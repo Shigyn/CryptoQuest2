@@ -39,7 +39,21 @@
     wdDelay: ["Le paiement peut mettre une à deux minutes à apparaître sur ton compte FaucetPay.", "The payment can take one to two minutes to show on your FaucetPay account."],
     wdDone: ["envoyés sur FaucetPay · paiement n°", "sent to FaucetPay · payout #"], wdValidated: ["partiront au prochain paiement horaire.", "will be sent with the next hourly payout."],
     withdrawals: ["Retraits", "Withdrawals"], activity: ["Activité", "Activity"], noWd: ["Aucun retrait pour le moment.", "No withdrawals yet."], noHistory: ["Aucun mouvement. Fais ton premier tirage !", "No activity yet. Make your first roll!"],
-    worth: ["soit", "worth"], rate: ["10 000 CC = 1 €", "10,000 CC = €1"],
+    worth: ["soit", "worth"], rate: [`10 000 ${TK} = 1 €`, `10,000 ${TK} = €1`],
+    mines: ["Mines", "Mines"], minesText: ["Ouvre des cases pour faire monter ton gain, encaisse avant de tomber sur une des 5 bombes. Gratuit, sans mise.", "Open tiles to grow your prize and cash out before hitting one of the 5 bombs. Free, no stake."],
+    newGame: ["Nouvelle partie", "New game"], playsLeft: ["parties restantes aujourd'hui", "games left today"], cashout: ["Encaisser", "Cash out"],
+    gainNow: ["Gain actuel", "Current prize"], nextTile: ["case suivante", "next tile"], boom: ["Boum ! Partie perdue, tu ne perds rien.", "Boom! Game over, you lose nothing."],
+    dice: ["Dice", "Dice"], diceText: ["Choisis ta cible : plus elle est basse, plus le gain est gros. Gratuit, sans mise.", "Pick your target: the lower it is, the bigger the prize. Free, no stake."],
+    diceWin: ["Gagne si le dé fait moins de", "Win if the roll is under"], chance: ["chance", "chance"], diceGo: ["Lancer le dé", "Roll the die"],
+    rollsLeft: ["lancers restants aujourd'hui", "rolls left today"], diceLost: ["Raté, retente ta chance !", "Missed, try again!"],
+    needRoll: ["Fais d'abord un tirage au faucet aujourd'hui.", "Make a faucet roll first today."],
+    advertise: ["Faire de la pub", "Advertise"], adText: ["Montre ton site à nos membres : chaque vue est une vraie visite de plusieurs secondes.", "Show your site to our members: every view is a real visit lasting several seconds."],
+    adTitle: ["Titre de l'annonce", "Ad title"], adUrl: ["Adresse de ton site (https://…)", "Your site address (https://…)"], adDuration: ["Durée de chaque vue", "Length of each view"],
+    adViews: ["Nombre de vues", "Number of views"], adPay: ["Payer avec FaucetPay", "Pay with FaucetPay"], adTotal: ["Total", "Total"],
+    adRules: ["Chaque campagne est vérifiée avant diffusion. Contenus interdits : arnaques, adulte, logiciels malveillants, jeux d'argent.", "Every campaign is reviewed before it runs. Not allowed: scams, adult content, malware, gambling."],
+    myAds: ["Mes campagnes", "My campaigns"], noAds: ["Aucune campagne pour le moment.", "No campaigns yet."],
+    ad_pending: ["En attente de paiement", "Awaiting payment"], ad_review: ["En vérification", "Under review"], ad_active: ["Active", "Running"], ad_stopped: ["Arrêtée", "Stopped"],
+    views: ["vues", "views"], back: ["Retour", "Back"],
     referral: ["Parrainage", "Referrals"], refText: ["de tout ce que gagnent tes filleuls te revient.", "of everything your referrals earn goes to you."],
     refLink: ["Ton lien", "Your link"], copy: ["Copier", "Copy"], copied: ["Lien copié.", "Link copied."], refCount: ["filleuls", "referrals"], refEarned: ["gagnés grâce à eux", "earned from them"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
@@ -76,6 +90,11 @@
     too_soon: ["Reste encore quelques secondes sur la page.", "Stay on the page a few more seconds."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
+    bad_request: ["Action impossible. Recharge la page et réessaie.", "Not possible. Reload the page and try again."],
+    bad_title: ["Le titre doit faire entre 3 et 60 caractères.", "The title must be 3 to 60 characters long."],
+    bad_url: ["L'adresse doit commencer par https://", "The address must start with https://"],
+    bad_views: ["Choisis entre 100 et 100 000 vues.", "Pick between 100 and 100,000 views."],
+    ads_unavailable: ["L'espace annonceur ouvre bientôt. Reviens dans quelques jours.", "Advertising opens soon. Come back in a few days."],
   };
   const message = (r) => (r.code === "offline" ? t("offline") : (ERR[r.code] || ERR.try_later)[FR ? 0 : 1]);
 
@@ -114,6 +133,8 @@
     gift: "M4 11h16v10H4zM3 7h18v4H3zM12 7v14M12 7S10 3 7.5 3 6 6 12 7zm0 0s2-4 4.5-4S18 6 12 7z",
     flag: "M5 21V4m0 0h12l-2 4 2 4H5",
     check: "M5 12l5 5L20 7",
+    bomb: "M11 7a7 7 0 1 0 6 3.4M15 4l2 2M18 3v2M20 5h-2M15.5 7.5 17 6",
+    megaphone: "M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zm13-3a5 5 0 0 1 0 8",
   };
   function icon(name) {
     const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -127,10 +148,12 @@
     s.innerHTML = `<path d="${PATHS[name]}"/>`;
     return s;
   }
-  // Piece CryptoCoin
+  // Piece bleue CryptoQuest
+  let coinSeq = 0;
   function coin(cls = "coin") {
+    const id = `cq${++coinSeq}`;
     const w = h("span", { style: "display:inline-flex" });
-    w.innerHTML = `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2f6bff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="url(#cg)"/><circle cx="32" cy="32" r="23" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2"/><path d="M40 24.5a10 10 0 1 0 0 15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>`;
+    w.innerHTML = `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9be6ff"/><stop offset=".5" stop-color="#3b82ff"/><stop offset="1" stop-color="#1640b8"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f9dff"/><stop offset="1" stop-color="#1d4fd6"/></linearGradient><radialGradient id="${id}s" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="31" fill="url(#${id}r)"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}f)"/><circle cx="32" cy="32" r="28.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.6" stroke-dasharray="1.6 3.4"/><circle cx="32" cy="32" r="25.5" fill="none" stroke="rgba(8,30,100,.45)" stroke-width="1.5"/><path d="M39.5 24.2a10.4 10.4 0 1 0 0 15.6" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/><path d="M30 16.5v5M30 42.5v5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}s)"/></svg>`;
     return w.firstChild;
   }
 
@@ -203,7 +226,7 @@
   // Mise en forme
   const locale = FR ? "fr-FR" : "en-US";
   const fmtInt = (n) => Number(n).toLocaleString(locale);
-  const tk = (n) => `${fmtInt(n)} ${TK}`;
+  const tk = (n) => `${fmtInt(n)} ${Math.abs(n) <= 1 && TK.endsWith("s") ? TK.slice(0, -1) : TK}`;
   const eur = (tokens) => {
     const v = tokens / (status?.tokens_per_eur || 10000);
     return v.toLocaleString(locale, { minimumFractionDigits: v < 0.01 ? 4 : 2, maximumFractionDigits: 4 }) + " €";
@@ -363,7 +386,7 @@
   const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["wallet", "wallet"], ["profile", "profile"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "");
-    return TABS.some(([k]) => k === r) ? r : "";
+    return TABS.some(([k]) => k === r) || r === "advertise" ? r : "";
   };
   let earnTab = "ptc";
   let walletTab = "withdrawals";
@@ -453,14 +476,8 @@
     const animateTo = (target) => new Promise((resolve) => {
       if (reduceMotion) { digits.textContent = String(target).padStart(5, "0"); resolve(); return; }
       digits.classList.add("spinning");
-      const start = performance.now();
-      const step = (now) => {
-        const p = Math.min(1, (now - start) / 1300);
-        digits.textContent = p < 1 ? String(Math.floor(Math.random() * 100000)).padStart(5, "0") : String(target).padStart(5, "0");
-        if (p < 1) requestAnimationFrame(step);
-        else { digits.classList.remove("spinning"); resolve(); }
-      };
-      requestAnimationFrame(step);
+      const id = setInterval(() => { digits.textContent = String(Math.floor(Math.random() * 100000)).padStart(5, "0"); }, 50);
+      setTimeout(() => { clearInterval(id); digits.textContent = String(target).padStart(5, "0"); digits.classList.remove("spinning"); resolve(); }, 1300);
     });
 
     btn.onclick = async () => {
@@ -675,13 +692,168 @@
       }));
   }
 
-  const gamesView = () => h("div", { class: "stack" }, h("div", { class: "grid2" }, wheelCard(), h("div", {}, bonusCard(), h("div", { style: "height:14px" }), questsCard())));
+  // Mines : grille 5 x 5, les bombes ne sont connues qu'en fin de partie.
+  let minesEnd = null;
+  function minesCard() {
+    const g = me.games || {};
+    const active = g.mines_active;
+    const rewards = g.mines_rewards || [];
+    const revealed = new Set(minesEnd?.revealed || active?.revealed || []);
+    const bombs = new Set(minesEnd?.bombs || []);
+    const playing = Boolean(active) && !minesEnd;
+    const gain = active?.gain || 0;
+    const grid = h("div", { class: "mines-grid" }, [...Array(25).keys()].map((c) => {
+      const isBomb = bombs.has(c);
+      const open = revealed.has(c);
+      return h("button", {
+        type: "button",
+        class: `tile${open ? " open" : ""}${isBomb ? " bomb" : ""}${minesEnd?.bomb === c ? " hit" : ""}`,
+        disabled: !playing || open, "aria-label": `Case ${c + 1}`,
+        onclick: async (e) => {
+          const r = await api("mines_reveal", { cell: c });
+          if (!r.ok) { toast(message(r), "bad"); return; }
+          if (r.status === "lost") { minesEnd = r; toast(t("boom"), "bad"); }
+          else if (r.status === "won") { minesEnd = r; burst(e.currentTarget, `+${tk(r.tokens)}`); toast(`${tk(r.tokens)} ${t("won")}`, "good"); }
+          await refreshMe();
+          render();
+        },
+      }, open ? icon("star") : isBomb ? icon("bomb") : null);
+    }));
+    const startBtn = h("button", {
+      class: "btn", style: "width:100%", disabled: (g.mines_left ?? 0) < 1 || me.claims_today < 1,
+      onclick: async () => {
+        const r = await api("mines_start");
+        if (!r.ok) { toast(message(r), "bad"); return; }
+        minesEnd = null;
+        await refreshMe();
+        render();
+      },
+    }, `${t("newGame")} · ${g.mines_left ?? 0}`);
+    const cashBtn = h("button", {
+      class: "btn gold", style: "width:100%", disabled: gain < 1,
+      onclick: async (e) => {
+        const target = e.currentTarget;
+        const r = await api("mines_cashout");
+        if (!r.ok) { toast(message(r), "bad"); return; }
+        minesEnd = r;
+        burst(target, `+${tk(r.tokens)}`);
+        toast(`${tk(r.tokens)} ${t("won")}`, "good");
+        await refreshMe();
+        render();
+      },
+    }, `${t("cashout")} ${tk(gain)}`);
+    return h("section", { class: "panel" },
+      h("div", { class: "panel-title" }, t("mines"), h("span", { class: "badge" }, `${g.mines_left ?? 0} ${t("playsLeft")}`)),
+      h("p", { class: "note" }, me.claims_today < 1 ? t("needRoll") : t("minesText")),
+      playing ? h("div", { class: "mines-bar" },
+        h("span", {}, `${t("gainNow")} `, h("b", {}, tk(gain))),
+        active.next ? h("span", {}, `${t("nextTile")} `, h("b", {}, tk(active.next))) : null) : null,
+      grid,
+      h("div", { style: "margin-top:14px" }, playing ? cashBtn : startBtn),
+      !playing ? h("p", { class: "note", style: "margin:10px 0 0;text-align:center" }, rewards.map((r) => fmtInt(r)).join(" · ")) : null);
+  }
+
+  // Dice : cible au choix, gain inversement proportionnel a la chance.
+  let diceTarget = 50;
+  function diceCard() {
+    const g = me.games || {};
+    const unit = g.dice_unit || 0;
+    const prize = () => Math.floor((unit * 100) / diceTarget);
+    const info = h("p", { class: "dice-info" });
+    const show = () => { info.replaceChildren(`${t("diceWin")} `, h("b", {}, String(diceTarget)), ` · ${diceTarget} % ${t("chance")} · `, h("b", { class: "gold-text" }, `+${tk(prize())}`)); };
+    show();
+    const digits = h("div", { class: "roll-digits dice-digits" }, "00");
+    const range = h("input", { type: "range", min: 5, max: 95, value: diceTarget, class: "range", ariaLabel: t("diceWin"), oninput: (e) => { diceTarget = Number(e.target.value); show(); } });
+    const btn = h("button", {
+      class: "btn big", disabled: (g.dice_left ?? 0) < 1 || me.claims_today < 1,
+      onclick: async () => {
+        btn.disabled = true;
+        const r = await api("dice", { target: diceTarget });
+        if (!r.ok) { toast(message(r), "bad"); btn.disabled = false; return; }
+        await new Promise((res) => {
+          if (reduceMotion) return res();
+          const id = setInterval(() => { digits.textContent = String(Math.floor(Math.random() * 100)).padStart(2, "0"); }, 50);
+          setTimeout(() => { clearInterval(id); res(); }, 900);
+        });
+        digits.textContent = String(r.roll).padStart(2, "0");
+        digits.classList.toggle("win", r.win);
+        digits.classList.toggle("lose", !r.win);
+        if (r.win) { burst(btn, `+${tk(r.tokens)}`); toast(`${tk(r.tokens)} ${t("won")}`, "good"); }
+        else toast(t("diceLost"), "info");
+        setTimeout(async () => { await refreshMe(); render(); }, 1600);
+      },
+    }, `${t("diceGo")} · ${g.dice_left ?? 0}`);
+    return h("section", { class: "panel" },
+      h("div", { class: "panel-title" }, t("dice"), h("span", { class: "badge" }, `${g.dice_left ?? 0} ${t("rollsLeft")}`)),
+      h("p", { class: "note" }, me.claims_today < 1 ? t("needRoll") : t("diceText")),
+      h("div", { class: "roll" }, digits),
+      info, range, btn);
+  }
+
+  const gamesView = () => h("div", { class: "stack" },
+    h("div", { class: "grid2" }, wheelCard(), h("div", {}, bonusCard(), h("div", { style: "height:14px" }), questsCard())),
+    h("div", { class: "grid2" }, minesCard(), diceCard()));
+
+  // Espace annonceur : l'annonceur paie sur la page FaucetPay, la campagne passe ensuite en verification.
+  let adForm = { title: "", url: "https://", duration: 10, views: 1000 };
+  function advertiseView() {
+    const price = () => {
+      const eurv = adForm.views * (status?.ad_price_eur_per_view || 0) * adForm.duration / 10;
+      return { eur: eurv, usdt: Math.ceil(eurv * (status?.usdt_per_eur || 1) * 10000) / 10000 };
+    };
+    const total = h("div", { class: "ad-total" });
+    const showTotal = () => { const p = price(); total.replaceChildren(h("span", {}, t("adTotal")), h("b", {}, `${p.usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`), h("span", { class: "row-sub" }, `≈ ${p.eur.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`)); };
+    showTotal();
+    const set = (k, cast = (v) => v) => (e) => { adForm[k] = cast(e.target.value); showTotal(); };
+    const msg = h("div", { role: "alert" });
+    const pay = h("button", { class: "btn big", type: "submit" }, t("adPay"));
+    const list = h("div", {}, h("p", { class: "empty" }, "…"));
+    api("ad_orders").then((r) => {
+      if (!r.ok) return;
+      const label = (o) => o.status === "pending" ? ["ad_pending", "warn"] : o.review ? ["ad_review", "warn"] : o.enabled ? ["ad_active", "good"] : ["ad_stopped", "bad"];
+      list.replaceChildren(...(r.orders.length ? r.orders.map((o) => {
+        const [k, cls] = label(o);
+        return h("div", { class: "list-line" },
+          h("div", { style: "min-width:0" }, h("div", { style: "color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, o.title),
+            h("div", { class: "row-sub" }, `${fmtInt(o.shown)} / ${fmtInt(o.views)} ${t("views")} · ${o.duration} s · ${Number(o.amount_usdt)} USDT`)),
+          h("span", { class: `badge ${cls}` }, t(k)));
+      }) : [h("p", { class: "empty" }, t("noAds"))]));
+    });
+    return h("div", { class: "stack" },
+      h("a", { class: "btn ghost small", href: "#profile", style: "align-self:flex-start;width:auto" }, `← ${t("back")}`),
+      h("section", { class: "panel" },
+        h("div", { class: "panel-title" }, t("advertise")),
+        h("p", { class: "note" }, t("adText")),
+        h("form", {
+          onsubmit: async (e) => {
+            e.preventDefault();
+            pay.disabled = true;
+            const r = await api("ad_order", adForm);
+            pay.disabled = false;
+            if (!r.ok) { msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:12px" }, message(r))); return; }
+            // Envoi classique du formulaire : l'annonceur arrive sur la page de paiement FaucetPay.
+            const f = h("form", { method: "post", action: r.form.action, style: "display:none" },
+              Object.entries(r.form.fields).map(([name, value]) => h("input", { type: "hidden", name, value })));
+            document.body.append(f);
+            f.submit();
+          },
+        },
+          h("label", { class: "field" }, t("adTitle"), h("input", { value: adForm.title, maxLength: 60, required: true, oninput: set("title"), style: "margin-top:6px" })),
+          h("label", { class: "field" }, t("adUrl"), h("input", { type: "url", value: adForm.url, required: true, oninput: set("url"), style: "margin-top:6px" })),
+          h("div", { class: "grid2", style: "gap:12px" },
+            h("label", { class: "field" }, t("adDuration"), h("select", { style: "margin-top:6px", onchange: set("duration", Number) },
+              [10, 15, 20, 30].map((s) => h("option", { value: s, selected: s === adForm.duration }, `${s} s`)))),
+            h("label", { class: "field" }, t("adViews"), h("input", { type: "number", min: 100, max: 100000, step: 100, value: adForm.views, oninput: set("views", Number), style: "margin-top:6px" }))),
+          total, pay, msg,
+          h("p", { class: "note", style: "margin:12px 0 0" }, t("adRules")))),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("myAds")), list));
+  }
 
   // Portefeuille
   const SOURCE = {
     faucet: ["Tirage", "Roll"], daily: ["Bonus quotidien", "Daily bonus"], challenge: ["Quête", "Quest"], referral: ["Parrainage", "Referral"], wheel: ["Roue du jour", "Daily wheel"],
     ptc: ["Pub", "Ad"], shortlink: ["Lien", "Link"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
-    validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
+    mines: ["Mines", "Mines"], dice: ["Dice", "Dice"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
   };
   function walletView() {
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
@@ -781,6 +953,10 @@
               } else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
             },
           }, h("label", { class: "field" }, t("secNew"), h("div", { class: "input" }, icon("lock"), pass)), save, msg))),
+      h("a", { class: "row ad-link", href: "#advertise" },
+        h("div", { class: "row-ico", style: "background:rgba(255,204,61,.14);color:var(--gold)" }, icon("megaphone")),
+        h("div", { class: "row-main" }, h("h3", {}, t("advertise")), h("div", { class: "row-sub" }, t("adText"))),
+        h("span", { class: "chev" }, "›")),
       h("button", {
         class: "btn ghost", type: "button", style: "width:100%",
         onclick: async () => {
@@ -799,8 +975,8 @@
     const route = routeNow();
     header = h("header", { class: "topline" });
     updateHeader();
-    const views = { "": homeView, earn: earnView, games: gamesView, wallet: walletView, profile: profileView };
-    const gamesReady = !me.wheel_done || !me.daily_done || me.challenges.some((c) => !c.done && me.claims_today >= c.target);
+    const views = { "": homeView, earn: earnView, games: gamesView, wallet: walletView, profile: profileView, advertise: advertiseView };
+    const gamesReady = !me.wheel_done || !me.daily_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0 || me.challenges.some((c) => !c.done && me.claims_today >= c.target);
     const nav = h("nav", { class: "tabbar", ariaLabel: "Menu" }, TABS.map(([k, label]) =>
       h("a", { class: "tab", href: `#${k}`, "aria-current": k === route ? "page" : undefined },
         icon(label), t(label), k === "games" && gamesReady && me.claims_today > 0 ? h("span", { class: "dot" }) : null)));

@@ -62,6 +62,17 @@ export function depsFromEnv(): Deps {
         return null;
       }
     },
+    merchantUsername: env("FAUCETPAY_MERCHANT_USERNAME"),
+    verifyMerchant: async (token) => {
+      try {
+        const res = await fetch(`https://faucetpay.io/merchant/get-payment/${encodeURIComponent(token)}`, { signal: AbortSignal.timeout(15000) });
+        return res.ok ? await res.json() : null;
+      } catch (err) {
+        console.error("verification marchand", err);
+        return null;
+      }
+    },
+    functionsBase: `${url}/functions/v1`,
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     ipPepper: env("IP_PEPPER"),
     adminPassword: env("ADMIN_PASSWORD"),

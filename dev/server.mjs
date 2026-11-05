@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHarness } from "./harness.mjs";
-import { handleAdmin, handleApi, handleCron, handlePostback } from "../supabase/functions/_shared/core.ts";
+import { handleAdmin, handleApi, handleCron, handleMerchant, handlePostback } from "../supabase/functions/_shared/core.ts";
 
 const PORT = Number(process.env.PORT) || 8188;
 const root = fileURLToPath(new URL("../public", import.meta.url));
@@ -13,7 +13,7 @@ const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 
 process.env.KEEP_ROLL = "1";
 const h = await createHarness({ siteUrl: `http://localhost:${PORT}/` });
-const handlers = { api: handleApi, admin: handleAdmin, postback: handlePostback, cron: handleCron };
+const handlers = { api: handleApi, admin: handleAdmin, postback: handlePostback, cron: handleCron, merchant: handleMerchant };
 
 // Contenus d'essai
 await h.rpc("admin_save_ptc", { p: { title: "Pub d'essai", url: `http://localhost:${PORT}/legal.html`, reward_tokens: 10, duration_seconds: 5, max_views: 100, price_eur_per_view: 0.002 } });
@@ -43,7 +43,7 @@ createServer(async (req, res) => {
   if (url.pathname === "/config.js") {
     res.writeHead(200, { "Content-Type": "text/javascript" });
     // 1x00000000000000000000AA : cle d'essai publique de Cloudflare, toujours valide.
-    res.end(`window.FAUCET_CONFIG = { SITE_NAME: "CryptoQuest", TOKEN: "CC", API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA", ADS: { top: "", bottom: "" } };`);
+    res.end(`window.FAUCET_CONFIG = { SITE_NAME: "CryptoQuest", TOKEN: "Coins", API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA", ADS: { top: "", bottom: "" } };`);
     return;
   }
 

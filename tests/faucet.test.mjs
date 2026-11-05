@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHarness } from "../dev/harness.mjs";
-import { handleAdmin, handleApi, handleCron, handlePostback, normalizeAddress } from "../supabase/functions/_shared/core.ts";
+import { handleAdmin, handleApi, handleCron, handleMerchant, handlePostback, normalizeAddress } from "../supabase/functions/_shared/core.ts";
 import { BASE, SCENARIOS, simulate } from "../public/simulation.mjs";
 
 let ipCounter = 0;
@@ -622,7 +622,7 @@ test("normalisation des adresses", () => {
 test("simulation : faucet seul, calcul a la main", () => {
   const r = simulate({
     ...BASE, users_per_day: 100, bot_percent: 0, claims_per_user: 10, faucet_reward_tokens: 2, ads_per_claim: 3,
-    ecpm_eur: 1, fill_percent: 100, daily_bonus_tokens: 0, wheel_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0,
+    ecpm_eur: 1, fill_percent: 100, daily_bonus_tokens: 0, wheel_tokens_per_user: 0, games_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0,
     links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0,
   });
   // 30 000 reclamations x 3 pubs = 90 000 affichages = 90 EUR ; 30 000 x 2 tokens = 60 000 tokens = 6 EUR
@@ -634,7 +634,7 @@ test("simulation : faucet seul, calcul a la main", () => {
 });
 
 test("simulation : les robots coutent sans rapporter", () => {
-  const off = { daily_bonus_tokens: 0, wheel_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0, links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0 };
+  const off = { daily_bonus_tokens: 0, wheel_tokens_per_user: 0, games_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0, links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0 };
   const clean = simulate({ ...BASE, ...off, bot_percent: 0 });
   const bots = simulate({ ...BASE, ...off, bot_percent: 50 });
   assert.equal(bots.revenue, clean.revenue);
@@ -687,4 +687,104 @@ test("tirage du faucet : nombre de 0 a 99 999, palier applique, jackpot", async 
   assert.equal(Number(rows[0].ref), r.body.roll, "le nombre tire est garde dans l'historique");
   const s = await (await handleApi(new Request("http://x/api", { method: "POST", headers: { "cf-connecting-ip": "9.9.9.9" }, body: JSON.stringify({ action: "status" }) }), h.deps)).json();
   assert.deepEqual(s.roll_tiers, [{ from: 0, tokens: 7 }]);
+});
+
+// Jeux gratuits et annonceurs -------------------------------------------------
+
+test("mines : gratuit, apres un tirage, bombes cachees, encaissement, limite du jour", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  assert.equal((await api(h, "mines_start", { session: u.session }, u.ip)).body.code, "not_reached");
+  await api(h, "claim", { session: u.session }, u.ip);
+  const g = (await api(h, "mines_start", { session: u.session }, u.ip)).body;
+  assert.equal(g.ok, true);
+  assert.equal(g.bombs, undefined, "les bombes ne partent jamais avant la fin");
+  assert.deepEqual(g.revealed, []);
+  assert.equal(g.next, 1);
+  const { rows } = await h.pg.query("select state from game_plays where status = 'active'");
+  const bombs = rows[0].state.bombs;
+  assert.equal(bombs.length, 5);
+  const safe = [...Array(25).keys()].filter((c) => !bombs.includes(c));
+  let r = (await api(h, "mines_reveal", { session: u.session, cell: safe[0] }, u.ip)).body;
+  assert.equal(r.gain, 1);
+  r = (await api(h, "mines_reveal", { session: u.session, cell: safe[1] }, u.ip)).body;
+  assert.equal(r.gain, 2);
+  assert.equal((await api(h, "mines_reveal", { session: u.session, cell: safe[1] }, u.ip)).body.code, "bad_request", "case deja ouverte");
+  const cash = (await api(h, "mines_cashout", { session: u.session }, u.ip)).body;
+  assert.equal(cash.tokens, 2);
+  assert.equal(cash.bombs.length, 5);
+  assert.equal((await me(h, u)).available, 2 + 2);
+
+  // Bombe : partie perdue, rien n'est retire au joueur.
+  await api(h, "mines_start", { session: u.session }, u.ip);
+  const b2 = (await h.pg.query("select state from game_plays where status = 'active'")).rows[0].state.bombs;
+  const lost = (await api(h, "mines_reveal", { session: u.session, cell: b2[0] }, u.ip)).body;
+  assert.equal(lost.status, "lost");
+  assert.equal(lost.tokens, 0);
+  assert.equal((await me(h, u)).available, 4);
+
+  await api(h, "mines_start", { session: u.session }, u.ip);
+  await h.pg.query("update game_plays set status = 'lost' where status = 'active'");
+  assert.equal((await api(h, "mines_start", { session: u.session }, u.ip)).body.code, "daily_limit");
+  assert.equal((await me(h, u)).games.mines_left, 0);
+});
+
+test("dice : gratuit, gain inverse a la chance, limite du jour", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  await api(h, "claim", { session: u.session }, u.ip);
+  assert.equal((await api(h, "dice", { session: u.session, target: 99 }, u.ip)).body.code, "bad_request");
+  await h.pg.exec("update settings set dice_unit = 2");
+  for (let i = 0; i < 3; i++) {
+    const r = (await api(h, "dice", { session: u.session, target: 95 }, u.ip)).body;
+    assert.equal(r.ok, true);
+    assert.equal(r.win, r.roll < 95);
+    assert.equal(r.tokens, r.win ? 2 : 0, "95 % de chance : 2 x 100 / 95 = 2");
+  }
+  assert.equal((await api(h, "dice", { session: u.session, target: 50 }, u.ip)).body.code, "daily_limit");
+});
+
+test("annonceur : commande, paiement verifie aupres de FaucetPay, campagne a approuver", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  assert.equal((await api(h, "ad_order", { session: u.session, title: "Ma pub", url: "http://pas-sur.com", duration: 10, views: 100 }, u.ip)).body.code, "bad_url");
+  const o = (await api(h, "ad_order", { session: u.session, title: "Ma pub", url: "https://mon-site.com", duration: 20, views: 1000 }, u.ip)).body;
+  assert.equal(o.ok, true);
+  // 1 000 vues x 0,002 € x 20 s / 10 = 4 € ; x 1,10 USDT = 4,40 USDT
+  assert.equal(Number(o.amount_usdt), 4.4);
+  assert.equal(o.form.fields.merchant_username, "marchand");
+  assert.equal(o.form.fields.currency1, "USDT");
+  const id = o.form.fields.custom;
+
+  const ipn = async (token) => (await handleMerchant(new Request("http://x/merchant", { method: "POST", body: new URLSearchParams({ token, custom: id }) }), h.deps));
+  // Faux message sans paiement reel : refuse.
+  assert.equal((await ipn("faux")).status, 400);
+  // Montant trop faible : refuse.
+  h.mock.merchantPayments.set("t1", { valid: true, merchant_username: "marchand", custom: id, amount1: "1", currency1: "USDT", transaction_id: "1" });
+  assert.equal((await ipn("t1")).status, 400);
+  // Vrai paiement : campagne creee, desactivee, a approuver.
+  h.mock.merchantPayments.set("t2", { valid: true, merchant_username: "marchand", custom: id, amount1: "4.4", currency1: "USDT", transaction_id: "2" });
+  assert.equal((await ipn("t2")).status, 200);
+  h.mock.merchantPayments.delete("t2");
+  assert.equal((await ipn("t2")).status, 200, "nouvel essai de FaucetPay : deja paye, reponse ok");
+  const ov = (await admin(h, { action: "overview" })).body;
+  assert.equal(ov.ptc.length, 1);
+  assert.equal(ov.ptc[0].enabled, false);
+  assert.equal(ov.ptc[0].needs_review, true);
+  assert.equal(ov.stats.ads_to_review, 1);
+  // 4 € / 1 000 vues = 0,004 € ; 50 % reverses = 0,002 € = 20 Coins par vue
+  assert.equal(ov.ptc[0].reward_tokens, 20);
+  assert.match(h.alerts.at(-1), /approuver/);
+  assert.equal((await api(h, "earn_list", { session: u.session }, u.ip)).body.ptc.length, 0, "pas diffusee avant approbation");
+  await admin(h, { action: "save_ptc", item: { id: ov.ptc[0].id, enabled: true } });
+  assert.equal((await api(h, "earn_list", { session: u.session }, u.ip)).body.ptc.length, 1);
+  const mine = (await api(h, "ad_orders", { session: u.session }, u.ip)).body.orders;
+  assert.equal(mine[0].status, "paid");
+  assert.equal(mine[0].enabled, true);
+});
+
+test("annonceur : indisponible sans compte marchand configure", async () => {
+  const h = await createHarness({ merchantUsername: "" });
+  const u = await newUser(h);
+  assert.equal((await api(h, "ad_order", { session: u.session, title: "Ma pub", url: "https://a.com", duration: 10, views: 100 }, u.ip)).body.code, "ads_unavailable");
 });

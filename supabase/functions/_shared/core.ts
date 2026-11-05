@@ -11,6 +11,10 @@ export interface Deps {
   shorten: (apiUrl: string, longUrl: string) => Promise<string | null>;
   // Prix en euros par identifiant CoinGecko. Un seul appel pour toutes les cryptos.
   prices: (ids: string[]) => Promise<Record<string, number> | null>;
+  // Espace annonceur : ton nom d'utilisateur marchand FaucetPay, et la verification d'un paiement.
+  merchantUsername: string;
+  verifyMerchant: (token: string) => Promise<Record<string, any> | null>;
+  functionsBase: string;
   sleep: (ms: number) => Promise<void>;
   ipPepper: string;
   adminPassword: string;
@@ -267,6 +271,52 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "wheel":
       return result(d, await d.rpc("spin_wheel", { p_user: userId, p_ip_hash: ipHash }));
 
+    case "mines_start":
+      return result(d, await d.rpc("mines_start", { p_user: userId, p_ip_hash: ipHash }));
+
+    case "mines_reveal":
+      return result(d, await d.rpc("mines_reveal", { p_user: userId, p_cell: Number(b.cell), p_ip_hash: ipHash }));
+
+    case "mines_cashout":
+      return result(d, await d.rpc("mines_cashout", { p_user: userId, p_ip_hash: ipHash }));
+
+    case "dice":
+      return result(d, await d.rpc("dice_roll", { p_user: userId, p_target: Number(b.target), p_ip_hash: ipHash }));
+
+    case "ad_order": {
+      if (!d.merchantUsername) return refuse(d, 503, "ads_unavailable");
+      const r = await d.rpc("create_ad_order", {
+        p_user: userId,
+        p_title: String(b.title ?? ""),
+        p_url: String(b.url ?? "").trim(),
+        p_duration: Number(b.duration),
+        p_views: Number(b.views),
+      });
+      if (!r.ok) return result(d, r);
+      // Formulaire de paiement heberge par FaucetPay : le navigateur l'envoie tel quel.
+      return json(d, 200, {
+        ok: true,
+        amount_usdt: r.amount_usdt,
+        form: {
+          action: "https://faucetpay.io/merchant/webscr",
+          fields: {
+            merchant_username: d.merchantUsername,
+            item_description: `Campagne PTC : ${String(b.title ?? "").slice(0, 60)}`,
+            amount1: String(r.amount_usdt),
+            currency1: "USDT",
+            currency2: "",
+            custom: r.id,
+            callback_url: `${d.functionsBase}/merchant`,
+            success_url: `${d.siteUrl}#advertise`,
+            cancel_url: `${d.siteUrl}#advertise`,
+          },
+        },
+      });
+    }
+
+    case "ad_orders":
+      return json(d, 200, { ok: true, orders: await d.rpc("my_ad_orders", { p_user: userId }) });
+
     case "challenge":
       return result(d, await d.rpc("claim_challenge", { p_user: userId, p_id: Number(b.id), p_ip_hash: ipHash }));
 
@@ -323,6 +373,37 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     default:
       return refuse(d, 400, "bad_request");
   }
+}
+
+// Retour de paiement FaucetPay (annonceurs). On ne croit jamais le message seul :
+// le jeton est verifie aupres de FaucetPay, qui donne le vrai montant.
+export async function handleMerchant(req: Request, d: Deps): Promise<Response> {
+  if (req.method !== "POST") return new Response("method", { status: 405 });
+  const form = new URLSearchParams(await req.text());
+  const token = form.get("token") ?? "";
+  const custom = form.get("custom") ?? "";
+  if (!token || !/^[0-9a-f-]{36}$/i.test(custom)) return new Response("missing", { status: 400 });
+
+  const p = await d.verifyMerchant(token);
+  if (!p || p.valid !== true) {
+    // Jeton deja utilise lors d'un essai precedent : la commande est peut-etre deja payee.
+    return (await d.rpc("ad_order_paid", { p_id: custom })) ? new Response("ok") : new Response("invalid", { status: 400 });
+  }
+  if (String(p.merchant_username ?? "").toLowerCase() !== d.merchantUsername.toLowerCase() || String(p.custom ?? "") !== custom) {
+    return new Response("mismatch", { status: 400 });
+  }
+  const r = await d.rpc("pay_ad_order", {
+    p_id: custom,
+    p_tx: String(p.transaction_id ?? token),
+    p_amount: Number(p.amount1),
+    p_currency: String(p.currency1 ?? ""),
+  });
+  if (!r.ok) {
+    await d.alert(`Paiement annonceur refusé (${r.code}) pour la commande ${custom}.`);
+    return new Response(r.code, { status: 400 });
+  }
+  if (!r.duplicate) await d.alert("Nouvelle campagne d'annonceur payée : à approuver dans le dashboard.");
+  return new Response("ok");
 }
 
 // Appele par le reseau d'offres, jamais par le visiteur. Le secret authentifie le reseau.

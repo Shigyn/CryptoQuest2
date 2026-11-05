@@ -215,6 +215,11 @@ const FIELDS = [
   ["daily_bonus_tokens", `Bonus quotidien (${TK})`],
   ["daily_bonus_min_claims", "Réclamations requises pour le bonus"],
   ["wheel_min_claims", "Réclamations requises pour la roue du jour"],
+  ["mines_daily_plays", "Mines : parties gratuites par jour"],
+  ["dice_daily_plays", "Dice : lancers gratuits par jour"],
+  ["dice_unit", `Dice : gain de base (${TK}, multiplié par 100 / cible)`],
+  ["ad_price_eur_per_view", "Annonceurs : prix d'une vue de 10 s (€)"],
+  ["ad_reward_share", "Annonceurs : part reversée aux membres (%)"],
   ["referral_percent", "Part du parrain (%)"],
   ["offer_share_percent", "Part des offerwalls reversée (%)"],
 ];
@@ -224,6 +229,8 @@ function settingsTab() {
   const inputs = Object.fromEntries(FIELDS.map(([k]) => [k, h("input", { type: "number", min: "0", step: "any", value: s[k], required: true })]));
   const prizes = h("input", { value: (s.wheel_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
   const prizeList = () => prizes.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
+  const mines = h("input", { value: (s.mines_rewards || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const minesList = () => mines.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   return h("div", { class: "stack" },
     card("Récompenses et plafonds",
       h("p", { class: "muted", style: "margin-bottom:12px" }, `Taux fixe : ${fmt(s.tokens_per_eur)} ${TK} = 1 €.`),
@@ -232,12 +239,15 @@ function settingsTab() {
           e.preventDefault();
           const list = prizeList();
           if (list.length < 2 || list.length > 16) { errorText = "La roue doit avoir entre 2 et 16 cases."; render(); return; }
-          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list } }));
+          const ml = minesList();
+          if (ml.length < 1 || ml.length > 20) { errorText = "Mines doit avoir entre 1 et 20 gains."; render(); return; }
+          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list, mines_rewards: ml } }));
         },
       },
         h("div", { class: "grid" }, FIELDS.map(([k, label]) => h("label", { class: "field" }, label, inputs[k]))),
         h("label", { class: "field" }, `Cases de la roue du jour (${TK}, séparées par des virgules, chaque case a la même chance)`, prizes),
         h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Gain moyen actuel : ${(prizeList().reduce((a, b) => a + b, 0) / Math.max(prizeList().length, 1)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${TK} par membre et par jour.`),
+        h("label", { class: "field" }, `Mines : gain selon le nombre de cases ouvertes (${TK}, séparés par des virgules)`, mines),
         h("button", { class: "btn" }, "Enregistrer les réglages"))),
     card("Cryptos de retrait",
       h("div", { class: "row between", style: "margin-bottom:12px" },
@@ -286,7 +296,13 @@ function contentTab() {
   return h("div", { class: "stack" },
     card("PTC : pubs payantes",
       table(["Titre", "Récompense", "Durée", "Vues", "Prix par vue", "État", ""], data.ptc.map((p) => [
-        h("td", { class: "wrap" }, p.title), `${fmt(p.reward_tokens)} ${TK}`, `${p.duration_seconds} s`, `${fmt(p.views)} / ${fmt(p.max_views)}`, money(p.price_eur_per_view, 4), statePill(p.enabled), toggle(p, "save_ptc"),
+        h("td", { class: "wrap" }, p.title, h("div", { class: "hint" }, h("a", { href: p.url, target: "_blank", rel: "noopener noreferrer" }, p.url))), `${fmt(p.reward_tokens)} ${TK}`, `${p.duration_seconds} s`, `${fmt(p.views)} / ${fmt(p.max_views)}`, money(p.price_eur_per_view, 4),
+        p.needs_review ? h("span", { class: "pill warn" }, "À approuver") : statePill(p.enabled),
+        p.needs_review
+          ? h("div", { class: "row" },
+              saveButton("Approuver", () => api("save_ptc", { item: { id: p.id, enabled: true } }), "btn small"),
+              saveButton("Refuser", () => api("save_ptc", { item: { id: p.id, enabled: false } }), "btn small danger"))
+          : toggle(p, "save_ptc"),
       ]), "Aucune campagne pour le moment. Ajoute celle d'un annonceur ci-dessous."),
       addForm([
         ["title", "Titre"], ["url", "Adresse de la pub (https://…)", "url"], ["reward_tokens", `Récompense (${TK})`, "number", 10],
@@ -322,7 +338,7 @@ function contentTab() {
 // Simulateur ---------------------------------------------------------------
 const SIM_GROUPS = [
   ["Audience", [["users_per_day", "Vrais membres actifs par jour"], ["bot_percent", "Part de robots (%)"], ["claims_per_user", "Réclamations par membre et par jour"]]],
-  ["Faucet et pub", [["faucet_reward_tokens", `Récompense par réclamation (${TK})`], ["ads_per_claim", "Pubs vues par réclamation"], ["ecpm_eur", "Revenu pour 1 000 affichages (€)"], ["fill_percent", "Pubs réellement remplies (%)"], ["daily_bonus_tokens", `Bonus quotidien (${TK})`], ["wheel_tokens_per_user", `Roue du jour, gain moyen (${TK})`], ["challenge_tokens_per_user", `Défis par membre et par jour (${TK})`]]],
+  ["Faucet et pub", [["faucet_reward_tokens", `Récompense par réclamation (${TK})`], ["ads_per_claim", "Pubs vues par réclamation"], ["ecpm_eur", "Revenu pour 1 000 affichages (€)"], ["fill_percent", "Pubs réellement remplies (%)"], ["daily_bonus_tokens", `Bonus quotidien (${TK})`], ["wheel_tokens_per_user", `Roue du jour, gain moyen (${TK})`], ["games_tokens_per_user", `Mines et Dice par membre et par jour (${TK})`], ["challenge_tokens_per_user", `Défis par membre et par jour (${TK})`]]],
   ["PTC", [["ptc_per_user", "Vues par membre et par jour"], ["ptc_price_eur", "Prix payé par l'annonceur par vue (€)"], ["ptc_reward_tokens", `Récompense par vue (${TK})`]]],
   ["Liens raccourcis", [["links_per_user", "Liens par membre et par jour"], ["link_revenue_eur", "Revenu par lien (€)"], ["link_reward_tokens", `Récompense par lien (${TK})`]]],
   ["Offerwalls", [["offers_per_user_day", "Offres par membre et par jour"], ["offer_revenue_eur", "Revenu moyen par offre (€)"], ["offer_share_percent", "Part reversée (%)"]]],
@@ -455,7 +471,7 @@ function render() {
   const s = data.settings;
   const review = Number(data.stats.earnings_to_review);
   const attention = Number(data.stats.attention);
-  const badge = { earnings: review, withdrawals: attention };
+  const badge = { earnings: review, withdrawals: attention, content: Number(data.stats.ads_to_review || 0) };
   const current = TABS.find(([k]) => k === tab) ?? TABS[0];
   root.replaceChildren(h("div", { class: "app" },
     h("nav", { class: "side", ariaLabel: "Menu" },

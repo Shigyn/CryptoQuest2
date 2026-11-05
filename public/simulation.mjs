@@ -32,6 +32,12 @@ export function simulate(i) {
       cost: eur(allUsers * days * (Number(i.wheel_tokens_per_user) || 0)),
     },
     {
+      key: "games",
+      label: "Mines et Dice",
+      revenue: 0,
+      cost: eur(allUsers * days * (Number(i.games_tokens_per_user) || 0)),
+    },
+    {
       key: "challenges",
       label: "Défis",
       revenue: 0,
@@ -98,6 +104,7 @@ export const BASE = {
   fill_percent: 80,
   daily_bonus_tokens: 5,
   wheel_tokens_per_user: 5,
+  games_tokens_per_user: 10,
   challenge_tokens_per_user: 2,
   ptc_per_user: 2,
   ptc_price_eur: 0.002,

@@ -76,7 +76,7 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
     return reply(404, { success: false, message: "Not found" });
   };
 
-  return { state, fp: createFaucetPay("cle-de-test", fetchImpl) };
+  return { state, fp: createFaucetPay("cle-de-test", fetchImpl), merchantPayments: new Map() };
 }
 
 export async function createHarness(options = {}) {
@@ -90,6 +90,9 @@ export async function createHarness(options = {}) {
     alert: async (t) => void alerts.push(t),
     shorten: async (_api, longUrl) => options.shortFails ? null : `/retour-simule?to=${encodeURIComponent(longUrl)}`,
     prices: async (ids) => (options.prices === null ? null : Object.fromEntries(ids.map((id) => [id, (options.prices ?? { tether: 0.9, litecoin: 80, bitcoin: 90000 })[id] ?? 0]))),
+    merchantUsername: options.merchantUsername ?? "marchand",
+    verifyMerchant: async (token) => mock.merchantPayments.get(token) ?? null,
+    functionsBase: "http://localhost:8188/functions/v1",
     sleep: async () => {},
     ipPepper: "poivre",
     adminPassword: "mot-de-passe-de-test-long",
