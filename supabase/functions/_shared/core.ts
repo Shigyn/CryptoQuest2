@@ -201,9 +201,10 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     } else {
       const check = await d.fp.checkAddress(address);
       if (!check.ok) {
+        // La raison donnee par FaucetPay aide a diagnostiquer ; elle ne contient aucune cle.
         return check.failure === "recipient" || check.failure === "rejected"
           ? refuse(d, 400, "invalid_address")
-          : refuse(d, 503, "try_later");
+          : refuse(d, 503, "try_later", { reason: check.failure, detail: (check.message ?? "").slice(0, 160) });
       }
       found = await d.rpc("fp_login", {
         p_address: address,
