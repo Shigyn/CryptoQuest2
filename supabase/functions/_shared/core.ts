@@ -9,6 +9,8 @@ export interface Deps {
   verifyCaptcha: (token: string, ip: string) => Promise<boolean>;
   alert: (text: string) => Promise<void>;
   shorten: (apiUrl: string, longUrl: string) => Promise<string | null>;
+  // Prix en euros par identifiant CoinGecko. Un seul appel pour toutes les cryptos.
+  prices: (ids: string[]) => Promise<Record<string, number> | null>;
   sleep: (ms: number) => Promise<void>;
   ipPepper: string;
   adminPassword: string;
@@ -343,12 +345,37 @@ export async function handlePostback(req: Request, d: Deps): Promise<Response> {
   return r.ok ? new Response("ok") : new Response(r.code, { status: 400 });
 }
 
+// Met a jour les taux. Un ecart de plus de 50 % est ignore : prix douteux, on garde l'ancien.
+export async function refreshRates(d: Deps, force = false): Promise<{ updated: string[]; skipped: string[]; error?: string }> {
+  const t = await d.rpc("rate_targets");
+  if (!force && !t.auto) return { updated: [], skipped: [] };
+  const coins: { code: string; price_id: string; per_eur: number | null }[] = t.coins;
+  if (!coins.length) return { updated: [], skipped: [] };
+  const prices = await d.prices([...new Set(coins.map((c) => c.price_id))]);
+  if (!prices) return { updated: [], skipped: [], error: "Service de prix injoignable" };
+  const next: Record<string, number> = {};
+  const skipped: string[] = [];
+  for (const c of coins) {
+    const eurPrice = prices[c.price_id];
+    if (!(eurPrice > 0)) { skipped.push(c.code); continue; }
+    const perEur = Number((1 / eurPrice).toPrecision(8));
+    const old = c.per_eur === null ? null : Number(c.per_eur);
+    if (old && Math.abs(perEur - old) / old > 0.5) { skipped.push(c.code); continue; }
+    next[c.code] = perEur;
+  }
+  if (Object.keys(next).length) await d.rpc("set_rates", { p: next });
+  if (skipped.length) await d.alert(`Taux non mis à jour pour ${skipped.join(", ")} : prix absent ou écart de plus de 50 %.`);
+  return { updated: Object.keys(next), skipped };
+}
+
 // Lot horaire : paie tout ce qui a ete valide. Limite a un paiement par seconde, pour l'API FaucetPay.
 export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Promise<Response> {
   if (d.cronSecret.length < 16 || !(await sameSecret(req.headers.get("authorization") ?? "", `Bearer ${d.cronSecret}`))) {
     return new Response("forbidden", { status: 403 });
   }
   const started = Date.now();
+  // Taux d'abord, pour payer au cours de l'heure.
+  const rates = await refreshRates(d).catch((err) => ({ updated: [], skipped: [], error: String(err) }));
   const users: string[] = await d.rpc("hourly_batch_users", { p_limit: 200 });
   let paid = 0, failed = 0, skipped = 0;
   for (const id of users) {
@@ -370,7 +397,7 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
     }
     await d.sleep(1000);
   }
-  return json(d, 200, { ok: true, paid, failed, skipped, candidates: users.length });
+  return json(d, 200, { ok: true, paid, failed, skipped, candidates: users.length, rates });
 }
 
 export async function handleAdmin(req: Request, d: Deps): Promise<Response> {
@@ -446,6 +473,8 @@ export async function handleAdmin(req: Request, d: Deps): Promise<Response> {
       case "save_challenge":
         await d.rpc("admin_save_challenge", { p: b.item ?? {} });
         return ok();
+      case "refresh_rates":
+        return ok(await refreshRates(d, true));
       case "run_batch":
         return handleCron(new Request(req.url, { headers: { authorization: `Bearer ${d.cronSecret}` } }), d, 100_000);
       case "retry": {

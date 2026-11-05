@@ -240,18 +240,27 @@ function settingsTab() {
         h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Gain moyen actuel : ${(prizeList().reduce((a, b) => a + b, 0) / Math.max(prizeList().length, 1)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${TK} par membre et par jour.`),
         h("button", { class: "btn" }, "Enregistrer les réglages"))),
     card("Cryptos de retrait",
-      table(["Crypto", "Solde", "Combien pour 1 €", "Alerte si solde sous", "Active", ""], data.coins.map((c) => {
+      h("div", { class: "row between", style: "margin-bottom:12px" },
+        h("label", { class: "row", style: "font-weight:700;color:var(--ink)" },
+          h("input", { type: "checkbox", checked: s.auto_rates, onchange: (e) => act(() => api("update_settings", { settings: { auto_rates: e.target.checked } })) }),
+          "Taux automatiques, mis à jour chaque heure (CoinGecko)"),
+        saveButton("Actualiser les taux maintenant", async () => {
+          const r = await api("refresh_rates");
+          if (r.error) throw new Error(r.error);
+          if (r.skipped?.length) throw new Error(`Taux gardés pour ${r.skipped.join(", ")} : prix absent ou écart de plus de 50 %.`);
+        }, "btn small ghost")),
+      table(["Crypto", "Solde", "Combien pour 1 €", "Mis à jour", "Alerte si solde sous", "Active", ""], data.coins.map((c) => {
         const rate = h("input", { type: "number", min: "0", step: "any", value: c.per_eur ?? "", ariaLabel: `Taux ${c.code}` });
         const low = h("input", { type: "number", min: "0", step: "any", value: fromUnits(c.low_balance_units, c.decimals), ariaLabel: `Seuil ${c.code}` });
         const on = h("input", { type: "checkbox", checked: c.enabled, ariaLabel: `Activer ${c.code}` });
         return [
           h("span", {}, h("b", {}, c.code), ` ${c.name}`),
           h("td", { class: "mono" }, fromUnits(c.last_balance_units, c.decimals)),
-          rate, low, on,
+          rate, c.rate_updated_at ? when(c.rate_updated_at) : (c.price_id ? "En attente" : "Manuel"), low, on,
           saveButton("Enregistrer", () => api("update_coin", { code: c.code, coin: { enabled: on.checked, per_eur: rate.value ? Number(rate.value) : null, low_balance_units: toUnits(low.value, c.decimals) } })),
         ];
       }), ""),
-      h("p", { class: "muted", style: "margin-top:10px" }, "Vérifie le taux régulièrement : il ne se met pas à jour seul. Teste chaque crypto avec un petit retrait avant de l'activer.")));
+      h("p", { class: "muted", style: "margin-top:10px" }, "Avec les taux automatiques, la valeur saisie est remplacée à chaque heure. Un écart de plus de 50 % est ignoré et signalé. Teste chaque crypto avec un petit retrait avant de l'annoncer.")));
 }
 
 // Contenus -----------------------------------------------------------------

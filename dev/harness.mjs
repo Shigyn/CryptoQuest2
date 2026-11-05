@@ -87,6 +87,7 @@ export async function createHarness(options = {}) {
     verifyCaptcha: async (token) => token !== "mauvais",
     alert: async (t) => void alerts.push(t),
     shorten: async (_api, longUrl) => options.shortFails ? null : `/retour-simule?to=${encodeURIComponent(longUrl)}`,
+    prices: async (ids) => (options.prices === null ? null : Object.fromEntries(ids.map((id) => [id, (options.prices ?? { tether: 0.9, litecoin: 80, bitcoin: 90000 })[id] ?? 0]))),
     sleep: async () => {},
     ipPepper: "poivre",
     adminPassword: "mot-de-passe-de-test-long",

@@ -30,6 +30,8 @@ create table settings (
   -- Roue du jour : gratuite, un tour par jour, sans mise. Chaque case a la meme chance.
   wheel_prizes int[] not null default '{1,1,2,2,3,3,5,10,20}' check (cardinality(wheel_prizes) between 2 and 16),
   wheel_min_claims int not null default 1 check (wheel_min_claims >= 0),
+  -- Taux de change mis a jour par le lot horaire (un seul appel CoinGecko par heure).
+  auto_rates boolean not null default true,
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
   offer_share_percent numeric not null default 50 check (offer_share_percent >= 0 and offer_share_percent <= 100),
   updated_at timestamptz not null default now()
@@ -46,14 +48,19 @@ create table coins (
   enabled boolean not null default false,
   sort int not null default 100,
   last_balance_units bigint,
-  last_balance_at timestamptz
+  last_balance_at timestamptz,
+  -- Identifiant CoinGecko, pour le taux automatique. Vide : taux saisi a la main.
+  price_id text,
+  rate_updated_at timestamptz
 );
-insert into coins (code, name, per_eur, low_balance_units, enabled, sort) values
-  ('USDT', 'Tether', 1.10, 100000000, true, 1), ('DOGE', 'Dogecoin', null, 0, false, 2), ('TRX', 'TRON', null, 0, false, 3),
-  ('LTC', 'Litecoin', null, 0, false, 4), ('BTC', 'Bitcoin', null, 0, false, 5), ('ETH', 'Ethereum', null, 0, false, 6),
-  ('USDC', 'USD Coin', null, 0, false, 7), ('SOL', 'Solana', null, 0, false, 8), ('BNB', 'BNB', null, 0, false, 9),
-  ('BCH', 'Bitcoin Cash', null, 0, false, 10), ('DASH', 'Dash', null, 0, false, 11), ('DGB', 'DigiByte', null, 0, false, 12),
-  ('ZEC', 'Zcash', null, 0, false, 13), ('FEY', 'Feyorra', null, 0, false, 14);
+insert into coins (code, name, per_eur, low_balance_units, enabled, sort, price_id) values
+  ('USDT', 'Tether', 1.10, 100000000, true, 1, 'tether'), ('LTC', 'Litecoin', null, 0, true, 2, 'litecoin'),
+  ('BTC', 'Bitcoin', null, 0, true, 3, 'bitcoin'), ('DOGE', 'Dogecoin', null, 0, false, 4, 'dogecoin'),
+  ('TRX', 'TRON', null, 0, false, 5, 'tron'), ('ETH', 'Ethereum', null, 0, false, 6, 'ethereum'),
+  ('USDC', 'USD Coin', null, 0, false, 7, 'usd-coin'), ('SOL', 'Solana', null, 0, false, 8, 'solana'),
+  ('BNB', 'BNB', null, 0, false, 9, 'binancecoin'), ('BCH', 'Bitcoin Cash', null, 0, false, 10, 'bitcoin-cash'),
+  ('DASH', 'Dash', null, 0, false, 11, 'dash'), ('DGB', 'DigiByte', null, 0, false, 12, 'digibyte'),
+  ('ZEC', 'Zcash', null, 0, false, 13, 'zcash'), ('FEY', 'Feyorra', null, 0, false, 14, null);
 
 -- Le compte, c'est l'adresse FaucetPay : pas d'e-mail ni de mot de passe a part.
 -- Les gains ne peuvent partir que vers cette adresse.
@@ -785,6 +792,20 @@ returns jsonb language sql stable set search_path = public as $$
     order by validated desc limit p_limit) x;
 $$;
 
+create function rate_targets()
+returns jsonb language sql stable set search_path = public as $fn$
+  select jsonb_build_object('auto', (select auto_rates from settings where id = 1),
+    'coins', coalesce(jsonb_agg(jsonb_build_object('code', code, 'price_id', price_id, 'per_eur', per_eur)), '[]'::jsonb))
+  from coins where price_id is not null and enabled;
+$fn$;
+
+-- p : {"LTC": 0.0125, ...} = combien de cette crypto pour 1 euro.
+create function set_rates(p jsonb)
+returns void language sql set search_path = public as $fn$
+  update coins c set per_eur = (p->>c.code)::numeric, rate_updated_at = now()
+   where p ? c.code and (p->>c.code)::numeric > 0;
+$fn$;
+
 create function pause_faucet(p_reason text)
 returns void language sql set search_path = public as $$
   update settings set paused = true, pause_reason = p_reason, updated_at = now() where id = 1;
@@ -982,6 +1003,7 @@ begin
     daily_bonus_tokens = coalesce((p->>'daily_bonus_tokens')::int, daily_bonus_tokens),
     daily_bonus_min_claims = coalesce((p->>'daily_bonus_min_claims')::int, daily_bonus_min_claims),
     wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
+    auto_rates = coalesce((p->>'auto_rates')::boolean, auto_rates),
     wheel_prizes = case when jsonb_typeof(p->'wheel_prizes') = 'array'
                         then (select array_agg(x::int) from jsonb_array_elements_text(p->'wheel_prizes') x)
                         else wheel_prizes end,

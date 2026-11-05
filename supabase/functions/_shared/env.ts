@@ -50,6 +50,18 @@ export function depsFromEnv(): Deps {
         return null;
       }
     },
+    prices: async (ids) => {
+      try {
+        const url = `https://api.coingecko.com/api/v3/simple/price?vs_currencies=eur&ids=${encodeURIComponent(ids.join(","))}`;
+        const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) return null;
+        const body = await res.json();
+        return Object.fromEntries(Object.entries(body).map(([id, v]: [string, any]) => [id, Number(v?.eur)]));
+      } catch (err) {
+        console.error("prix", err);
+        return null;
+      }
+    },
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     ipPepper: env("IP_PEPPER"),
     adminPassword: env("ADMIN_PASSWORD"),

@@ -435,6 +435,38 @@ test("offerwall : statut d'annulation propre au reseau, ou montant negatif", asy
   assert.equal((await me(h, u)).pending, 0);
 });
 
+test("taux automatiques : mis a jour par le lot horaire, ecart aberrant ignore", async () => {
+  const h = await createHarness({ prices: { tether: 0.9, litecoin: 80, bitcoin: 90000 } });
+  const r = await cron(h);
+  assert.deepEqual(r.body.rates.updated.sort(), ["BTC", "LTC", "USDT"]);
+  const coins = Object.fromEntries((await h.pg.query("select code, per_eur::float8 v, rate_updated_at from coins")).rows.map((c) => [c.code, c]));
+  assert.ok(Math.abs(coins.USDT.v - 1 / 0.9) < 1e-6);
+  assert.equal(coins.LTC.v, 0.0125);
+  assert.ok(coins.BTC.rate_updated_at);
+  assert.equal(coins.DOGE.v, null, "crypto inactive avec taux deja vide : pas d'appel inutile");
+
+  // Le LTC passe a 8 000 € d'un coup : prix douteux, on garde l'ancien taux.
+  const h2 = await createHarness({ prices: { tether: 0.9, litecoin: 8000, bitcoin: 90000 } });
+  await h2.pg.query("update coins set per_eur = 0.0125 where code = 'LTC'");
+  const r2 = await cron(h2);
+  assert.deepEqual(r2.body.rates.skipped, ["LTC"]);
+  assert.equal((await h2.pg.query("select per_eur::float8 v from coins where code = 'LTC'")).rows[0].v, 0.0125);
+  assert.match(h2.alerts[0], /LTC/);
+});
+
+test("taux automatiques : desactivables, service injoignable sans casse, bouton admin", async () => {
+  const h = await createHarness({ prices: null });
+  const r = await cron(h);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.rates.error, "Service de prix injoignable");
+  assert.equal((await h.pg.query("select per_eur::float8 v from coins where code = 'USDT'")).rows[0].v, 1.1);
+
+  const h2 = await createHarness();
+  await admin(h2, { action: "update_settings", settings: { auto_rates: false } });
+  assert.deepEqual((await cron(h2)).body.rates.updated, []);
+  assert.equal((await admin(h2, { action: "refresh_rates" })).body.updated.length, 3, "le bouton force la mise a jour");
+});
+
 test("validation puis lot horaire : tout part en un seul paiement, a un seul moment", async () => {
   const h = await createHarness();
   await admin(h, { action: "save_offerwall", item: { code: "mur", name: "Mur", iframe_url: "https://x/{user}", postback_secret: "s" } });
