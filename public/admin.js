@@ -125,7 +125,7 @@ function earningsTab() {
       h("div", { class: "row between", style: "margin-bottom:10px" },
         h("p", { class: "muted" }, `${earnings.length} gains en attente, dont ${earnings.length - clean} signalés. Les gains signalés se valident un par un.`),
         saveButton(`Tout valider sauf les signalés (${clean})`, () => api("validate", { all_clean: true }), "btn")),
-      table(["Date", "Membre", "Origine", "Tokens", "Alerte", "Actions"], earnings.map((e) => [
+      table(["Date", "Membre", "Origine", TK, "Alerte", "Actions"], earnings.map((e) => [
         when(e.created_at),
         h("td", { class: "wrap" }, e.email),
         `${SOURCE[e.source]} · ${e.label ?? ""}`,
@@ -149,7 +149,7 @@ function withdrawalsTab() {
     onclick: () => { wdFilter = f; render(); },
   }, label);
   api("withdrawals", { filter: wdFilter }).then(({ withdrawals }) => {
-    box.replaceChildren(table(["Date", "Membre", "Type", "Tokens", "Montant", "État", "Détail", ""], withdrawals.map((w) => [
+    box.replaceChildren(table(["Date", "Membre", "Type", TK, "Montant", "État", "Détail", ""], withdrawals.map((w) => [
       when(w.created_at),
       h("td", { class: "wrap" }, w.email),
       w.kind === "instant" ? "Immédiat" : "Horaire",

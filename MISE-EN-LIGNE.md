@@ -1,4 +1,4 @@
-# Mettre CryptoCoin en ligne
+# Mettre CryptoQuest en ligne
 
 Compte environ 45 minutes. Tu saisis toi-même chaque clé secrète : ne les colle jamais dans `public/` ni dans une conversation.
 

@@ -42,7 +42,7 @@ createServer(async (req, res) => {
   if (url.pathname === "/config.js") {
     res.writeHead(200, { "Content-Type": "text/javascript" });
     // 1x00000000000000000000AA : cle d'essai publique de Cloudflare, toujours valide.
-    res.end(`window.FAUCET_CONFIG = { SITE_NAME: "CryptoCoin", TOKEN: "CC", API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA", ADS: { top: "", bottom: "" } };`);
+    res.end(`window.FAUCET_CONFIG = { SITE_NAME: "CryptoQuest", TOKEN: "CC", API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA", ADS: { top: "", bottom: "" } };`);
     return;
   }
 
@@ -65,4 +65,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404).end("Introuvable");
   }
-}).listen(PORT, () => console.log(`CryptoCoin local : http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`CryptoQuest local : http://localhost:${PORT}`));
