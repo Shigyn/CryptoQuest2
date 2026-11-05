@@ -26,6 +26,12 @@ export function simulate(i) {
       cost: eur(allUsers * days * i.daily_bonus_tokens),
     },
     {
+      key: "wheel",
+      label: "Roue du jour",
+      revenue: 0,
+      cost: eur(allUsers * days * (Number(i.wheel_tokens_per_user) || 0)),
+    },
+    {
       key: "challenges",
       label: "Défis",
       revenue: 0,
@@ -91,6 +97,7 @@ export const BASE = {
   ecpm_eur: 0.5,
   fill_percent: 80,
   daily_bonus_tokens: 5,
+  wheel_tokens_per_user: 5,
   challenge_tokens_per_user: 2,
   ptc_per_user: 2,
   ptc_price_eur: 0.002,

@@ -214,6 +214,7 @@ const FIELDS = [
   ["max_signups_ip_day", "Inscriptions par IP, sur 24 h"],
   ["daily_bonus_tokens", `Bonus quotidien (${TK})`],
   ["daily_bonus_min_claims", "Réclamations requises pour le bonus"],
+  ["wheel_min_claims", "Réclamations requises pour la roue du jour"],
   ["referral_percent", "Part du parrain (%)"],
   ["offer_share_percent", "Part des offerwalls reversée (%)"],
 ];
@@ -221,16 +222,22 @@ const FIELDS = [
 function settingsTab() {
   const s = data.settings;
   const inputs = Object.fromEntries(FIELDS.map(([k]) => [k, h("input", { type: "number", min: "0", step: "any", value: s[k], required: true })]));
+  const prizes = h("input", { value: (s.wheel_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const prizeList = () => prizes.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   return h("div", { class: "stack" },
     card("Récompenses et plafonds",
       h("p", { class: "muted", style: "margin-bottom:12px" }, `Taux fixe : ${fmt(s.tokens_per_eur)} ${TK} = 1 €.`),
       h("form", {
         onsubmit: (e) => {
           e.preventDefault();
-          act(() => api("update_settings", { settings: Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])) }));
+          const list = prizeList();
+          if (list.length < 2 || list.length > 16) { errorText = "La roue doit avoir entre 2 et 16 cases."; render(); return; }
+          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list } }));
         },
       },
         h("div", { class: "grid" }, FIELDS.map(([k, label]) => h("label", { class: "field" }, label, inputs[k]))),
+        h("label", { class: "field" }, `Cases de la roue du jour (${TK}, séparées par des virgules, chaque case a la même chance)`, prizes),
+        h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Gain moyen actuel : ${(prizeList().reduce((a, b) => a + b, 0) / Math.max(prizeList().length, 1)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${TK} par membre et par jour.`),
         h("button", { class: "btn" }, "Enregistrer les réglages"))),
     card("Cryptos de retrait",
       table(["Crypto", "Solde", "Combien pour 1 €", "Alerte si solde sous", "Active", ""], data.coins.map((c) => {
@@ -285,10 +292,15 @@ function contentTab() {
         ["daily_limit", "Passages par jour", "number", 1], ["revenue_eur_per_view", "Ce que te paie le réseau par vue (€)", "number", 0.003],
       ], "Ajouter le réseau", (item) => api("save_shortlink", { item }))),
     card("Offerwalls",
-      table(["Code", "Nom", "État", ""], data.offerwalls.map((o) => [o.code, o.name, statePill(o.enabled), toggle(o, "save_offerwall", "code")]), "Aucun offerwall pour le moment."),
-      h("div", { class: "notice info", style: "margin-top:12px;overflow-wrap:anywhere" }, "Adresse de retour à donner au réseau : ", h("span", { class: "mono" }, `${postbackUrl}?wall=CODE&secret=SECRET&user={USER}&tx={TX}&usd={MONTANT}`), ". Remplace les éléments entre accolades par les variables du réseau. Pour une annulation, le réseau ajoute status=reversed."),
+      table(["Code", "Nom", "Statut d'annulation", "Adresse de retour à donner au réseau", "État", ""], data.offerwalls.map((o) => [
+        o.code, o.name, h("td", { class: "mono" }, o.reversed_status),
+        h("td", { class: "mono wrap" }, `${postbackUrl}?wall=${o.code}&secret=${o.postback_secret}&user={USER}&tx={TX}&usd={MONTANT}&status={STATUT}`),
+        statePill(o.enabled), toggle(o, "save_offerwall", "code"),
+      ]), "Aucun offerwall pour le moment."),
+      h("div", { class: "notice info", style: "margin-top:12px" }, "Dans l'adresse de retour, remplace {USER}, {TX}, {MONTANT} et {STATUT} par les variables du réseau : identifiant du membre, identifiant de la transaction, gain en dollars, statut. Une annulation est reconnue par le statut indiqué, ou par un montant négatif."),
       addForm([
         ["code", "Code (sans espace)"], ["name", "Nom"], ["iframe_url", "Adresse du mur, avec {user} à la place du membre"], ["postback_secret", "Secret choisi par toi"],
+        ["reversed_status", "Valeur du statut quand le réseau annule une offre", "text", "reversed"],
       ], "Ajouter l'offerwall", (item) => api("save_offerwall", { item }))),
     card("Défis du jour",
       table(["Défi", "Objectif", "Récompense", "État", ""], data.challenges.map((c) => [
@@ -301,7 +313,7 @@ function contentTab() {
 // Simulateur ---------------------------------------------------------------
 const SIM_GROUPS = [
   ["Audience", [["users_per_day", "Vrais membres actifs par jour"], ["bot_percent", "Part de robots (%)"], ["claims_per_user", "Réclamations par membre et par jour"]]],
-  ["Faucet et pub", [["faucet_reward_tokens", `Récompense par réclamation (${TK})`], ["ads_per_claim", "Pubs vues par réclamation"], ["ecpm_eur", "Revenu pour 1 000 affichages (€)"], ["fill_percent", "Pubs réellement remplies (%)"], ["daily_bonus_tokens", `Bonus quotidien (${TK})`], ["challenge_tokens_per_user", `Défis par membre et par jour (${TK})`]]],
+  ["Faucet et pub", [["faucet_reward_tokens", `Récompense par réclamation (${TK})`], ["ads_per_claim", "Pubs vues par réclamation"], ["ecpm_eur", "Revenu pour 1 000 affichages (€)"], ["fill_percent", "Pubs réellement remplies (%)"], ["daily_bonus_tokens", `Bonus quotidien (${TK})`], ["wheel_tokens_per_user", `Roue du jour, gain moyen (${TK})`], ["challenge_tokens_per_user", `Défis par membre et par jour (${TK})`]]],
   ["PTC", [["ptc_per_user", "Vues par membre et par jour"], ["ptc_price_eur", "Prix payé par l'annonceur par vue (€)"], ["ptc_reward_tokens", `Récompense par vue (${TK})`]]],
   ["Liens raccourcis", [["links_per_user", "Liens par membre et par jour"], ["link_revenue_eur", "Revenu par lien (€)"], ["link_reward_tokens", `Récompense par lien (${TK})`]]],
   ["Offerwalls", [["offers_per_user_day", "Offres par membre et par jour"], ["offer_revenue_eur", "Revenu moyen par offre (€)"], ["offer_share_percent", "Part reversée (%)"]]],
@@ -371,6 +383,7 @@ function simulatorTab() {
       tokens_per_eur: s.tokens_per_eur,
       faucet_reward_tokens: s.faucet_reward_tokens,
       daily_bonus_tokens: s.daily_bonus_tokens,
+      wheel_tokens_per_user: Math.round((s.wheel_prizes || []).reduce((a, b) => a + b, 0) / Math.max((s.wheel_prizes || []).length, 1) * 10) / 10,
       referral_percent: Number(s.referral_percent),
       offer_share_percent: Number(s.offer_share_percent),
       users_per_day: active,

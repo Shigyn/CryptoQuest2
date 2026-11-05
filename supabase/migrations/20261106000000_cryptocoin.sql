@@ -27,6 +27,9 @@ create table settings (
   max_signups_ip_day int not null default 3 check (max_signups_ip_day >= 1),
   daily_bonus_tokens int not null default 5 check (daily_bonus_tokens >= 0),
   daily_bonus_min_claims int not null default 1 check (daily_bonus_min_claims >= 0),
+  -- Roue du jour : gratuite, un tour par jour, sans mise. Chaque case a la meme chance.
+  wheel_prizes int[] not null default '{1,1,2,2,3,3,5,10,20}' check (cardinality(wheel_prizes) between 2 and 16),
+  wheel_min_claims int not null default 1 check (wheel_min_claims >= 0),
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
   offer_share_percent numeric not null default 50 check (offer_share_percent >= 0 and offer_share_percent <= 100),
   updated_at timestamptz not null default now()
@@ -70,6 +73,7 @@ create table users (
   pending bigint not null default 0,
   validated bigint not null default 0,
   last_daily_day date,
+  last_wheel_day date,
   signup_ip_hash text not null,
   last_ip_hash text,
   banned boolean not null default false,
@@ -201,6 +205,7 @@ create table offerwalls (
   name text not null,
   iframe_url text not null,
   postback_secret text not null,
+  reversed_status text not null default 'reversed',
   enabled boolean not null default true
 );
 
@@ -430,6 +435,32 @@ begin
   update users set last_daily_day = today where id = p_user;
   perform move_tokens(p_user, 'available', s.daily_bonus_tokens, 'daily', today::text);
   return jsonb_build_object('ok', true, 'tokens', s.daily_bonus_tokens);
+end $$;
+
+create function spin_wheel(p_user uuid, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  blk text;
+  today date := (now() at time zone 'utc')::date;
+  n int;
+  idx int;
+  prize int;
+begin
+  select * into u from users where id = p_user for update;
+  select * into s from settings where id = 1;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  if u.last_wheel_day = today then return jsonb_build_object('ok', false, 'code', 'already_done'); end if;
+  select count(*) into n from claims where user_id = p_user and (at at time zone 'utc')::date = today;
+  if n < s.wheel_min_claims then return jsonb_build_object('ok', false, 'code', 'not_reached'); end if;
+  -- Tirage cote serveur : le navigateur ne fait qu'afficher le resultat.
+  idx := floor(random() * cardinality(s.wheel_prizes))::int + 1;
+  prize := s.wheel_prizes[idx];
+  update users set last_wheel_day = today where id = p_user;
+  perform move_tokens(p_user, 'available', prize, 'wheel', today::text);
+  return jsonb_build_object('ok', true, 'tokens', prize, 'index', idx - 1);
 end $$;
 
 create function claim_challenge(p_user uuid, p_id bigint, p_ip_hash text)
@@ -772,6 +803,9 @@ returns jsonb language sql stable set search_path = public as $$
     'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
+    'wheel_done', u.last_wheel_day = (now() at time zone 'utc')::date,
+    'wheel_prizes', s.wheel_prizes,
+    'wheel_min_claims', s.wheel_min_claims,
     'daily_bonus_tokens', s.daily_bonus_tokens,
     'claims_today', (select count(*) from claims where user_id = u.id and (at at time zone 'utc')::date = (now() at time zone 'utc')::date),
     'retry_after', greatest(coalesce((select ceil(extract(epoch from max(at) + make_interval(secs => s.cooldown_seconds) - now()))::int from claims where user_id = u.id), 0), 0),
@@ -929,6 +963,10 @@ begin
     max_signups_ip_day = coalesce((p->>'max_signups_ip_day')::int, max_signups_ip_day),
     daily_bonus_tokens = coalesce((p->>'daily_bonus_tokens')::int, daily_bonus_tokens),
     daily_bonus_min_claims = coalesce((p->>'daily_bonus_min_claims')::int, daily_bonus_min_claims),
+    wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
+    wheel_prizes = case when jsonb_typeof(p->'wheel_prizes') = 'array'
+                        then (select array_agg(x::int) from jsonb_array_elements_text(p->'wheel_prizes') x)
+                        else wheel_prizes end,
     referral_percent = coalesce((p->>'referral_percent')::numeric, referral_percent),
     offer_share_percent = coalesce((p->>'offer_share_percent')::numeric, offer_share_percent),
     updated_at = now()
@@ -976,9 +1014,10 @@ create function admin_save_offerwall(p jsonb)
 returns void language plpgsql set search_path = public as $$
 begin
   if p ? 'iframe_url' then
-    insert into offerwalls (code, name, iframe_url, postback_secret)
-    values (p->>'code', p->>'name', p->>'iframe_url', p->>'postback_secret')
-    on conflict (code) do update set name = excluded.name, iframe_url = excluded.iframe_url, postback_secret = excluded.postback_secret;
+    insert into offerwalls (code, name, iframe_url, postback_secret, reversed_status)
+    values (p->>'code', p->>'name', p->>'iframe_url', p->>'postback_secret', coalesce(nullif(p->>'reversed_status', ''), 'reversed'))
+    on conflict (code) do update set name = excluded.name, iframe_url = excluded.iframe_url,
+      postback_secret = excluded.postback_secret, reversed_status = excluded.reversed_status;
   else
     update offerwalls set enabled = coalesce((p->>'enabled')::boolean, enabled) where code = p->>'code';
   end if;

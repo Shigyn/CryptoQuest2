@@ -44,6 +44,10 @@
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"],
     secSave: ["Enregistrer le mot de passe", "Save password"], secChange: ["Changer le mot de passe", "Change password"],
     secDone: ["Mot de passe enregistré.", "Password saved."],
+    wheel: ["Roue du jour", "Daily wheel"],
+    wheelText: ["Un tour gratuit par jour, après ta première réclamation. Aucune mise.", "One free spin a day, after your first claim. No stake."],
+    spin: ["Tourner la roue", "Spin the wheel"], spun: ["Reviens demain pour un nouveau tour.", "Come back tomorrow for another spin."],
+    won: ["gagnés à la roue.", "won on the wheel."],
     available: ["Disponible", "Available"], pending: ["À valider", "Under review"], validated: ["Validé", "Approved"],
     linkTitle: ["Relie ton compte FaucetPay", "Link your FaucetPay account"],
     linkText: ["Il faut un compte FaucetPay pour gagner et retirer tes CryptoCoin.", "You need a FaucetPay account to earn and withdraw CryptoCoin."],
@@ -504,6 +508,39 @@
       h("h2", {}, t("daily")), h("p", { class: "muted", style: "margin:4px 0 12px" }, t("bonusText")), btn);
   }
 
+  // Roue gratuite : le serveur tire le gain, la roue ne fait que l'afficher.
+  function wheelCard() {
+    const prizes = me.wheel_prizes || [];
+    const n = Math.max(prizes.length, 1);
+    const colors = ["#1f5ae0", "#5fb4f5", "#14275a", "#ffaa40"];
+    const stops = prizes.map((_, i) => `${colors[i % (n % 4 === 1 && i === n - 1 ? 3 : 4)]} ${(i / n) * 360}deg ${((i + 1) / n) * 360}deg`).join(", ");
+    const disc = h("div", { class: "wheel-disc", style: `background:conic-gradient(${stops})` },
+      prizes.map((p, i) => h("span", { class: "wheel-label", style: `transform:translate(-50%, -50%) rotate(${(i + 0.5) * 360 / n}deg) translateY(-74px)` }, String(p))));
+    let turns = Number(store.get("cc.wheelTurn")) || 0;
+    disc.style.transform = `rotate(${turns}deg)`;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const btn = h("button", {
+      class: "btn", disabled: me.wheel_done || me.claims_today < me.wheel_min_claims,
+      onclick: async () => {
+        btn.disabled = true;
+        const r = await api("wheel");
+        if (!r.ok) { toast(message(r), "bad"); btn.disabled = false; return; }
+        // La case gagnante s'arrete sous le pointeur, en haut.
+        const target = 360 - (r.index + 0.5) * 360 / n;
+        turns = turns - (turns % 360) + 360 * 5 + target;
+        store.set("cc.wheelTurn", String(turns % 360));
+        disc.style.transition = reduce ? "none" : "transform 4s cubic-bezier(.15,.85,.2,1)";
+        disc.style.transform = `rotate(${turns}deg)`;
+        setTimeout(async () => { toast(`${tk(r.tokens)} ${t("won")}`, "good"); await refreshMe(); render(); }, reduce ? 50 : 4200);
+      },
+    }, me.wheel_done ? t("done") : t("spin"));
+    return h("section", { class: "card" },
+      h("h2", {}, t("wheel")),
+      h("p", { class: "muted", style: "margin:4px 0 12px" }, me.wheel_done ? t("spun") : t("wheelText")),
+      h("div", { class: "wheel" }, h("div", { class: "wheel-pointer", "aria-hidden": "true" }), disc),
+      h("div", { style: "text-align:center;margin-top:12px" }, btn));
+  }
+
   function challengesCard() {
     return h("section", { class: "card" },
       h("div", { class: "row between", style: "margin-bottom:8px" }, h("h2", {}, t("challenges")), h("span", { class: "pill" }, `${me.claims_today} ${t("progress")}`)),
@@ -683,7 +720,7 @@
   const SOURCE = {
     faucet: ["Faucet", "Faucet"], daily: ["Bonus quotidien", "Daily bonus"], challenge: ["Défi", "Challenge"], referral: ["Parrainage", "Referral"],
     ptc: ["Pub payante", "Paid ad"], shortlink: ["Lien raccourci", "Shortlink"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
-    validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
+    wheel: ["Roue du jour", "Daily wheel"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
   };
   function historyPage() {
     const bucket = { available: t("available"), pending: t("pending"), validated: t("validated") };
@@ -701,7 +738,7 @@
 
   function dashboardPage() {
     return h("div", { class: "stack" },
-      h("div", { class: "grid" }, faucetCard(), bonusCard()),
+      h("div", { class: "grid" }, faucetCard(), wheelCard(), bonusCard()),
       challengesCard(),
       h("section", { class: "card" }, h("h2", { style: "margin-bottom:8px" }, t("latest")), recentList(status?.recent)));
   }
@@ -715,7 +752,7 @@
 
     const page = {
       "": dashboardPage, faucet: faucetCard, ptc: ptcPage, links: linksPage, offers: offersPage,
-      challenges: () => h("div", { class: "stack" }, bonusCard(), challengesCard()),
+      challenges: () => h("div", { class: "stack" }, h("div", { class: "grid" }, wheelCard(), bonusCard()), challengesCard()),
       referral: referralPage, withdraw: withdrawPage, history: historyPage, security: securityPage,
     }[route]?.() ?? dashboardPage();
 

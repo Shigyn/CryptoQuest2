@@ -55,14 +55,22 @@ Facultatif, pour recevoir les alertes sur Telegram : ajoute `TELEGRAM_BOT_TOKEN`
 
 ## 4. Le paiement toutes les heures
 
-Dans Supabase, ouvre **Integrations > Cron**, crée une tâche, puis :
+Le fichier `supabase/cron.local.sql` est prêt sur ton ordinateur. Il contient ton secret de lot, donc il n'est pas publié sur GitHub.
 
-- Horaire : `0 * * * *`
-- Type : requête HTTP, méthode POST
-- Adresse : `https://VOTRE_REF.supabase.co/functions/v1/cron`
-- En-tête : `Authorization` = `Bearer ` suivi de la valeur `CRON_SECRET` de ton `.env`
+Ouvre-le, copie tout, colle-le dans **SQL Editor**, puis clique sur **Run**. La dernière ligne doit afficher `cryptoquest-paiement-horaire`, `0 * * * *` et `true`.
 
-Un lot paie environ 120 membres au maximum, à un paiement par seconde. Le reste part au lot suivant. Le bouton « Lancer le lot maintenant » du dashboard fait la même chose.
+Un lot paie environ 120 membres au maximum, à un paiement par seconde. Le reste part au lot suivant. Le bouton « Lancer le lot maintenant » du dashboard fait la même chose à la demande.
+
+## Brancher les réseaux qui rapportent
+
+Tout se règle dans le dashboard, onglet « PTC, liens, offres ». Chaque réseau demande d'abord ton inscription comme éditeur, et peut refuser un site de faucet : c'est à toi de t'inscrire.
+
+- **Offerwalls :** ajoute le réseau avec un code, l'adresse du mur fournie par le réseau (`{user}` à la place du membre) et un secret que tu choisis. Le dashboard affiche ensuite l'adresse de retour à copier chez le réseau, où tu remplaces `{USER}`, `{TX}`, `{MONTANT}` et `{STATUT}` par ses variables. Indique aussi la valeur que le réseau envoie pour une annulation.
+- **Liens raccourcis :** colle l'adresse de l'API du réseau avec `{url}` à la place du lien. Le site attend une réponse JSON contenant `shortenedUrl`, le format courant ; vérifie-le pour chaque réseau.
+- **PTC :** chaque campagne d'annonceur se saisit à la main, avec le prix qu'il te paie par vue.
+- **Bannières :** colle le code HTML du réseau (par exemple celui de ton espace pub FaucetPay) dans `ADS` de `public/config.js`, puis envoie-le-moi pour que je le publie.
+
+Après chaque branchement, fais un test réel avec ton propre compte avant de l'annoncer.
 
 ## 5. Le site
 

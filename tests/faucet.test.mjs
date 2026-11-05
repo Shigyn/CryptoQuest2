@@ -188,6 +188,27 @@ test("bonus quotidien et defis : une fois par jour, seulement si l'objectif est 
   assert.equal((await api(h, "challenge", { session: u.session, id: first.id }, u.ip)).body.code, "already_done");
 });
 
+test("roue du jour : gratuite, une fois par jour, apres une reclamation, gain tire dans la liste", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.code, "not_reached");
+  await api(h, "claim", { session: u.session }, u.ip);
+  const r = await api(h, "wheel", { session: u.session }, u.ip);
+  assert.equal(r.body.ok, true);
+  const m = await me(h, u);
+  assert.equal(m.wheel_prizes[r.body.index], r.body.tokens);
+  assert.equal(m.available, 2 + r.body.tokens);
+  assert.equal(m.wheel_done, true);
+  assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.code, "already_done");
+});
+
+test("roue du jour : les cases se reglent dans le dashboard", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "update_settings", settings: { wheel_prizes: [7, 7], wheel_min_claims: 0 } });
+  const u = await newUser(h);
+  assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.tokens, 7);
+});
+
 test("le parrain gagne sa part sans perdre les fractions, pas depuis sa propre IP", async () => {
   const h = await createHarness();
   const parrain = await newUser(h);
@@ -387,6 +408,20 @@ test("offerwall : secret exige, partage du revenu, pas de double credit, annulat
   assert.equal((await me(h, u)).pending, 0);
 });
 
+test("offerwall : statut d'annulation propre au reseau, ou montant negatif", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "save_offerwall", item: { code: "cpx", name: "CPX", iframe_url: "https://x/{user}", postback_secret: "s", reversed_status: "2" } });
+  const u = await newUser(h);
+  const user = (await me(h, u)).ref_code;
+  await postback(h, { wall: "cpx", secret: "s", user, tx: "A", usd: "0.11", status: "1" });
+  assert.equal((await me(h, u)).pending, 500);
+  await postback(h, { wall: "cpx", secret: "s", user, tx: "A", usd: "0.11", status: "2" });
+  assert.equal((await me(h, u)).pending, 0);
+  await postback(h, { wall: "cpx", secret: "s", user, tx: "B", usd: "0.11" });
+  await postback(h, { wall: "cpx", secret: "s", user, tx: "B", usd: "-0.11" });
+  assert.equal((await me(h, u)).pending, 0);
+});
+
 test("validation puis lot horaire : tout part en un seul paiement, a un seul moment", async () => {
   const h = await createHarness();
   await admin(h, { action: "save_offerwall", item: { code: "mur", name: "Mur", iframe_url: "https://x/{user}", postback_secret: "s" } });
@@ -542,7 +577,7 @@ test("normalisation des adresses", () => {
 test("simulation : faucet seul, calcul a la main", () => {
   const r = simulate({
     ...BASE, users_per_day: 100, bot_percent: 0, claims_per_user: 10, faucet_reward_tokens: 2, ads_per_claim: 3,
-    ecpm_eur: 1, fill_percent: 100, daily_bonus_tokens: 0, challenge_tokens_per_user: 0, ptc_per_user: 0,
+    ecpm_eur: 1, fill_percent: 100, daily_bonus_tokens: 0, wheel_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0,
     links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0,
   });
   // 30 000 reclamations x 3 pubs = 90 000 affichages = 90 EUR ; 30 000 x 2 tokens = 60 000 tokens = 6 EUR
@@ -554,7 +589,7 @@ test("simulation : faucet seul, calcul a la main", () => {
 });
 
 test("simulation : les robots coutent sans rapporter", () => {
-  const off = { daily_bonus_tokens: 0, challenge_tokens_per_user: 0, ptc_per_user: 0, links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0 };
+  const off = { daily_bonus_tokens: 0, wheel_tokens_per_user: 0, challenge_tokens_per_user: 0, ptc_per_user: 0, links_per_user: 0, offers_per_user_day: 0, referral_share_percent: 0, fixed_costs_eur: 0 };
   const clean = simulate({ ...BASE, ...off, bot_percent: 0 });
   const bots = simulate({ ...BASE, ...off, bot_percent: 50 });
   assert.equal(bots.revenue, clean.revenue);

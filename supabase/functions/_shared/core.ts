@@ -255,6 +255,9 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "daily":
       return result(d, await d.rpc("claim_daily", { p_user: userId, p_ip_hash: ipHash }));
 
+    case "wheel":
+      return result(d, await d.rpc("spin_wheel", { p_user: userId, p_ip_hash: ipHash }));
+
     case "challenge":
       return result(d, await d.rpc("claim_challenge", { p_user: userId, p_id: Number(b.id), p_ip_hash: ipHash }));
 
@@ -321,12 +324,14 @@ export async function handlePostback(req: Request, d: Deps): Promise<Response> {
   const user = q.get("user");
   if (!tx || !user) return new Response("missing", { status: 400 });
 
-  if (q.get("status") === "reversed") {
+  // Annulation : la valeur choisie pour ce reseau, ou un montant negatif.
+  const usd = Number(q.get("usd"));
+  const status = q.get("status");
+  if ((status !== null && status === wall.reversed_status) || (Number.isFinite(usd) && usd < 0)) {
     await d.rpc("offer_reverse", { p_code: wall.code, p_tx: tx });
     return new Response("ok");
   }
-  const usd = Number(q.get("usd"));
-  if (!Number.isFinite(usd) || usd < 0) return new Response("invalid", { status: 400 });
+  if (!Number.isFinite(usd)) return new Response("invalid", { status: 400 });
   const r = await d.rpc("offer_postback", { p_code: wall.code, p_tx: tx, p_ref_code: user, p_usd: usd });
   return r.ok ? new Response("ok") : new Response(r.code, { status: 400 });
 }
