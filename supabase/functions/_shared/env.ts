@@ -39,8 +39,22 @@ export function depsFromEnv(): Deps {
         body: JSON.stringify({ chat_id: chat, text }),
       }).catch((err) => console.error("alerte Telegram", err));
     },
+    // Format courant des reseaux de liens : JSON avec shortenedUrl.
+    shorten: async (apiUrl, longUrl) => {
+      try {
+        const res = await fetch(apiUrl.replace("{url}", encodeURIComponent(longUrl)), { signal: AbortSignal.timeout(10000) });
+        const body = await res.json();
+        return body.shortenedUrl ?? body.shortened_url ?? body.short ?? null;
+      } catch (err) {
+        console.error("raccourcisseur", err);
+        return null;
+      }
+    },
+    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     ipPepper: env("IP_PEPPER"),
     adminPassword: env("ADMIN_PASSWORD"),
+    cronSecret: env("CRON_SECRET"),
     allowedOrigin: env("ALLOWED_ORIGIN") || "*",
+    siteUrl: env("SITE_URL"),
   };
 }

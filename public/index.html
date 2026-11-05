@@ -3,52 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Faucet</title>
-  <meta name="description" content="Reçois de la crypto gratuitement, versée tout de suite sur ton compte FaucetPay.">
+  <title>CryptoCoin</title>
+  <meta name="description" content="Gagne des CryptoCoin avec le faucet, puis retire-les sur ton compte FaucetPay.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="tank" aria-hidden="true"><div class="water" id="water"><div class="wave"></div></div></div>
-
-  <main class="page">
-    <p class="brand" id="brand"></p>
-
-    <div class="ad" id="ad-top" hidden></div>
-
-    <section class="card">
-      <h1 id="title"></h1>
-      <p class="lede" id="lede"></p>
-
-      <form id="form" novalidate>
-        <div class="coins" id="coins" role="radiogroup"></div>
-
-        <label class="field" for="address" id="address-label"></label>
-        <input id="address" name="address" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="128">
-
-        <div class="captcha" id="captcha"></div>
-
-        <button class="tap" id="tap" type="submit"></button>
-        <p class="message" id="message" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-
-    <section class="card recent" id="recent-card" hidden>
-      <h2 id="recent-title"></h2>
-      <ul id="recent"></ul>
-    </section>
-
-    <div class="ad" id="ad-bottom" hidden></div>
-
-    <footer class="foot">
-      <a href="legal.html" id="legal-link"></a>
-      <a href="https://faucetpay.io" rel="noopener" id="fp-link"></a>
-    </footer>
-  </main>
-
+  <div id="root"></div>
   <script src="config.js"></script>
-  <script src="faucet.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

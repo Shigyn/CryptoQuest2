@@ -1,8 +1,11 @@
-[functions.claim]
-verify_jwt = false
-
-[functions.status]
+[functions.api]
 verify_jwt = false
 
 [functions.admin]
+verify_jwt = false
+
+[functions.postback]
+verify_jwt = false
+
+[functions.cron]
 verify_jwt = false

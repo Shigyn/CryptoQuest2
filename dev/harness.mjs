@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { createFaucetPay } from "../supabase/functions/_shared/faucetpay.ts";
 
-const migration = new URL("../supabase/migrations/20261105000000_init.sql", import.meta.url);
+const migration = new URL("../supabase/migrations/20261106000000_cryptocoin.sql", import.meta.url);
 
 export async function createDb() {
   const pg = new PGlite();
@@ -21,18 +21,10 @@ export async function createDb() {
   return { pg, rpc };
 }
 
-// Comportement selon l'adresse : inconnu@x (compte inexistant), panne@x (coupure puis reprise),
+// Comportement selon l'adresse : inconnu@x (compte inexistant), panne@x (reponse perdue puis reprise),
 // panne-totale@x (FaucetPay ne repond plus). Une meme idempotency_key ne paie qu'une fois.
 export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } = {}) {
-  const state = {
-    balance,
-    payouts: [],
-    seen: new Map(),
-    calls: [],
-    failOnce: new Set(),
-    keyCapReached: false,
-    keyRevoked: false,
-  };
+  const state = { balance, payouts: [], seen: new Map(), calls: [], failOnce: new Set(), keyCapReached: false, keyRevoked: false };
 
   const reply = (http, body) =>
     new Response(JSON.stringify(body), { status: http, headers: { "Content-Type": "application/json" } });
@@ -42,7 +34,6 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
     const body = JSON.parse(init.body);
     state.calls.push({ path, body });
     if (state.keyRevoked) return reply(401, { success: false, message: "Unauthorized" });
-
     const hashOf = (a) => accounts[a] ?? "hash-" + a.toLowerCase();
 
     if (path === "/check-address") {
@@ -51,11 +42,9 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
       }
       return reply(200, { success: true, message: "OK", data: { payout_user_hash: hashOf(body.address) } });
     }
-
     if (path === "/balances") {
-      return reply(200, { success: true, message: "OK", data: { balances: [{ currency: "DOGE", balance: state.balance }] } });
+      return reply(200, { success: true, message: "OK", data: { balances: [{ currency: "USDT", balance: state.balance }] } });
     }
-
     if (path === "/send") {
       if (body.to.startsWith("panne-totale")) throw new Error("connection reset");
       if (body.to.startsWith("panne") && !state.failOnce.has(body.idempotency_key)) {
@@ -63,19 +52,15 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
         // Le paiement passe, mais la reponse se perd : c'est le cas dangereux.
         state.balance -= body.amount;
         state.payouts.push(body);
-        state.seen.set(body.idempotency_key, 1);
+        state.seen.set(body.idempotency_key, state.payouts.length);
         throw new Error("timeout");
       }
-      if (state.keyCapReached) {
-        return reply(429, { success: false, message: "Daily payout cap exceeded" });
-      }
+      if (state.keyCapReached) return reply(429, { success: false, message: "Daily payout cap exceeded" });
       if (body.to.startsWith("refuse")) {
         return reply(400, { success: false, status: 457, message: "Recipient refused by anti-fraud rules" });
       }
       if (!state.seen.has(body.idempotency_key)) {
-        if (state.balance < body.amount) {
-          return reply(402, { success: false, status: 402, message: "Insufficient balance" });
-        }
+        if (state.balance < body.amount) return reply(402, { success: false, status: 402, message: "Insufficient balance" });
         state.balance -= body.amount;
         state.payouts.push(body);
         state.seen.set(body.idempotency_key, state.payouts.length);
@@ -83,12 +68,7 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
       return reply(200, {
         success: true,
         message: "OK",
-        data: {
-          currency: body.currency,
-          balance: state.balance,
-          payout_id: 1000 + state.seen.get(body.idempotency_key),
-          payout_user_hash: hashOf(body.to),
-        },
+        data: { currency: body.currency, balance: state.balance, payout_id: 1000 + state.seen.get(body.idempotency_key), payout_user_hash: hashOf(body.to) },
       });
     }
     return reply(404, { success: false, message: "Not found" });
@@ -106,9 +86,13 @@ export async function createHarness(options = {}) {
     fp: mock.fp,
     verifyCaptcha: async (token) => token !== "mauvais",
     alert: async (t) => void alerts.push(t),
+    shorten: async (_api, longUrl) => options.shortFails ? null : `/retour-simule?to=${encodeURIComponent(longUrl)}`,
+    sleep: async () => {},
     ipPepper: "poivre",
     adminPassword: "mot-de-passe-de-test-long",
+    cronSecret: "secret-cron-de-test-long",
     allowedOrigin: "*",
+    siteUrl: options.siteUrl ?? "http://localhost:8188/",
   };
   return { pg, rpc, deps, mock, alerts };
 }

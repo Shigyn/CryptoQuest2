@@ -1,6 +1,7 @@
 // Seul fichier a remplir avant la mise en ligne. Ces valeurs sont publiques, jamais de cle secrete ici.
 window.FAUCET_CONFIG = {
-  SITE_NAME: "Faucet",
+  SITE_NAME: "CryptoCoin",
+  TOKEN: "CC",
   // https://VOTRE-PROJET.supabase.co/functions/v1
   API_BASE: "",
   // Cle de site Cloudflare Turnstile (pas le secret).
