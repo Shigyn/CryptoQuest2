@@ -3,7 +3,7 @@ window.FAUCET_CONFIG = {
   SITE_NAME: "CryptoQuest",
   TOKEN: "CC",
   // https://VOTRE-PROJET.supabase.co/functions/v1
-  API_BASE: "",
+  API_BASE: "https://snvfovahyugxpqtthfoo.supabase.co/functions/v1",
   // Cle de site Cloudflare Turnstile (pas le secret).
   TURNSTILE_SITE_KEY: "",
   // Code HTML fourni par le reseau publicitaire. Vide : l'emplacement reste masque.
