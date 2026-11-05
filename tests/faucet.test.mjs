@@ -654,3 +654,37 @@ test("simulation : les trois scenarios tournent et sont ordonnes", () => {
   assert.ok(net.every(Number.isFinite));
   assert.ok(net[0] < net[1] && net[1] < net[2], net.join());
 });
+
+test("profil : total gagne et serie de jours", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  let m = await me(h, u);
+  assert.equal(m.streak, 0);
+  assert.equal(m.earned_total, 0);
+  await api(h, "claim", { session: u.session }, u.ip);
+  await api(h, "daily", { session: u.session }, u.ip);
+  m = await me(h, u);
+  assert.equal(m.streak, 1);
+  assert.equal(m.earned_total, 7);
+  // Deux jours de plus en arriere, sans trou : serie de 3.
+  await h.pg.query("insert into claims (user_id, ip_hash, tokens, at) select user_id, ip_hash, 2, at - interval '1 day' from claims limit 1");
+  await h.pg.query("insert into claims (user_id, ip_hash, tokens, at) select user_id, ip_hash, 2, at - interval '2 days' from claims order by at desc limit 1");
+  assert.equal((await me(h, u)).streak, 3);
+  // Un retrait ne compte pas comme un gain.
+  await api(h, "withdraw", { session: u.session }, u.ip);
+  assert.equal((await me(h, u)).earned_total, 7);
+});
+
+test("tirage du faucet : nombre de 0 a 99 999, palier applique, jackpot", async () => {
+  const h = await createHarness();
+  await h.pg.exec(`update settings set roll_tiers = '[{"from": 0, "tokens": 7}]'`);
+  const u = await newUser(h);
+  const r = await api(h, "claim", { session: u.session }, u.ip);
+  assert.ok(r.body.roll >= 0 && r.body.roll <= 99999);
+  assert.equal(r.body.tokens, 7);
+  assert.equal((await me(h, u)).available, 7);
+  const { rows } = await h.pg.query("select ref from ledger where source = 'faucet'");
+  assert.equal(Number(rows[0].ref), r.body.roll, "le nombre tire est garde dans l'historique");
+  const s = await (await handleApi(new Request("http://x/api", { method: "POST", headers: { "cf-connecting-ip": "9.9.9.9" }, body: JSON.stringify({ action: "status" }) }), h.deps)).json();
+  assert.deepEqual(s.roll_tiers, [{ from: 0, tokens: 7 }]);
+});

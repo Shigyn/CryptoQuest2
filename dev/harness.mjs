@@ -12,6 +12,8 @@ export async function createDb() {
     grant usage on schema public to anon, authenticated, service_role;
   `);
   await pg.exec(readFileSync(migration, "utf8"));
+  // Tirage deterministe pour les tests : toujours la recompense de base.
+  if (!process.env.KEEP_ROLL) await pg.exec("update settings set roll_tiers = '[]'");
   const rpc = async (fn, args = {}) => {
     const keys = Object.keys(args);
     const call = keys.map((k, i) => `${k} => $${i + 1}`).join(", ");

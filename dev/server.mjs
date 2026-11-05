@@ -11,6 +11,7 @@ const PORT = Number(process.env.PORT) || 8188;
 const root = fileURLToPath(new URL("../public", import.meta.url));
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css" };
 
+process.env.KEEP_ROLL = "1";
 const h = await createHarness({ siteUrl: `http://localhost:${PORT}/` });
 const handlers = { api: handleApi, admin: handleAdmin, postback: handlePostback, cron: handleCron };
 

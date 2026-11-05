@@ -32,6 +32,8 @@ create table settings (
   wheel_min_claims int not null default 1 check (wheel_min_claims >= 0),
   -- Taux de change mis a jour par le lot horaire (un seul appel CoinGecko par heure).
   auto_rates boolean not null default true,
+  -- Tirage gratuit du faucet : nombre de 0 a 99 999. Sous le premier palier, la recompense de base.
+  roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 100}, {"from": 99999, "tokens": 10000}]',
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
   offer_share_percent numeric not null default 50 check (offer_share_percent >= 0 and offer_share_percent <= 100),
   updated_at timestamptz not null default now()
@@ -400,6 +402,8 @@ end $$;
 create function faucet_claim(p_user uuid, p_ip_hash text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
+  roll int;
+  reward int;
   s settings;
   u users;
   blk text;
@@ -434,11 +438,15 @@ begin
     return jsonb_build_object('ok', false, 'code', 'paused', 'tripped', true);
   end if;
 
-  insert into claims (user_id, ip_hash, tokens) values (p_user, p_ip_hash, s.faucet_reward_tokens);
-  perform move_tokens(p_user, 'available', s.faucet_reward_tokens, 'faucet', null);
-  perform credit_referral(p_user, s.faucet_reward_tokens);
-  return jsonb_build_object('ok', true, 'tokens', s.faucet_reward_tokens,
-    'available', u.available + s.faucet_reward_tokens, 'cooldown_seconds', s.cooldown_seconds);
+  -- Tirage cote serveur : le navigateur ne fait qu'afficher le nombre.
+  roll := floor(random() * 100000)::int;
+  reward := coalesce((select (t->>'tokens')::int from jsonb_array_elements(s.roll_tiers) t
+                      where roll >= (t->>'from')::int order by (t->>'from')::int desc limit 1), s.faucet_reward_tokens);
+  insert into claims (user_id, ip_hash, tokens) values (p_user, p_ip_hash, reward);
+  perform move_tokens(p_user, 'available', reward, 'faucet', roll::text);
+  perform credit_referral(p_user, reward);
+  return jsonb_build_object('ok', true, 'tokens', reward, 'roll', roll,
+    'available', u.available + reward, 'cooldown_seconds', s.cooldown_seconds);
 end $$;
 
 create function claim_daily(p_user uuid, p_ip_hash text)
@@ -819,6 +827,7 @@ returns jsonb language sql stable set search_path = public as $$
     'paused', s.paused,
     'tokens_per_eur', s.tokens_per_eur,
     'faucet_reward_tokens', s.faucet_reward_tokens,
+    'roll_tiers', s.roll_tiers,
     'cooldown_seconds', s.cooldown_seconds,
     'referral_percent', s.referral_percent,
     'daily_bonus_tokens', s.daily_bonus_tokens,
@@ -846,8 +855,18 @@ returns jsonb language sql stable set search_path = public as $$
     'wheel_prizes', s.wheel_prizes,
     'wheel_min_claims', s.wheel_min_claims,
     'daily_bonus_tokens', s.daily_bonus_tokens,
+    'claims_max', s.max_claims_account_day,
     'claims_today', (select count(*) from claims where user_id = u.id and (at at time zone 'utc')::date = (now() at time zone 'utc')::date),
     'retry_after', greatest(coalesce((select ceil(extract(epoch from max(at) + make_interval(secs => s.cooldown_seconds) - now()))::int from claims where user_id = u.id), 0), 0),
+    -- Gamification : total gagne (niveau) et serie de jours consecutifs avec au moins une reclamation.
+    'earned_total', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and delta > 0
+                      and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer')),
+    'streak', (with d as (select distinct (at at time zone 'utc')::date as day from claims
+                          where user_id = u.id and at > now() - interval '400 days'),
+                    g as (select day, day - (row_number() over (order by day))::int as grp from d)
+               select case when max(day) >= (now() at time zone 'utc')::date - 1
+                           then (select count(*) from g g2 where g2.grp = (select grp from g order by day desc limit 1))
+                           else 0 end from g),
     'referrals', (select count(*) from users r where r.referrer_id = u.id),
     'referral_earned', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and source = 'referral'),
     'coins', (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'per_eur', per_eur, 'decimals', decimals) order by sort), '[]'::jsonb)
@@ -994,6 +1013,7 @@ begin
     pause_reason = case when (p->>'paused')::boolean is false then null
                         when p ? 'pause_reason' then p->>'pause_reason' else pause_reason end,
     faucet_reward_tokens = coalesce((p->>'faucet_reward_tokens')::int, faucet_reward_tokens),
+    roll_tiers = case when jsonb_typeof(p->'roll_tiers') = 'array' then p->'roll_tiers' else roll_tiers end,
     cooldown_seconds = coalesce((p->>'cooldown_seconds')::int, cooldown_seconds),
     max_claims_account_day = coalesce((p->>'max_claims_account_day')::int, max_claims_account_day),
     max_claims_ip_day = coalesce((p->>'max_claims_ip_day')::int, max_claims_ip_day),
