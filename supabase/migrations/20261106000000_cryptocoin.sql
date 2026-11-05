@@ -52,16 +52,18 @@ insert into coins (code, name, per_eur, low_balance_units, enabled, sort) values
   ('BCH', 'Bitcoin Cash', null, 0, false, 10), ('DASH', 'Dash', null, 0, false, 11), ('DGB', 'DigiByte', null, 0, false, 12),
   ('ZEC', 'Zcash', null, 0, false, 13), ('FEY', 'Feyorra', null, 0, false, 14);
 
+-- Le compte, c'est l'adresse FaucetPay : pas d'e-mail ni de mot de passe a part.
+-- Les gains ne peuvent partir que vers cette adresse.
 create table users (
   id uuid primary key default gen_random_uuid(),
-  email text not null unique,
-  password_hash text not null,
   ref_code text not null unique default substr(replace(gen_random_uuid()::text, '-', ''), 1, 10),
   referrer_id uuid references users (id),
   referral_carry numeric not null default 0,
-  fp_address text,
-  fp_norm text unique,
+  fp_address text not null,
+  fp_norm text not null unique,
   fp_user_hash text unique,
+  -- Facultatif : une fois choisi, l'adresse seule ne suffit plus pour se connecter.
+  password_hash text,
   payout_coin text not null default 'USDT' references coins (code),
   -- available : retirable tout de suite. pending : a valider. validated : part au prochain lot horaire.
   available bigint not null default 0,
@@ -271,37 +273,52 @@ end $$;
 
 -- Comptes ----------------------------------------------------------------
 
-create function signup_user(p_email text, p_password_hash text, p_ip_hash text, p_ref text)
+-- Compte deja connu sous cette adresse : connexion sans appeler FaucetPay.
+create function find_fp_user(p_norm text)
+returns jsonb language sql stable set search_path = public as $$
+  select jsonb_build_object('user_id', id, 'password_hash', password_hash, 'banned', banned) from users where fp_norm = p_norm;
+$$;
+
+create function set_user_password(p_user uuid, p_hash text)
+returns void language sql set search_path = public as $$
+  update users set password_hash = p_hash where id = p_user;
+  -- Les autres appareils sont deconnectes.
+  delete from sessions where user_id = p_user;
+$$;
+
+-- Connexion par adresse FaucetPay. Une autre adresse du meme compte FaucetPay (e-mail, pseudo,
+-- portefeuille) ouvre le meme compte ici. Sinon, le compte est cree.
+create function fp_login(p_address text, p_norm text, p_hash text, p_ip_hash text, p_ref text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
   s settings;
+  u users;
   n int;
   rid uuid;
   new_id uuid;
 begin
   select * into s from settings where id = 1;
-  if exists (select 1 from bans where kind = 'ip' and value = p_ip_hash) then
+  if exists (select 1 from bans where (kind = 'ip' and value = p_ip_hash) or (kind = 'account' and value = p_hash)) then
     return jsonb_build_object('ok', false, 'code', 'banned');
   end if;
   perform pg_advisory_xact_lock(hashtextextended('signup:' || p_ip_hash, 0));
+
+  select * into u from users where fp_norm = p_norm or (p_hash is not null and fp_user_hash = p_hash) limit 1;
+  if found then
+    if u.banned then return jsonb_build_object('ok', false, 'code', 'banned'); end if;
+    return jsonb_build_object('ok', true, 'user_id', u.id, 'created', false, 'password_hash', u.password_hash);
+  end if;
+
   select count(*) into n from users where signup_ip_hash = p_ip_hash and created_at > now() - interval '24 hours';
   if n >= s.max_signups_ip_day then return jsonb_build_object('ok', false, 'code', 'too_many_signups'); end if;
-  if exists (select 1 from users where email = p_email) then
-    return jsonb_build_object('ok', false, 'code', 'email_taken');
-  end if;
   -- Pas de parrainage depuis sa propre connexion.
   if p_ref is not null then
     select id into rid from users where ref_code = p_ref and signup_ip_hash <> p_ip_hash and not banned;
   end if;
-  insert into users (email, password_hash, signup_ip_hash, last_ip_hash, referrer_id)
-  values (p_email, p_password_hash, p_ip_hash, p_ip_hash, rid) returning id into new_id;
-  return jsonb_build_object('ok', true, 'user_id', new_id);
+  insert into users (fp_address, fp_norm, fp_user_hash, signup_ip_hash, last_ip_hash, referrer_id)
+  values (p_address, p_norm, p_hash, p_ip_hash, p_ip_hash, rid) returning id into new_id;
+  return jsonb_build_object('ok', true, 'user_id', new_id, 'created', true);
 end $$;
-
-create function get_login(p_email text)
-returns jsonb language sql stable set search_path = public as $$
-  select jsonb_build_object('user_id', id, 'password_hash', password_hash) from users where email = p_email;
-$$;
 
 create function create_session(p_token_hash text, p_user uuid)
 returns void language sql set search_path = public as $$
@@ -323,19 +340,6 @@ begin
     update users set last_ip_hash = p_ip_hash where id = uid and last_ip_hash is distinct from p_ip_hash;
   end if;
   return uid;
-end $$;
-
-create function link_faucetpay(p_user uuid, p_address text, p_norm text, p_hash text)
-returns jsonb language plpgsql set search_path = public as $$
-begin
-  if p_hash is not null and exists (select 1 from bans where kind = 'account' and value = p_hash) then
-    return jsonb_build_object('ok', false, 'code', 'banned');
-  end if;
-  if exists (select 1 from users where id <> p_user and (fp_norm = p_norm or (p_hash is not null and fp_user_hash = p_hash))) then
-    return jsonb_build_object('ok', false, 'code', 'fp_taken');
-  end if;
-  update users set fp_address = p_address, fp_norm = p_norm, fp_user_hash = p_hash where id = p_user;
-  return jsonb_build_object('ok', true);
 end $$;
 
 create function set_payout_coin(p_user uuid, p_coin text)
@@ -765,7 +769,7 @@ $$;
 create function user_profile(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select jsonb_build_object(
-    'email', u.email, 'ref_code', u.ref_code, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
+    'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
     'daily_bonus_tokens', s.daily_bonus_tokens,
@@ -826,7 +830,7 @@ $$;
 create function admin_earnings(p_status text, p_limit int)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (
-    select e.id, e.created_at, e.source, e.label, e.tokens, e.status, e.risk, u.email, u.fp_address, e.user_id
+    select e.id, e.created_at, e.source, e.label, e.tokens, e.status, e.risk, u.fp_address as member, e.user_id
     from earnings e join users u on u.id = e.user_id
     where e.status = p_status order by e.risk is not null desc, e.created_at
     limit least(greatest(p_limit, 1), 200)) x;
@@ -866,7 +870,7 @@ end $$;
 create function admin_withdrawals(p_filter text, p_limit int)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (
-    select w.*, c.decimals, u.email from withdrawals w join coins c on c.code = w.coin join users u on u.id = w.user_id
+    select w.*, c.decimals, u.fp_address as member from withdrawals w join coins c on c.code = w.coin join users u on u.id = w.user_id
     where case p_filter
       when 'attention' then w.status = 'unknown' or (w.status = 'reserved' and w.created_at < now() - interval '2 minutes')
       when 'paid' then w.status = 'paid'
@@ -883,11 +887,11 @@ $$;
 create function admin_users(p_search text)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (
-    select u.id, u.email, u.fp_address, u.fp_user_hash, u.available, u.pending, u.validated, u.banned, u.ban_reason, u.created_at, u.last_ip_hash,
+    select u.id, u.fp_address, u.fp_user_hash, u.password_hash is not null as secured, u.available, u.pending, u.validated, u.banned, u.ban_reason, u.created_at, u.last_ip_hash,
       (select count(*) from claims c where c.user_id = u.id) as claims,
       (select count(*) from users o where o.last_ip_hash = u.last_ip_hash and o.id <> u.id) as same_ip
     from users u
-    where p_search = '' or u.email ilike '%' || p_search || '%' or u.fp_address ilike '%' || p_search || '%'
+    where p_search = '' or u.fp_address ilike '%' || p_search || '%'
     order by u.created_at desc limit 50) x;
 $$;
 

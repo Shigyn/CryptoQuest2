@@ -127,7 +127,7 @@ function earningsTab() {
         saveButton(`Tout valider sauf les signalés (${clean})`, () => api("validate", { all_clean: true }), "btn")),
       table(["Date", "Membre", "Origine", TK, "Alerte", "Actions"], earnings.map((e) => [
         when(e.created_at),
-        h("td", { class: "wrap" }, e.email),
+        h("td", { class: "wrap mono" }, e.member),
         `${SOURCE[e.source]} · ${e.label ?? ""}`,
         fmt(e.tokens),
         e.risk ? h("span", { class: "pill warn" }, e.risk) : "",
@@ -151,7 +151,7 @@ function withdrawalsTab() {
   api("withdrawals", { filter: wdFilter }).then(({ withdrawals }) => {
     box.replaceChildren(table(["Date", "Membre", "Type", TK, "Montant", "État", "Détail", ""], withdrawals.map((w) => [
       when(w.created_at),
-      h("td", { class: "wrap" }, w.email),
+      h("td", { class: "wrap mono" }, w.member),
       w.kind === "instant" ? "Immédiat" : "Horaire",
       fmt(w.tokens),
       h("td", { class: "mono" }, `${fromUnits(w.amount_units, w.decimals)} ${w.coin}`),
@@ -174,24 +174,24 @@ let userSearch = "";
 function usersTab() {
   const box = h("div", {}, empty("Chargement…"));
   const load = () => api("users", { search: userSearch }).then(({ users }) => {
-    box.replaceChildren(table(["Membre", "FaucetPay", "Dispo", "À valider", "Validé", "Réclam.", "IP partagée", "Actions"], users.map((u) => [
-      h("td", { class: "wrap" }, u.email, u.banned ? h("span", { class: "pill bad", style: "margin-left:6px" }, "Banni") : null),
-      h("td", { class: "wrap mono" }, u.fp_address ?? "—"),
+    box.replaceChildren(table(["Compte FaucetPay", "Mot de passe", "Dispo", "À valider", "Validé", "Réclam.", "IP partagée", "Actions"], users.map((u) => [
+      h("td", { class: "wrap mono" }, u.fp_address, u.banned ? h("span", { class: "pill bad", style: "margin-left:6px" }, "Banni") : null),
+      u.secured ? "Oui" : "Non",
       fmt(u.available), fmt(u.pending), fmt(u.validated), fmt(u.claims),
       u.same_ip > 0 ? h("span", { class: "pill warn" }, `${u.same_ip} autre(s)`) : "",
       h("div", { class: "row" },
         u.banned
           ? saveButton("Débannir", () => api("ban_user", { id: u.id, banned: false }))
           : saveButton("Bannir", () => api("ban_user", { id: u.id, banned: true, reason: "Décision admin" })),
-        u.last_ip_hash ? saveButton("Bannir l'IP", () => api("ban", { kind: "ip", value: u.last_ip_hash, reason: u.email })) : null,
-        u.fp_user_hash ? saveButton("Bannir le compte FP", () => api("ban", { kind: "account", value: u.fp_user_hash, reason: u.email })) : null),
+        u.last_ip_hash ? saveButton("Bannir l'IP", () => api("ban", { kind: "ip", value: u.last_ip_hash, reason: u.fp_address })) : null,
+        u.fp_user_hash ? saveButton("Bannir le compte FP", () => api("ban", { kind: "account", value: u.fp_user_hash, reason: u.fp_address })) : null),
     ]), "Aucun membre trouvé."));
   }).catch(fail);
   load();
   return h("div", { class: "stack" },
     card("Membres",
       h("form", { class: "row", style: "margin-bottom:10px", onsubmit: (e) => { e.preventDefault(); userSearch = e.target.elements.q.value; load(); } },
-        h("input", { name: "q", value: userSearch, placeholder: "E-mail ou compte FaucetPay", style: "flex:1;min-width:200px;margin:0", ariaLabel: "Rechercher" }),
+        h("input", { name: "q", value: userSearch, placeholder: "Compte FaucetPay", style: "flex:1;min-width:200px;margin:0", ariaLabel: "Rechercher" }),
         h("button", { class: "btn" }, "Rechercher")),
       box),
     card("Bannissements",

@@ -32,6 +32,18 @@
     legal: ["Mentions et confidentialité", "Legal and privacy"], fpCreate: ["Créer un compte FaucetPay", "Create a FaucetPay account"],
     email: ["E-mail", "Email"], password: ["Mot de passe (8 caractères minimum)", "Password (8 characters minimum)"], passwordShort: ["Mot de passe", "Password"],
     create: ["Créer mon compte", "Create my account"], sign: ["Me connecter", "Log in"],
+    enter: ["Entrer", "Enter"],
+    enterTitle: ["Entre avec ton compte FaucetPay", "Enter with your FaucetPay account"],
+    enterText: ["Rien d'autre à remplir : ton compte est créé à la première visite, et tes gains partent vers ce compte FaucetPay.", "Nothing else to fill in: your account is created on your first visit, and your earnings go to this FaucetPay account."],
+    passwordAsk: ["Ce compte est protégé par un mot de passe.", "This account is protected by a password."],
+    security: ["Sécurité", "Security"],
+    secTitle: ["Sécuriser mon compte", "Secure my account"],
+    secText: ["Facultatif. Avec un mot de passe, connaître ton adresse FaucetPay ne suffit plus pour entrer dans ton compte. Tes autres appareils seront déconnectés.", "Optional. With a password, knowing your FaucetPay address is no longer enough to enter your account. Your other devices will be logged out."],
+    secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
+    secOff: ["Ton compte n'a pas de mot de passe : ton adresse FaucetPay suffit pour y entrer.", "Your account has no password: your FaucetPay address is enough to enter it."],
+    secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"],
+    secSave: ["Enregistrer le mot de passe", "Save password"], secChange: ["Changer le mot de passe", "Change password"],
+    secDone: ["Mot de passe enregistré.", "Password saved."],
     available: ["Disponible", "Available"], pending: ["À valider", "Under review"], validated: ["Validé", "Approved"],
     linkTitle: ["Relie ton compte FaucetPay", "Link your FaucetPay account"],
     linkText: ["Il faut un compte FaucetPay pour gagner et retirer tes CryptoCoin.", "You need a FaucetPay account to earn and withdraw CryptoCoin."],
@@ -70,6 +82,8 @@
     invalid_address: ["FaucetPay ne connaît pas ce compte. Vérifie ton identifiant.", "FaucetPay doesn't know this account. Check your ID."],
     invalid_email: ["Saisis une adresse e-mail valide.", "Enter a valid email address."],
     weak_password: ["Choisis un mot de passe d'au moins 8 caractères.", "Choose a password of at least 8 characters."],
+    password_required: ["Ce compte est protégé : saisis ton mot de passe.", "This account is protected: enter your password."],
+    bad_password: ["Mot de passe incorrect.", "Wrong password."],
     bad_credentials: ["E-mail ou mot de passe incorrect.", "Wrong email or password."],
     email_taken: ["Cet e-mail a déjà un compte. Connecte-toi.", "This email already has an account. Log in."],
     too_many_signups: ["Trop de comptes créés depuis cette connexion. Réessaie demain.", "Too many accounts from this connection. Try again tomorrow."],
@@ -292,15 +306,16 @@
         h("td", { class: "num muted" }, when(r.at)))))));
   }
 
-  function authForm(startMode) {
-    let mode = startMode;
+  // Un seul champ : l'adresse FaucetPay. Le mot de passe n'apparait que si le compte en a un.
+  function authForm() {
     const wrap = h("section", { class: "card auth", id: "auth" });
     const draw = () => {
-      const email = h("input", { type: "email", autocomplete: "email", required: true });
-      const pass = h("input", { type: "password", autocomplete: mode === "signup" ? "new-password" : "current-password", required: true });
+      const address = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, required: true, placeholder: "toi@exemple.com", value: store.get("cc.address") || "" });
+      const passLabel = h("label", { class: "field", hidden: true }, t("passwordShort"), h("input", { type: "password", autocomplete: "current-password" }));
+      const pass = passLabel.querySelector("input");
       const cap = captchaBox();
       const msg = h("div", { role: "alert" });
-      const submit = h("button", { class: "btn big", type: "submit" }, mode === "signup" ? t("create") : t("sign"));
+      const submit = h("button", { class: "btn big", type: "submit" }, t("enter"));
       const form = h("form", {
         novalidate: true,
         onsubmit: async (e) => {
@@ -310,27 +325,32 @@
             return;
           }
           submit.disabled = true;
-          const r = await api(mode, { email: email.value, password: pass.value, captcha: captchaToken(cap) || "dev", ref: store.get("cc.ref") });
+          const r = await api("login", {
+            address: address.value,
+            password: passLabel.hidden ? undefined : pass.value,
+            captcha: captchaToken(cap) || "dev",
+            ref: store.get("cc.ref"),
+          });
           submit.disabled = false;
+          captchaReset(cap);
           if (r.ok) {
+            store.set("cc.address", address.value.trim());
             session = r.session;
             store.set("cc.session", session);
             location.hash = "";
             await boot();
+          } else if (r.code === "password_required") {
+            passLabel.hidden = false;
+            msg.replaceChildren(h("div", { class: "notice info", style: "margin-top:12px" }, t("passwordAsk")));
+            pass.focus();
           } else {
             msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:12px" }, message(r)));
-            captchaReset(cap);
           }
         },
       },
-        h("label", { class: "field" }, t("email"), email),
-        h("label", { class: "field" }, mode === "signup" ? t("password") : t("passwordShort"), pass),
-        cap, submit, msg);
-      const tab = (m, label) => h("button", {
-        type: "button", role: "tab", "aria-selected": String(mode === m),
-        onclick: () => { mode = m; draw(); },
-      }, label);
-      wrap.replaceChildren(h("div", { class: "tabs", role: "tablist" }, tab("signup", t("signup")), tab("login", t("login"))), form);
+        h("label", { class: "field" }, t("fpField"), address),
+        passLabel, cap, submit, msg);
+      wrap.replaceChildren(h("h2", {}, t("enterTitle")), h("p", { class: "muted", style: "margin:4px 0 14px" }, t("enterText")), form);
     };
     draw();
     return wrap;
@@ -338,21 +358,19 @@
 
   function homePage() {
     const feature = (i, title, text) => h("div", { class: "card feature" }, icon(i), h("div", {}, h("h3", {}, title), h("p", {}, text)));
-    const scrollAuth = (mode) => (e) => {
+    const scrollAuth = (e) => {
       e.preventDefault();
-      authMode = mode;
-      render();
       document.getElementById("auth")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => document.querySelector("#auth input")?.focus({ preventScroll: true }), 400);
     };
     return h("div", {},
-      h("header", { class: "topbar" }, logo(), h("div", { class: "row" },
-        h("a", { class: "btn", href: "#auth", onclick: scrollAuth("login") }, t("login")),
-        h("a", { class: "btn orange", href: "#auth", onclick: scrollAuth("signup") }, t("signup")))),
+      h("header", { class: "topbar" }, logo(), h("a", { class: "btn orange", href: "#auth", onclick: scrollAuth }, t("start"))),
       h("main", { class: "home" },
         h("section", { class: "hero" },
           h("h1", {}, cfg.SITE_NAME),
           h("p", {}, t("heroSub")),
           h("p", { class: "muted" }, t("rate"))),
+        h("div", { style: "margin-bottom:16px" }, authForm()),
         status?.paused ? h("div", { class: "notice warn", style: "margin-bottom:16px" }, t("allPaused")) : null,
         status ? simulator() : h("div", { class: "notice bad" }, t("offline")),
         adSlot("top") && h("div", { style: "margin-top:16px" }, adSlot("top")),
@@ -369,8 +387,6 @@
           h("div", { class: "card stat" }, h("b", {}, fmtInt(status?.users ?? 0)), t("statUsers")),
           h("div", { class: "card stat" }, h("b", {}, tk(status?.paid_tokens ?? 0)), t("statPaid")),
           h("div", { class: "card", style: "grid-column:1/-1;min-width:0" }, h("h2", { style: "margin-bottom:8px" }, t("latest")), recentList(status?.recent))),
-        h("h2", { class: "section-title" }, authMode === "login" ? t("login") : t("signup")),
-        authForm(authMode),
         adSlot("bottom") && h("div", { style: "margin-top:16px" }, adSlot("bottom"))),
       footer());
   }
@@ -382,10 +398,9 @@
   // Application ------------------------------------------------------------
   const ROUTES = [
     ["", "home"], ["faucet", "faucet"], ["ptc", "ptc"], ["links", "links"], ["offers", "offers"],
-    ["challenges", "challenges"], ["referral", "referral"], ["withdraw", "withdraw"], ["history", "history"],
+    ["challenges", "challenges"], ["referral", "referral"], ["withdraw", "withdraw"], ["history", "history"], ["security", "security"],
   ];
   const routeNow = () => location.hash.replace("#", "");
-  let authMode = "signup";
   let earn = null;
   let timers = [];
   const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
@@ -404,24 +419,30 @@
     chip.replaceChildren(cell(t("available"), me.available), cell(t("pending"), me.pending), cell(t("validated"), me.validated));
   }
 
-  function linkForm() {
-    const addr = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, value: me.fp_address || "", placeholder: "toi@exemple.com" });
+  function securityPage() {
+    const pass = h("input", { type: "password", autocomplete: "new-password", minLength: 8, required: true });
     const msg = h("div", { role: "alert" });
-    const btn = h("button", { class: "btn", type: "submit" }, t("linkBtn"));
-    return h("form", {
-      onsubmit: async (e) => {
-        e.preventDefault();
-        btn.disabled = true;
-        const r = await api("link_faucetpay", { address: addr.value });
-        btn.disabled = false;
-        if (r.ok) { toast(t("linked"), "good"); await refreshMe(); render(); }
-        else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
-      },
-    }, h("label", { class: "field" }, t("fpField"), addr), btn, msg);
+    const btn = h("button", { class: "btn", type: "submit" }, me.secured ? t("secChange") : t("secSave"));
+    return h("section", { class: "card claim-card" },
+      h("h2", {}, t("secTitle")),
+      h("div", { class: `notice ${me.secured ? "good" : "info"}`, style: "margin:10px 0" }, me.secured ? t("secOn") : t("secOff")),
+      h("p", { class: "muted", style: "margin-bottom:12px" }, t("secText")),
+      h("form", {
+        onsubmit: async (e) => {
+          e.preventDefault();
+          btn.disabled = true;
+          const r = await api("set_password", { password: pass.value });
+          btn.disabled = false;
+          if (r.ok) {
+            session = r.session;
+            store.set("cc.session", session);
+            toast(t("secDone"), "good");
+            await refreshMe();
+            render();
+          } else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
+        },
+      }, h("label", { class: "field" }, t("secNew"), pass), btn, msg));
   }
-
-  const linkCard = () => h("section", { class: "card" },
-    h("h2", {}, t("linkTitle")), h("p", { class: "muted", style: "margin:4px 0 12px" }, t("linkText")), linkForm());
 
   function faucetCard() {
     const reward = status?.faucet_reward_tokens ?? 0;
@@ -620,7 +641,6 @@
     const coin = me.coins.find((c) => c.code === me.payout_coin) || me.coins[0];
     const rate = status?.tokens_per_eur || 10000;
     const estimate = coin && me.available > 0 ? (me.available / rate * coin.per_eur) : 0;
-    const showChange = h("div", { hidden: true }, linkForm());
     const btn = h("button", {
       class: "btn big", disabled: me.available <= 0 || !coin || status?.paused,
       onclick: async () => {
@@ -647,9 +667,7 @@
             },
           }, me.coins.map((c) => h("option", { value: c.code, selected: c.code === me.payout_coin }, `${c.code} · ${c.name}`)))) : null,
         btn,
-        h("p", { class: "muted", style: "margin-top:10px;overflow-wrap:anywhere" }, `${t("wdTo")} `, h("span", { class: "mono" }, me.fp_address), " · ",
-          h("a", { href: "#", onclick: (e) => { e.preventDefault(); showChange.hidden = !showChange.hidden; } }, t("change"))),
-        showChange,
+        h("p", { class: "muted", style: "margin-top:10px;overflow-wrap:anywhere" }, `${t("wdTo")} `, h("span", { class: "mono" }, me.fp_address)),
         me.validated > 0 ? h("div", { class: "notice info", style: "margin-top:12px" }, `${tk(me.validated)} ${t("wdValidated")}`) : null),
       h("section", { class: "card" },
         h("h2", { style: "margin-bottom:8px" }, t("wdHistory")),
@@ -690,17 +708,15 @@
 
   function appPage() {
     const route = routeNow();
-    const labelOf = { "": t("home"), faucet: t("faucet"), ptc: t("ptc"), links: t("links"), offers: t("offers"), challenges: t("challenges"), referral: t("referral"), withdraw: t("withdraw"), history: t("history") };
+    const labelOf = { "": t("home"), faucet: t("faucet"), ptc: t("ptc"), links: t("links"), offers: t("offers"), challenges: t("challenges"), referral: t("referral"), withdraw: t("withdraw"), history: t("history"), security: t("security") };
     const nav = ROUTES.map(([r]) => h("a", { class: "nav", href: `#${r}`, "aria-current": r === route ? "page" : undefined }, labelOf[r]));
     chip = h("div", { class: "balance-chip" });
     updateChip();
 
-    let page;
-    if (!me.fp_address && ["", "faucet", "ptc", "links", "offers", "withdraw"].includes(route)) page = linkCard();
-    else page = {
+    const page = {
       "": dashboardPage, faucet: faucetCard, ptc: ptcPage, links: linksPage, offers: offersPage,
       challenges: () => h("div", { class: "stack" }, bonusCard(), challengesCard()),
-      referral: referralPage, withdraw: withdrawPage, history: historyPage,
+      referral: referralPage, withdraw: withdrawPage, history: historyPage, security: securityPage,
     }[route]?.() ?? dashboardPage();
 
     return h("div", { class: "app" },

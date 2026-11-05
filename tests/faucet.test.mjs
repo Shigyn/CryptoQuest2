@@ -25,15 +25,10 @@ const admin = async (h, body, password = h.deps.adminPassword) => {
 
 let userCounter = 0;
 async function newUser(h, { address, ip = freshIp(), ref } = {}) {
-  const n = ++userCounter;
-  const email = `u${n}@example.com`;
-  const s = await api(h, "signup", { email, password: "mot de passe", ref }, ip);
-  assert.equal(s.body.ok, true, JSON.stringify(s.body));
-  const session = s.body.session;
-  const fp = address ?? `compte${n}@example.com`;
-  const l = await api(h, "link_faucetpay", { session, address: fp }, ip);
-  assert.equal(l.body.ok, true, JSON.stringify(l.body));
-  return { session, ip, email, fp };
+  const fp = address ?? `compte${++userCounter}@example.com`;
+  const r = await api(h, "login", { address: fp, ref }, ip);
+  assert.equal(r.body.ok, true, JSON.stringify(r.body));
+  return { session: r.body.session, ip, fp };
 }
 
 const me = async (h, u) => (await api(h, "me", { session: u.session }, u.ip)).body;
@@ -45,51 +40,84 @@ const cron = async (h, secret = h.deps.cronSecret) => {
 
 // Comptes --------------------------------------------------------------
 
-test("inscription, connexion, deconnexion", async () => {
+test("entree avec la seule adresse FaucetPay : compte cree, puis retrouve", async () => {
   const h = await createHarness();
-  const u = await newUser(h);
-  assert.equal((await me(h, u)).email, u.email);
-  assert.equal((await api(h, "login", { email: u.email, password: "faux" })).body.code, "bad_credentials");
-  const login = await api(h, "login", { email: u.email.toUpperCase(), password: "mot de passe" });
-  assert.equal(login.body.ok, true);
-  await api(h, "logout", { session: login.body.session });
-  assert.equal((await api(h, "me", { session: login.body.session })).status, 401);
+  const first = await api(h, "login", { address: "alice@x.com" });
+  assert.equal(first.body.ok, true);
+  assert.equal(first.body.created, true);
+  const again = await api(h, "login", { address: " ALICE@x.com " });
+  assert.equal(again.body.created, false);
+  assert.equal((await h.pg.query("select count(*)::int n from users")).rows[0].n, 1);
+  const u = { session: again.body.session, ip: freshIp() };
+  assert.equal((await me(h, u)).fp_address, "alice@x.com");
+  assert.equal((await me(h, u)).secured, false);
+  await api(h, "logout", { session: u.session });
+  assert.equal((await api(h, "me", { session: u.session })).status, 401);
   assert.equal((await api(h, "me", {})).status, 401);
 });
 
-test("le mot de passe n'est jamais stocke en clair", async () => {
-  const h = await createHarness();
-  await newUser(h);
-  const { rows } = await h.pg.query("select password_hash from users");
-  assert.ok(!rows[0].password_hash.includes("mot de passe"));
-  assert.match(rows[0].password_hash, /^100000:/);
+test("une autre adresse du meme compte FaucetPay ouvre le meme compte", async () => {
+  const h = await createHarness({ accounts: { "alice@x.com": "A", alice_pseudo: "A" } });
+  await api(h, "login", { address: "alice@x.com" });
+  const r = await api(h, "login", { address: "alice_pseudo" });
+  assert.equal(r.body.created, false);
+  assert.equal((await h.pg.query("select count(*)::int n from users")).rows[0].n, 1);
 });
 
-test("le captcha est exige a l'inscription, a la connexion et a la reclamation", async () => {
+test("une adresse inconnue de FaucetPay est refusee, sans creer de compte", async () => {
   const h = await createHarness();
-  assert.equal((await api(h, "signup", { email: "a@b.co", password: "12345678", captcha: "mauvais" })).body.code, "captcha");
-  assert.equal((await api(h, "login", { email: "a@b.co", password: "12345678", captcha: "mauvais" })).body.code, "captcha");
+  assert.equal((await api(h, "login", { address: "inconnu@x.com" })).body.code, "invalid_address");
+  assert.equal((await api(h, "login", { address: "<script>" })).body.code, "invalid_address");
+  assert.equal((await h.pg.query("select count(*)::int n from users")).rows[0].n, 0);
+});
+
+test("un compte deja connu entre sans nouvel appel a FaucetPay", async () => {
+  const h = await createHarness();
+  await api(h, "login", { address: "alice@x.com" });
+  await api(h, "login", { address: "alice@x.com" });
+  assert.equal(h.mock.state.calls.filter((c) => c.path === "/check-address").length, 1);
+});
+
+test("le captcha est exige a l'entree et a la reclamation", async () => {
+  const h = await createHarness();
+  assert.equal((await api(h, "login", { address: "a@x.com", captcha: "mauvais" })).body.code, "captcha");
   const u = await newUser(h);
   assert.equal((await api(h, "claim", { session: u.session, captcha: "mauvais" }, u.ip)).body.code, "captcha");
   assert.equal((await me(h, u)).available, 0);
 });
 
-test("trop d'inscriptions depuis une IP sont refusees, e-mail unique", async () => {
+test("trop de comptes crees depuis une IP sont refuses", async () => {
   const h = await createHarness();
   const ip = freshIp();
-  for (let i = 0; i < 3; i++) await api(h, "signup", { email: `s${i}@b.co`, password: "12345678" }, ip);
-  assert.equal((await api(h, "signup", { email: "s9@b.co", password: "12345678" }, ip)).body.code, "too_many_signups");
-  assert.equal((await api(h, "signup", { email: "s0@b.co", password: "12345678" })).body.code, "email_taken");
+  for (let i = 0; i < 3; i++) assert.equal((await api(h, "login", { address: `s${i}@x.com` }, ip)).body.ok, true);
+  assert.equal((await api(h, "login", { address: "s9@x.com" }, ip)).body.code, "too_many_signups");
+  assert.equal((await api(h, "login", { address: "s0@x.com" }, ip)).body.ok, true, "un compte existant entre toujours");
 });
 
-test("un compte FaucetPay ne se lie qu'a un seul utilisateur, sous tout identifiant", async () => {
-  const h = await createHarness({ accounts: { "alice@x.com": "A", alice_pseudo: "A" } });
-  await newUser(h, { address: "alice@x.com" });
-  const s = await api(h, "signup", { email: "bob@b.co", password: "12345678" });
-  const session = s.body.session;
-  assert.equal((await api(h, "link_faucetpay", { session, address: "ALICE+2@x.com" })).body.code, "fp_taken");
-  assert.equal((await api(h, "link_faucetpay", { session, address: "alice_pseudo" })).body.code, "fp_taken");
-  assert.equal((await api(h, "link_faucetpay", { session, address: "inconnu@x.com" })).body.code, "invalid_address");
+test("mot de passe facultatif : une fois choisi, l'adresse seule ne suffit plus", async () => {
+  const h = await createHarness();
+  const u = await newUser(h, { address: "alice@x.com" });
+  const other = (await api(h, "login", { address: "alice@x.com" })).body.session;
+  assert.equal((await api(h, "set_password", { session: u.session, password: "court" }, u.ip)).body.code, "weak_password");
+  const set = await api(h, "set_password", { session: u.session, password: "mon mot de passe" }, u.ip);
+  assert.equal(set.body.ok, true);
+  assert.equal((await api(h, "me", { session: other })).status, 401, "les autres sessions tombent");
+  assert.equal((await me(h, { session: set.body.session, ip: u.ip })).secured, true);
+  assert.equal((await api(h, "login", { address: "alice@x.com" })).body.code, "password_required");
+  assert.equal((await api(h, "login", { address: "alice@x.com", password: "faux" })).body.code, "bad_password");
+  assert.equal((await api(h, "login", { address: "alice@x.com", password: "mon mot de passe" })).body.ok, true);
+  const { rows } = await h.pg.query("select password_hash from users");
+  assert.ok(!rows[0].password_hash.includes("mon mot de passe"));
+  assert.match(rows[0].password_hash, /^100000:/);
+});
+
+test("un compte banni ne peut plus entrer", async () => {
+  const h = await createHarness();
+  const u = await newUser(h, { address: "alice@x.com" });
+  const [row] = (await admin(h, { action: "users", search: "alice" })).body.users;
+  await admin(h, { action: "ban_user", id: row.id, banned: true, reason: "test" });
+  assert.equal((await api(h, "me", { session: u.session }, u.ip)).status, 401);
+  assert.equal((await api(h, "login", { address: "alice@x.com" })).body.code, "banned");
 });
 
 // Faucet ---------------------------------------------------------------
@@ -102,12 +130,6 @@ test("une reclamation credite les tokens tout de suite, sans toucher a FaucetPay
   assert.equal(r.body.tokens, 2);
   assert.equal((await me(h, u)).available, 2);
   assert.equal(h.mock.state.payouts.length, 0);
-});
-
-test("il faut un compte FaucetPay lie pour reclamer", async () => {
-  const h = await createHarness();
-  const s = await api(h, "signup", { email: "c@b.co", password: "12345678" });
-  assert.equal((await api(h, "claim", { session: s.body.session })).body.code, "link_faucetpay");
 });
 
 test("le delai bloque le compte et l'IP, puis se libere", async () => {
@@ -443,21 +465,10 @@ test("lot horaire : echec rendu, arret sur solde vide, secret exige", async () =
   assert.equal((await me(h, a)).validated, 100);
 });
 
-test("un utilisateur banni ne reclame plus et sa session tombe", async () => {
-  const h = await createHarness();
-  const u = await newUser(h);
-  const [row] = (await admin(h, { action: "users", search: u.email })).body.users;
-  await admin(h, { action: "ban_user", id: row.id, banned: true, reason: "test" });
-  assert.equal((await api(h, "me", { session: u.session }, u.ip)).status, 401);
-  const login = await api(h, "login", { email: u.email, password: "mot de passe" }, u.ip);
-  assert.equal((await api(h, "claim", { session: login.body.session }, u.ip)).body.code, "banned");
-  assert.equal((await api(h, "withdraw", { session: login.body.session }, u.ip)).body.code, "banned");
-});
-
 test("bannir une IP bloque, lever le bannissement rouvre", async () => {
   const h = await createHarness();
   const u = await newUser(h);
-  const [row] = (await admin(h, { action: "users", search: u.email })).body.users;
+  const [row] = (await admin(h, { action: "users", search: u.fp })).body.users;
   await admin(h, { action: "ban", kind: "ip", value: row.last_ip_hash });
   assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.code, "banned");
   await admin(h, { action: "unban", kind: "ip", value: row.last_ip_hash });
@@ -488,7 +499,7 @@ test("le statut public ne montre ni adresse entiere, ni e-mail, ni IP", async ()
   const text = await res.text();
   assert.equal(JSON.parse(text).recent[0].who, "ali…com");
   assert.ok(!text.includes("alice@example.com"));
-  assert.ok(!text.includes(u.email));
+  
 });
 
 test("l'IP n'est jamais stockee en clair", async () => {

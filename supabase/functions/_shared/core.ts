@@ -93,7 +93,6 @@ export function normalizeAddress(address: string): string {
 }
 
 const ADDRESS_RE = /^[A-Za-z0-9@._+:\-]{3,128}$/;
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,200}\.[^\s@]{2,}$/;
 const SHORTLINK_MIN_SECONDS = 10;
 
 function numberOrNull(v: unknown): number | null {
@@ -179,29 +178,47 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
   // Sans compte
   if (b.action === "status") return json(d, 200, await d.rpc("public_status"));
 
-  if (b.action === "signup") {
-    const email = String(b.email ?? "").trim().toLowerCase();
-    const password = String(b.password ?? "");
-    if (!EMAIL_RE.test(email)) return refuse(d, 400, "invalid_email");
-    if (password.length < 8 || password.length > 200) return refuse(d, 400, "weak_password");
-    if (!(await captchaOk())) return refuse(d, 400, "captcha");
-    const r = await d.rpc("signup_user", {
-      p_email: email,
-      p_password_hash: await hashPassword(password),
-      p_ip_hash: ipHash,
-      p_ref: b.ref ? String(b.ref) : null,
-    });
-    if (!r.ok) return result(d, r);
-    return json(d, 200, { ok: true, session: await startSession(d, r.user_id) });
-  }
-
+  // Une seule entree : l'adresse FaucetPay. Compte cree a la premiere visite.
+  // Mot de passe demande seulement si le membre en a choisi un.
   if (b.action === "login") {
+    const address = String(b.address ?? "").trim();
+    if (!ADDRESS_RE.test(address)) return refuse(d, 400, "invalid_address");
     if (!(await captchaOk())) return refuse(d, 400, "captcha");
-    const email = String(b.email ?? "").trim().toLowerCase();
-    const row = await d.rpc("get_login", { p_email: email });
-    const ok = row && (await checkPassword(String(b.password ?? ""), row.password_hash));
-    if (!ok) return refuse(d, 401, "bad_credentials");
-    return json(d, 200, { ok: true, session: await startSession(d, row.user_id) });
+    const norm = normalizeAddress(address);
+
+    let found = await d.rpc("find_fp_user", { p_norm: norm });
+    let userId: string | null = null;
+    let passwordHash: string | null = null;
+    let created = false;
+    if (found) {
+      if (found.banned) return refuse(d, 403, "banned");
+      userId = found.user_id;
+      passwordHash = found.password_hash;
+    } else {
+      const check = await d.fp.checkAddress(address);
+      if (!check.ok) {
+        return check.failure === "recipient" || check.failure === "rejected"
+          ? refuse(d, 400, "invalid_address")
+          : refuse(d, 503, "try_later");
+      }
+      found = await d.rpc("fp_login", {
+        p_address: address,
+        p_norm: norm,
+        p_hash: (check.data?.payout_user_hash as string) ?? null,
+        p_ip_hash: ipHash,
+        p_ref: b.ref ? String(b.ref) : null,
+      });
+      if (!found.ok) return result(d, found);
+      userId = found.user_id;
+      passwordHash = found.password_hash ?? null;
+      created = found.created;
+    }
+
+    if (passwordHash) {
+      if (!b.password) return refuse(d, 401, "password_required");
+      if (!(await checkPassword(String(b.password), passwordHash))) return refuse(d, 401, "bad_password");
+    }
+    return json(d, 200, { ok: true, created, session: await startSession(d, userId!) });
   }
 
   // Avec compte
@@ -217,21 +234,12 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "me":
       return json(d, 200, { ok: true, ...(await d.rpc("user_profile", { p_user: userId })) });
 
-    case "link_faucetpay": {
-      const address = String(b.address ?? "").trim();
-      if (!ADDRESS_RE.test(address)) return refuse(d, 400, "invalid_address");
-      const check = await d.fp.checkAddress(address);
-      if (!check.ok) {
-        return check.failure === "recipient" || check.failure === "rejected"
-          ? refuse(d, 400, "invalid_address")
-          : refuse(d, 503, "try_later");
-      }
-      return result(d, await d.rpc("link_faucetpay", {
-        p_user: userId,
-        p_address: address,
-        p_norm: normalizeAddress(address),
-        p_hash: (check.data?.payout_user_hash as string) ?? null,
-      }));
+    case "set_password": {
+      const password = String(b.password ?? "");
+      if (password.length < 8 || password.length > 200) return refuse(d, 400, "weak_password");
+      await d.rpc("set_user_password", { p_user: userId, p_hash: await hashPassword(password) });
+      // Les autres sessions sont fermees ; celle-ci est remplacee.
+      return json(d, 200, { ok: true, session: await startSession(d, userId) });
     }
 
     case "set_coin":
