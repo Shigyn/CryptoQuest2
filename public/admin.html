@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="plain">
+  <main class="page">
+    <p class="brand">Dashboard</p>
+
+    <section class="card" id="login">
+      <h1>Connexion</h1>
+      <form id="login-form" class="settings">
+        <label>Mot de passe admin
+          <input id="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="btn primary" type="submit">Se connecter</button>
+      </form>
+      <p class="error" id="login-error" role="alert"></p>
+    </section>
+
+    <div id="app" hidden style="display:flex;flex-direction:column;gap:16px">
+      <div class="banner" id="banner"></div>
+      <p class="error" id="app-error" role="alert"></p>
+
+      <section class="card">
+        <div class="toolbar"><h2>Activité</h2><button class="btn" id="refresh">Actualiser</button></div>
+        <div class="kpis" id="kpis"></div>
+        <p class="hint" id="balance-note"></p>
+      </section>
+
+      <section class="card">
+        <h2>Cryptos et récompenses</h2>
+        <div class="table-wrap"><table id="coins-table"></table></div>
+        <p class="hint">Montants en crypto. Teste chaque nouvelle crypto avec un petit paiement avant de l'activer, pour confirmer le montant reçu.</p>
+      </section>
+
+      <section class="card">
+        <h2>Délais et plafonds</h2>
+        <form id="settings-form" class="settings">
+          <label>Délai entre deux réclamations (secondes)<input type="number" min="10" name="cooldown_seconds" required></label>
+          <label>Réclamations par compte, sur 24 h<input type="number" min="1" name="max_claims_account_day" required></label>
+          <label>Réclamations par IP, sur 24 h<input type="number" min="1" name="max_claims_ip_day" required></label>
+          <label>Coupe-circuit : réclamations du site par heure<input type="number" min="1" name="max_claims_site_hour" required></label>
+          <button class="btn primary" type="submit">Enregistrer les réglages</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <h2>Réclamations</h2>
+          <button class="btn small" data-filter="attention">À vérifier</button>
+          <button class="btn small" data-filter="paid">Payées</button>
+          <button class="btn small" data-filter="failed">Refusées</button>
+          <button class="btn small" data-filter="all">Toutes</button>
+        </div>
+        <div class="table-wrap"><table id="claims-table"></table></div>
+        <p class="hint" id="claims-empty" hidden>Aucune réclamation dans cette liste.</p>
+      </section>
+
+      <section class="card">
+        <h2>Bannissements</h2>
+        <div class="table-wrap"><table id="bans-table"></table></div>
+        <p class="hint" id="bans-empty" hidden>Personne n'est banni. Bannis une adresse, une IP ou un compte depuis la liste des réclamations.</p>
+      </section>
+    </div>
+  </main>
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

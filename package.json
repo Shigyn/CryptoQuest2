@@ -1,0 +1,12 @@
+{
+  "name": "faucet",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "node dev/server.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.2.17"
+  }
+}
