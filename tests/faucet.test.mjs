@@ -78,9 +78,18 @@ test("un compte deja connu entre sans nouvel appel a FaucetPay", async () => {
   assert.equal(h.mock.state.calls.filter((c) => c.path === "/check-address").length, 1);
 });
 
-test("le captcha est exige a l'entree et a la reclamation", async () => {
+test("pas de captcha a l'entree, mais exige a la reclamation, aux pubs et aux liens", async () => {
   const h = await createHarness();
-  assert.equal((await api(h, "login", { address: "a@x.com", captcha: "mauvais" })).body.code, "captcha");
+  assert.equal((await api(h, "login", { address: "a@x.com", captcha: undefined })).body.ok, true);
+  await admin(h, { action: "save_shortlink", item: { name: "Lien", api_url: "https://x/api?url={url}", reward_tokens: 15, daily_limit: 1 } });
+  const id = (await admin(h, { action: "overview" })).body.shortlinks[0].id;
+  const v = await newUser(h);
+  assert.equal((await api(h, "shortlink_start", { session: v.session, id, captcha: "mauvais" }, v.ip)).body.code, "captcha");
+  await admin(h, { action: "save_ptc", item: { title: "Pub", url: "https://e.com", reward_tokens: 10, duration_seconds: 5, max_views: 2 } });
+  const pid = (await admin(h, { action: "overview" })).body.ptc[0].id;
+  await api(h, "ptc_start", { session: v.session, id: pid }, v.ip);
+  await h.pg.query("update ptc_views set started_at = now() - interval '6 seconds'");
+  assert.equal((await api(h, "ptc_complete", { session: v.session, id: pid, captcha: "mauvais" }, v.ip)).body.code, "captcha");
   const u = await newUser(h);
   assert.equal((await api(h, "claim", { session: u.session, captcha: "mauvais" }, u.ip)).body.code, "captcha");
   assert.equal((await me(h, u)).available, 0);
@@ -106,6 +115,10 @@ test("mot de passe facultatif : une fois choisi, l'adresse seule ne suffit plus"
   assert.equal((await api(h, "login", { address: "alice@x.com" })).body.code, "password_required");
   assert.equal((await api(h, "login", { address: "alice@x.com", password: "faux" })).body.code, "bad_password");
   assert.equal((await api(h, "login", { address: "alice@x.com", password: "mon mot de passe" })).body.ok, true);
+  for (let i = 0; i < 5; i++) await api(h, "login", { address: "alice@x.com", password: "faux" });
+  assert.equal((await api(h, "login", { address: "alice@x.com", password: "mon mot de passe" })).body.code, "locked", "verrou apres 5 erreurs");
+  await h.pg.query("update users set locked_until = now() - interval '1 second'");
+  assert.equal((await api(h, "login", { address: "alice@x.com", password: "mon mot de passe" })).body.ok, true, "le verrou expire");
   const { rows } = await h.pg.query("select password_hash from users");
   assert.ok(!rows[0].password_hash.includes("mon mot de passe"));
   assert.match(rows[0].password_hash, /^100000:/);

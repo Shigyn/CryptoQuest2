@@ -181,19 +181,21 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
   // Une seule entree : l'adresse FaucetPay. Compte cree a la premiere visite.
   // Mot de passe demande seulement si le membre en a choisi un.
   if (b.action === "login") {
+    // Pas de captcha ici : zero friction. Les comptes proteges se verrouillent apres 5 erreurs.
     const address = String(b.address ?? "").trim();
     if (!ADDRESS_RE.test(address)) return refuse(d, 400, "invalid_address");
-    if (!(await captchaOk())) return refuse(d, 400, "captcha");
     const norm = normalizeAddress(address);
 
     let found = await d.rpc("find_fp_user", { p_norm: norm });
     let userId: string | null = null;
     let passwordHash: string | null = null;
+    let locked = false;
     let created = false;
     if (found) {
       if (found.banned) return refuse(d, 403, "banned");
       userId = found.user_id;
       passwordHash = found.password_hash;
+      locked = Boolean(found.locked);
     } else {
       const check = await d.fp.checkAddress(address);
       if (!check.ok) {
@@ -211,12 +213,16 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
       if (!found.ok) return result(d, found);
       userId = found.user_id;
       passwordHash = found.password_hash ?? null;
+      locked = Boolean(found.locked);
       created = found.created;
     }
 
     if (passwordHash) {
       if (!b.password) return refuse(d, 401, "password_required");
-      if (!(await checkPassword(String(b.password), passwordHash))) return refuse(d, 401, "bad_password");
+      if (locked) return refuse(d, 429, "locked");
+      const good = await checkPassword(String(b.password), passwordHash);
+      await d.rpc("login_result", { p_user: userId, p_ok: good });
+      if (!good) return refuse(d, 401, "bad_password");
     }
     return json(d, 200, { ok: true, created, session: await startSession(d, userId!) });
   }
@@ -295,6 +301,7 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
       return result(d, await d.rpc("ptc_complete", { p_user: userId, p_id: Number(b.id), p_ip_hash: ipHash }));
 
     case "shortlink_start": {
+      if (!(await captchaOk())) return refuse(d, 400, "captcha");
       const token = crypto.randomUUID().replaceAll("-", "");
       const r = await d.rpc("shortlink_start", { p_user: userId, p_id: Number(b.id), p_token: token, p_ip_hash: ipHash });
       if (!r.ok) return result(d, r);

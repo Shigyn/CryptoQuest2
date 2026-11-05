@@ -8,7 +8,9 @@
   // Chaque texte : [francais, anglais]
   const W = {
     login: ["Connexion", "Log in"], signup: ["Inscription", "Sign up"], logout: ["Déconnexion", "Log out"],
-    heroSub: ["Gagne des CryptoCoin, puis retire-les sur ton compte FaucetPay.", "Earn CryptoCoin, then withdraw them to your FaucetPay account."],
+    heroSub: ["Faucet, pubs payantes, liens, offres et roue du jour. Retire quand tu veux, directement sur ton compte FaucetPay.", "Faucet, paid ads, links, offers and a daily wheel. Withdraw whenever you want, straight to your FaucetPay account."],
+    heroA: ["Gagne des", "Earn"], heroB: [" en continu.", " around the clock."],
+    eyebrow: ["Retraits instantanés sur FaucetPay", "Instant withdrawals to FaucetPay"],
     start: ["Commencer", "Get started"],
     simTitle: ["Estimation de tes gains", "Estimate your earnings"],
     simDay: ["Par jour", "Per day"],
@@ -201,6 +203,7 @@
         state.widget = ts.render(box, {
           sitekey: cfg.TURNSTILE_SITE_KEY,
           language: lang,
+          theme: "dark",
           callback: (tok) => { state.token = tok; },
           "expired-callback": () => { state.token = ""; },
           "error-callback": () => { state.token = ""; },
@@ -248,57 +251,54 @@
   };
 
   // Accueil ----------------------------------------------------------------
-  function slider(label, unit, rewardText, max, value, onChange) {
-    const out = h("span", {}, `${value} ${unit}`);
-    return h("div", { class: "soft" },
-      h("div", { class: "slider-head" }, h("span", {}, label), out),
-      h("input", {
-        type: "range", min: 0, max, value, ariaLabel: label,
-        oninput: (e) => { out.textContent = `${e.target.value} ${unit}`; onChange(Number(e.target.value)); },
-      }),
-      h("div", { class: "slider-foot" }, rewardText));
-  }
-
-  function simulator() {
-    const reward = status?.faucet_reward_tokens ?? 0;
-    const bonus = status?.daily_bonus_tokens ?? 0;
-    const lines = [];
-    const v = { claims: 30, views: 5, links: 3 };
-    if (reward) lines.push({ key: "claims", label: t("faucet"), per: reward });
-    if (status?.ptc_reward) lines.push({ key: "views", label: t("ptc"), per: status.ptc_reward });
-    if (status?.link_reward) lines.push({ key: "links", label: t("links"), per: status.link_reward });
-
-    const body = h("div", { style: "display:contents" });
-    const total = h("div", { class: "total" });
-    const money = h("div", {});
-    const update = () => {
-      let sum = bonus;
-      body.replaceChildren(...lines.map((l) => {
-        const n = v[l.key] * l.per;
-        sum += n;
-        return h("div", { class: "line" }, l.label, h("b", {}, tk(n)));
-      }), h("div", { class: "line" }, t("daily"), h("b", {}, tk(bonus))));
-      total.textContent = tk(sum);
-      money.textContent = `${t("worth")} ${eur(sum)}`;
+  // Fond anime : reseau de points relies, en pause quand l'onglet est cache.
+  function background() {
+    if (document.querySelector(".bg")) return;
+    const layer = h("div", { class: "bg", "aria-hidden": "true" });
+    const canvas = h("canvas", {});
+    layer.append(canvas);
+    document.body.prepend(layer);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = canvas.getContext("2d");
+    let w = 0, ht = 0, dpr = 1, points = [];
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = innerWidth * dpr;
+      ht = canvas.height = innerHeight * dpr;
+      const count = Math.round(Math.min(70, (innerWidth * innerHeight) / 22000));
+      points = Array.from({ length: count }, () => ({
+        x: Math.random() * w, y: Math.random() * ht,
+        vx: (Math.random() - 0.5) * 0.25 * dpr, vy: (Math.random() - 0.5) * 0.25 * dpr,
+      }));
     };
-    update();
-
-    const sets = {
-      claims: [t("faucet"), t("claimsUnit"), `${tk(reward)} ${t("perClaim")}`, 100],
-      views: [t("ptc"), t("viewsUnit"), `${tk(status?.ptc_reward ?? 0)} ${t("perView")}`, 30],
-      links: [t("links"), t("linksUnit"), `${tk(status?.link_reward ?? 0)} ${t("perLink")}`, 20],
+    resize();
+    addEventListener("resize", resize);
+    const link = 150 * dpr;
+    const frame = () => {
+      if (!document.hidden) {
+        ctx.clearRect(0, 0, w, ht);
+        for (const p of points) {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > w) p.vx *= -1;
+          if (p.y < 0 || p.y > ht) p.vy *= -1;
+        }
+        for (let i = 0; i < points.length; i++) {
+          for (let j = i + 1; j < points.length; j++) {
+            const a = points[i], b = points[j];
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d < link) {
+              ctx.strokeStyle = `rgba(80, 150, 255, ${0.22 * (1 - d / link)})`;
+              ctx.lineWidth = dpr;
+              ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+            }
+          }
+        }
+        ctx.fillStyle = "rgba(120, 200, 255, .8)";
+        for (const p of points) { ctx.beginPath(); ctx.arc(p.x, p.y, 1.6 * dpr, 0, Math.PI * 2); ctx.fill(); }
+      }
+      requestAnimationFrame(frame);
     };
-    return h("section", { class: "card sim" },
-      h("div", {},
-        h("h2", { style: "margin-bottom:12px" }, t("simTitle")),
-        h("div", { class: "sliders" }, lines.map((l) => {
-          const [a, b, c, max] = sets[l.key];
-          return slider(a, b, c, max, v[l.key], (n) => { v[l.key] = n; update(); });
-        }))),
-      h("aside", { class: "panel" },
-        h("h2", {}, t("simDay")), total, money, body,
-        h("a", { class: "btn orange", href: "#auth" }, t("start")),
-        h("p", { style: "font-size:12px;opacity:.8" }, t("simNote"))));
+    requestAnimationFrame(frame);
   }
 
   function recentList(list) {
@@ -317,26 +317,19 @@
       const address = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, required: true, placeholder: "toi@exemple.com", value: store.get("cc.address") || "" });
       const passLabel = h("label", { class: "field", hidden: true }, t("passwordShort"), h("input", { type: "password", autocomplete: "current-password" }));
       const pass = passLabel.querySelector("input");
-      const cap = captchaBox();
       const msg = h("div", { role: "alert" });
       const submit = h("button", { class: "btn big", type: "submit" }, t("enter"));
       const form = h("form", {
         novalidate: true,
         onsubmit: async (e) => {
           e.preventDefault();
-          if (cfg.TURNSTILE_SITE_KEY && !captchaToken(cap)) {
-            msg.replaceChildren(h("div", { class: "notice bad" }, t("needCaptcha")));
-            return;
-          }
           submit.disabled = true;
           const r = await api("login", {
             address: address.value,
             password: passLabel.hidden ? undefined : pass.value,
-            captcha: captchaToken(cap) || "dev",
             ref: store.get("cc.ref"),
           });
           submit.disabled = false;
-          captchaReset(cap);
           if (r.ok) {
             store.set("cc.address", address.value.trim());
             session = r.session;
@@ -353,7 +346,7 @@
         },
       },
         h("label", { class: "field" }, t("fpField"), address),
-        passLabel, cap, submit, msg);
+        passLabel, submit, msg);
       wrap.replaceChildren(h("h2", {}, t("enterTitle")), h("p", { class: "muted", style: "margin:4px 0 14px" }, t("enterText")), form);
     };
     draw();
@@ -368,15 +361,20 @@
       setTimeout(() => document.querySelector("#auth input")?.focus({ preventScroll: true }), 400);
     };
     return h("div", {},
-      h("header", { class: "topbar" }, logo(), h("a", { class: "btn orange", href: "#auth", onclick: scrollAuth }, t("start"))),
+      h("header", { class: "topbar" }, logo(), h("a", { class: "btn", href: "#auth", onclick: scrollAuth }, t("enter"))),
       h("main", { class: "home" },
         h("section", { class: "hero" },
-          h("h1", {}, cfg.SITE_NAME),
-          h("p", {}, t("heroSub")),
-          h("p", { class: "muted" }, t("rate"))),
-        h("div", { style: "margin-bottom:16px" }, authForm()),
+          h("div", {},
+            h("span", { class: "eyebrow" }, t("eyebrow")),
+            h("h1", {}, t("heroA"), " ", h("span", { class: "accent" }, "CryptoCoin"), t("heroB")),
+            h("p", { class: "lead" }, t("heroSub")),
+            h("div", { class: "metrics" },
+              h("div", { class: "metric" }, h("b", {}, fmtInt(status?.users ?? 0)), h("span", {}, t("statUsers"))),
+              h("div", { class: "metric" }, h("b", {}, tk(status?.paid_tokens ?? 0)), h("span", {}, t("statPaid"))),
+              h("div", { class: "metric" }, h("b", {}, "10 000 CC"), h("span", {}, "= 1 €")))),
+          authForm()),
         status?.paused ? h("div", { class: "notice warn", style: "margin-bottom:16px" }, t("allPaused")) : null,
-        status ? simulator() : h("div", { class: "notice bad" }, t("offline")),
+        status ? null : h("div", { class: "notice bad", style: "margin-bottom:16px" }, t("offline")),
         adSlot("top") && h("div", { style: "margin-top:16px" }, adSlot("top")),
         h("h2", { class: "section-title" }, t("featuresTitle")),
         h("section", { class: "grid" },
@@ -386,11 +384,8 @@
           feature("list", t("offers"), t("fOffers")),
           feature("flag", t("challenges"), t("fChallenges")),
           feature("users", t("referral"), t("fReferral"))),
-        h("h2", { class: "section-title" }, t("statsTitle")),
-        h("section", { class: "grid" },
-          h("div", { class: "card stat" }, h("b", {}, fmtInt(status?.users ?? 0)), t("statUsers")),
-          h("div", { class: "card stat" }, h("b", {}, tk(status?.paid_tokens ?? 0)), t("statPaid")),
-          h("div", { class: "card", style: "grid-column:1/-1;min-width:0" }, h("h2", { style: "margin-bottom:8px" }, t("latest")), recentList(status?.recent))),
+        h("h2", { class: "section-title" }, t("latest")),
+        h("section", { class: "card" }, recentList(status?.recent)),
         adSlot("bottom") && h("div", { style: "margin-top:16px" }, adSlot("bottom"))),
       footer());
   }
@@ -617,18 +612,22 @@
   }
 
   function linksPage() {
+    const linkCap = captchaBox();
     const box = h("section", { class: "card" }, h("h2", {}, t("links")));
     loadEarn().then(() => {
       if (!earn) return;
       box.replaceChildren(h("h2", { style: "margin-bottom:6px" }, t("links")), h("p", { class: "muted", style: "margin-bottom:10px" }, t("pendingNote")));
       if (!earn.shortlinks.length) { box.append(h("p", {}, t("noLinks"))); return; }
+      box.append(linkCap);
       for (const p of earn.shortlinks) {
         box.append(h("div", { class: "item" },
           h("div", {}, h("h3", {}, p.name), h("p", { class: "muted" }, `${tk(p.reward_tokens)} · ${p.remaining} ${t("left")}`)),
           h("button", {
             class: "btn small", disabled: p.remaining < 1,
             onclick: async () => {
-              const r = await api("shortlink_start", { id: p.id });
+              if (cfg.TURNSTILE_SITE_KEY && !captchaToken(linkCap)) { toast(t("needCaptcha"), "bad"); return; }
+              const r = await api("shortlink_start", { id: p.id, captcha: captchaToken(linkCap) || "dev" });
+              captchaReset(linkCap);
               if (r.ok) location.href = r.url;
               else toast(message(r), "bad");
             },
@@ -814,5 +813,6 @@
     if (session && me) await refreshMe();
   }, 60000);
 
+  background();
   boot();
 })();

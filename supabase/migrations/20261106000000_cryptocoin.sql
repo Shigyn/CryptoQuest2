@@ -67,6 +67,9 @@ create table users (
   fp_user_hash text unique,
   -- Facultatif : une fois choisi, l'adresse seule ne suffit plus pour se connecter.
   password_hash text,
+  -- Verrou apres 5 mauvais mots de passe en 15 minutes.
+  failed_logins int not null default 0,
+  locked_until timestamptz,
   payout_coin text not null default 'USDT' references coins (code),
   -- available : retirable tout de suite. pending : a valider. validated : part au prochain lot horaire.
   available bigint not null default 0,
@@ -281,8 +284,22 @@ end $$;
 -- Compte deja connu sous cette adresse : connexion sans appeler FaucetPay.
 create function find_fp_user(p_norm text)
 returns jsonb language sql stable set search_path = public as $$
-  select jsonb_build_object('user_id', id, 'password_hash', password_hash, 'banned', banned) from users where fp_norm = p_norm;
+  select jsonb_build_object('user_id', id, 'password_hash', password_hash, 'banned', banned,
+    'locked', locked_until is not null and locked_until > now()) from users where fp_norm = p_norm;
 $$;
+
+create function login_result(p_user uuid, p_ok boolean)
+returns void language plpgsql set search_path = public as $fn$
+begin
+  if p_ok then
+    update users set failed_logins = 0, locked_until = null where id = p_user;
+  else
+    update users set failed_logins = failed_logins + 1,
+      locked_until = case when failed_logins + 1 >= 5 then now() + interval '15 minutes' else locked_until end
+     where id = p_user;
+    update users set failed_logins = 0 where id = p_user and failed_logins >= 5;
+  end if;
+end $fn$;
 
 create function set_user_password(p_user uuid, p_hash text)
 returns void language sql set search_path = public as $$
@@ -311,7 +328,8 @@ begin
   select * into u from users where fp_norm = p_norm or (p_hash is not null and fp_user_hash = p_hash) limit 1;
   if found then
     if u.banned then return jsonb_build_object('ok', false, 'code', 'banned'); end if;
-    return jsonb_build_object('ok', true, 'user_id', u.id, 'created', false, 'password_hash', u.password_hash);
+    return jsonb_build_object('ok', true, 'user_id', u.id, 'created', false, 'password_hash', u.password_hash,
+      'locked', u.locked_until is not null and u.locked_until > now());
   end if;
 
   select count(*) into n from users where signup_ip_hash = p_ip_hash and created_at > now() - interval '24 hours';
