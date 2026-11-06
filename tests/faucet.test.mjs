@@ -788,3 +788,39 @@ test("annonceur : indisponible sans compte marchand configure", async () => {
   const u = await newUser(h);
   assert.equal((await api(h, "ad_order", { session: u.session, title: "Ma pub", url: "https://a.com", duration: 10, views: 100 }, u.ip)).body.code, "ads_unavailable");
 });
+
+test("rythme : 30 s minimum entre deux tirages, 5 tirages au plus sur 10 minutes", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true);
+  const soon = (await api(h, "claim", { session: u.session }, u.ip)).body;
+  assert.equal(soon.code, "cooldown");
+  assert.ok(soon.retry_after <= 30);
+  for (let i = 0; i < 4; i++) {
+    await h.pg.query("update claims set at = at - interval '31 seconds'");
+    assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true, `tirage ${i + 2}`);
+  }
+  await h.pg.query("update claims set at = at - interval '31 seconds'");
+  const full = (await api(h, "claim", { session: u.session }, u.ip)).body;
+  assert.equal(full.code, "cooldown", "6e tirage dans les 10 minutes");
+  assert.ok(full.retry_after > 400 && full.retry_after <= 600, String(full.retry_after));
+  assert.equal((await me(h, u)).window_used, 5);
+  assert.ok((await me(h, u)).retry_after > 400);
+  // Le plus ancien sort de la fenetre : on peut retirer.
+  await h.pg.query("update claims set at = at - interval '500 seconds'");
+  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true);
+});
+
+test("roue : un tour toutes les 4 heures", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  await api(h, "claim", { session: u.session }, u.ip);
+  assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.ok, true);
+  const again = (await api(h, "wheel", { session: u.session }, u.ip)).body;
+  assert.equal(again.code, "already_done");
+  assert.ok(again.retry_after > 14000 && again.retry_after <= 14400);
+  assert.ok((await me(h, u)).wheel_retry_after > 14000);
+  await h.pg.query("update users set last_wheel_at = now() - interval '4 hours 1 second'");
+  assert.equal((await me(h, u)).wheel_done, false);
+  assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.ok, true);
+});

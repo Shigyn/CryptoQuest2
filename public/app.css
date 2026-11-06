@@ -191,7 +191,7 @@ iframe.wall { width: 100%; height: 68vh; border: 0; border-radius: 14px; backgro
 
 /* Barre d'onglets du bas */
 .tabbar { position: fixed; z-index: 30; left: 50%; bottom: 0; transform: translateX(-50%); width: min(980px, 100%); height: var(--nav);
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
   background: rgba(5, 11, 28, .94); border-top: 1px solid var(--line-2); border-radius: 22px 22px 0 0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 14px; color: var(--muted); text-decoration: none; font: 700 11px var(--display); letter-spacing: .06em; text-transform: uppercase; position: relative; }
 .tab svg { width: 22px; height: 22px; }
@@ -257,3 +257,39 @@ iframe.wall { width: 100%; height: 68vh; border: 0; border-radius: 14px; backgro
 .ad-link:hover { border-color: var(--line-2); }
 .chev { font-size: 26px; color: var(--muted); line-height: 1; }
 .stack > a.btn { width: auto; }
+
+/* Emplacements pub autour du bouton de tirage */
+.ad-ph { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px 14px; min-height: 64px; border-radius: 14px; text-decoration: none;
+  color: var(--text); background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .025) 0 10px, transparent 10px 20px); border: 1px dashed var(--line-2); }
+.ad-ph:hover { border-color: var(--sky); }
+.ad-ph b { display: block; color: var(--ink); font-family: var(--display); }
+.ad-ph-sub { font-size: 12px; color: var(--muted); }
+.ad-ph svg { width: 22px; height: 22px; margin-left: auto; color: var(--gold); flex: none; }
+.ad-ph-tag { flex: none; font: 800 10px var(--display); letter-spacing: .1em; color: var(--bg); background: var(--muted); border-radius: 6px; padding: 3px 6px; }
+.panel .ad { margin: 12px 0; }
+
+/* Menu des jeux */
+.game-menu { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.game-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 210px; padding: 18px; border-radius: 20px; cursor: pointer; text-align: left;
+  color: var(--text); background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0, 0, 0, .35); font: inherit; transition: transform .15s ease, border-color .15s ease; }
+.game-tile:hover { transform: translateY(-3px); border-color: var(--line-2); }
+.game-tile.ready { border-color: rgba(49, 214, 138, .35); }
+.game-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--sky)); box-shadow: 0 8px 20px rgba(47, 107, 255, .4); }
+.game-ico svg { width: 28px; height: 28px; }
+.game-name { font: 800 20px var(--display); color: var(--ink); }
+.game-text { font-size: 13px; color: var(--muted); }
+.game-solo { max-width: 560px; width: 100%; margin: 0 auto; }
+.tab-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+@media (max-width: 720px) {
+  .game-menu { grid-template-columns: minmax(0, 1fr); }
+  .game-tile { min-height: 0; display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "ico name play" "ico text play" "ico state play"; align-items: center; column-gap: 14px; row-gap: 2px; }
+  .game-tile .game-ico { grid-area: ico; }
+  .game-tile .game-name { grid-area: name; font-size: 17px; }
+  .game-tile .game-text { grid-area: text; }
+  .game-tile .badge { grid-area: state; justify-self: start; }
+  .game-tile .btn { grid-area: play; margin-top: 0 !important; }
+  .tab { font-size: 9.5px; letter-spacing: .02em; }
+  .tab svg { width: 20px; height: 20px; }
+}

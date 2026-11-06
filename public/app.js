@@ -29,8 +29,8 @@
     noOffers: ["Aucune offre pour le moment. Reviens plus tard.", "No offers right now. Come back later."],
     view: ["Voir", "View"], watch: ["Reste encore", "Stay"], confirm: ["Valider", "Confirm"], open: ["Ouvrir", "Open"], left: ["restants", "left"],
     credited: ["ajoutés, en attente de validation.", "added, under review."],
-    wheel: ["Roue du jour", "Daily wheel"], wheelText: ["Un tour gratuit par jour, après ton premier tirage.", "One free spin a day, after your first roll."],
-    spin: ["Tourner la roue", "Spin the wheel"], spun: ["Reviens demain", "Come back tomorrow"], wheelWon: ["gagnés à la roue !", "won on the wheel!"],
+    wheel: ["Roue", "Wheel"], wheelText: ["Un tour gratuit toutes les quelques heures, après ton premier tirage du jour.", "A free spin every few hours, after your first roll of the day."],
+    spin: ["Tourner la roue", "Spin the wheel"], spun: ["Reviens plus tard", "Come back later"], wheelWon: ["gagnés à la roue !", "won on the wheel!"],
     bonus: ["Bonus quotidien", "Daily bonus"], bonusText: ["Fais un tirage, puis récupère ton bonus.", "Make a roll, then collect your bonus."],
     collect: ["Récupérer", "Collect"], done: ["Récupéré", "Collected"],
     quests: ["Quêtes du jour", "Daily quests"], rolls: ["tirages", "rolls"],
@@ -54,6 +54,13 @@
     myAds: ["Mes campagnes", "My campaigns"], noAds: ["Aucune campagne pour le moment.", "No campaigns yet."],
     ad_pending: ["En attente de paiement", "Awaiting payment"], ad_review: ["En vérification", "Under review"], ad_active: ["Active", "Running"], ad_stopped: ["Arrêtée", "Stopped"],
     views: ["vues", "views"], back: ["Retour", "Back"],
+    quests: ["Quêtes", "Quests"], questsTitle: ["Quêtes du jour", "Daily quests"],
+    perWindow: ["sur", "per"], minutes: ["min", "min"],
+    adHere: ["Ta pub ici", "Your ad here"], adHereSub: ["Montre ton site à tous nos joueurs", "Show your site to all our players"],
+    pickGame: ["Choisis un jeu", "Pick a game"], play: ["Jouer", "Play"], ready: ["Disponible", "Available"],
+    wheelNext: ["Prochain tour dans", "Next spin in"], wheelEvery: ["Un tour gratuit toutes les", "One free spin every"], hours: ["h", "h"],
+    minesShort: ["Ouvre des cases, évite les bombes.", "Open tiles, dodge the bombs."], diceShort: ["Choisis ta cible, lance le dé.", "Pick your target, roll the die."],
+    wheelShort: ["Fais tourner, gagne des Coins.", "Spin it, win Coins."],
     referral: ["Parrainage", "Referrals"], refText: ["de tout ce que gagnent tes filleuls te revient.", "of everything your referrals earn goes to you."],
     refLink: ["Ton lien", "Your link"], copy: ["Copier", "Copy"], copied: ["Lien copié.", "Link copied."], refCount: ["filleuls", "referrals"], refEarned: ["gagnés grâce à eux", "earned from them"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
@@ -119,6 +126,10 @@
 
   const PATHS = {
     home: "M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+    quests: "M9 5h10M9 12h10M9 19h10M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2",
+    wheel: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 0v9l6.4 6.4M12 12 3.6 9.6",
+    dice: "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm3.5 4.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01",
+    grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
     earn: "M13 2 4 14h7l-1 8 9-12h-7z",
     games: "M6 12h4M8 10v4M15 11h.01M18 13h.01M7 6h10a5 5 0 0 1 4.9 6l-.8 4A3 3 0 0 1 16 17l-1-1H9l-1 1a3 3 0 0 1-5.1-1l-.8-4A5 5 0 0 1 7 6z",
     wallet: "M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm14 7h.01",
@@ -271,9 +282,16 @@
     }
   }
 
-  const adSlot = (slot) => {
+  // Emplacement pub. Vide et "reserve" : propose aux visiteurs d'y mettre leur pub.
+  const adSlot = (slot, reserved = false) => {
     const html = cfg.ADS?.[slot];
-    if (!html) return null;
+    if (!html) {
+      if (!reserved) return null;
+      return h("a", { class: "ad-ph", href: "#advertise" },
+        h("span", { class: "ad-ph-tag" }, "AD"),
+        h("span", {}, h("b", {}, t("adHere")), h("span", { class: "ad-ph-sub" }, t("adHereSub"))),
+        icon("megaphone"));
+    }
     const box = h("div", { class: "ad" });
     // createContextualFragment execute les scripts du reseau publicitaire.
     box.append(document.createRange().createContextualFragment(html));
@@ -383,7 +401,7 @@
   }
 
   // Application ------------------------------------------------------------
-  const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["wallet", "wallet"], ["profile", "profile"]];
+  const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["quests", "quests"], ["wallet", "wallet"], ["profile", "profile"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "");
     return TABS.some(([k]) => k === r) || r === "advertise" ? r : "";
@@ -426,7 +444,7 @@
     const lv = levelOf(me.earned_total || 0);
     return h("section", { class: "stats" },
       stat("wallet", "", t("balance"), tk(me.available), `${t("worth")} ${eur(me.available)}`),
-      stat("bolt", "green", t("claims"), `${me.claims_today}/${me.claims_max}`, t("today")),
+      stat("bolt", "green", t("claims"), `${me.window_used ?? 0}/${me.window_count ?? 5}`, `${t("perWindow")} ${me.window_minutes ?? 10} ${t("minutes")} · ${me.claims_today} ${t("today")}`),
       stat("fire", "fire", t("streak"), `${me.streak}`, t("days")),
       stat("star", "gold", t("level"), `${lv.lvl}`, `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`));
   }
@@ -458,7 +476,7 @@
     const fill = h("i", {});
     const cap = captchaBox();
     const btn = h("button", { class: "btn big", type: "button" });
-    const cooldown = status?.cooldown_seconds ?? 300;
+    let cooldown = Math.max(status?.cooldown_seconds ?? 30, me.retry_after || 0);
     let readyAt = Date.now() + (me.retry_after || 0) * 1000;
     let busy = false;
 
@@ -492,13 +510,14 @@
         await animateTo(r.roll ?? 0);
         const i = table.findIndex((row) => r.roll >= row.from && r.roll <= row.to);
         if (i >= 0) rowEls[i].classList.add("hit");
+        cooldown = r.cooldown_seconds;
         readyAt = Date.now() + r.cooldown_seconds * 1000;
         burst(btn, `+${tk(r.tokens)}`);
         toast(`${tk(r.tokens)} ${t("won")}`, "good");
         await refreshMe();
         statsHost?.replaceChildren(statsRow());
       } else {
-        if (r.retry_after) readyAt = Date.now() + r.retry_after * 1000;
+        if (r.retry_after) { cooldown = r.retry_after; readyAt = Date.now() + r.retry_after * 1000; }
         toast(message(r), "bad");
       }
       busy = false;
@@ -510,7 +529,7 @@
       h("section", { class: "panel" },
         h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("roll").toUpperCase()), digits),
         h("div", { class: "cooldown" }, fill),
-        cap, btn,
+        cap, adSlot("roll_top", true), btn, adSlot("roll_bottom", true),
         h("p", { class: "note", style: "text-align:center;margin:12px 0 0" }, t("free"))));
   }
 
@@ -639,9 +658,19 @@
           render();
         }, reduceMotion ? 50 : 4400);
       },
-    }, me.wheel_done ? t("spun") : t("spin"));
+    }, t("spin"));
+    if (me.wheel_done) {
+      let left = me.wheel_retry_after || 0;
+      const fmt = (x) => `${Math.floor(x / 3600)}:${String(Math.floor((x % 3600) / 60)).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`;
+      btn.textContent = `${t("wheelNext")} ${fmt(left)}`;
+      every(() => {
+        left -= 1;
+        if (left <= 0) { refreshMe().then(render); return; }
+        btn.textContent = `${t("wheelNext")} ${fmt(left)}`;
+      }, 1000);
+    }
     return h("section", { class: "panel" },
-      h("div", { class: "panel-title" }, t("wheel")),
+      h("div", { class: "panel-title" }, t("wheel"), h("span", { class: "badge" }, `${t("wheelEvery")} ${me.wheel_hours ?? 4} ${t("hours")}`)),
       h("p", { class: "note" }, t("wheelText")),
       h("div", { class: "wheel" }, h("div", { class: "wheel-pointer" }), disc, h("div", { class: "wheel-hub" })),
       h("div", { style: "margin-top:18px" }, btn));
@@ -669,7 +698,7 @@
 
   function questsCard() {
     return h("section", { class: "panel" },
-      h("div", { class: "panel-title" }, t("quests"), h("span", { class: "badge" }, `${me.claims_today} ${t("rolls")}`)),
+      h("div", { class: "panel-title" }, t("questsTitle"), h("span", { class: "badge" }, `${me.claims_today} ${t("rolls")}`)),
       me.challenges.map((c) => {
         const pct = Math.min(100, (me.claims_today / c.target) * 100);
         const ready = me.claims_today >= c.target && !c.done;
@@ -790,9 +819,35 @@
       info, range, btn);
   }
 
-  const gamesView = () => h("div", { class: "stack" },
-    h("div", { class: "grid2" }, wheelCard(), h("div", {}, bonusCard(), h("div", { style: "height:14px" }), questsCard())),
-    h("div", { class: "grid2" }, minesCard(), diceCard()));
+  let gameSel = null;
+  function gamesView() {
+    const g = me.games || {};
+    const games = [
+      { key: "wheel", ico: "wheel", name: t("wheel"), text: t("wheelShort"), ok: !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1),
+        state: me.wheel_done ? `${t("wheelNext")} ${Math.ceil((me.wheel_retry_after || 0) / 60)} ${t("minutes")}` : t("ready"), card: wheelCard },
+      { key: "mines", ico: "grid", name: t("mines"), text: t("minesShort"), ok: (g.mines_left ?? 0) > 0 || Boolean(g.mines_active),
+        state: `${g.mines_left ?? 0} ${t("playsLeft")}`, card: minesCard },
+      { key: "dice", ico: "dice", name: t("dice"), text: t("diceShort"), ok: (g.dice_left ?? 0) > 0,
+        state: `${g.dice_left ?? 0} ${t("rollsLeft")}`, card: diceCard },
+    ];
+    const current = games.find((x) => x.key === gameSel);
+    if (current) {
+      return h("div", { class: "stack" },
+        h("button", { class: "btn ghost small", type: "button", style: "align-self:flex-start", onclick: () => { gameSel = null; minesEnd = null; render(); } }, `← ${t("pickGame")}`),
+        h("div", { class: "game-solo" }, current.card()));
+    }
+    return h("div", { class: "stack" },
+      h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickGame")),
+      h("div", { class: "game-menu" }, games.map((x) =>
+        h("button", { type: "button", class: `game-tile${x.ok ? " ready" : ""}`, onclick: () => { gameSel = x.key; render(); } },
+          h("span", { class: "game-ico" }, icon(x.ico)),
+          h("span", { class: "game-name" }, x.name),
+          h("span", { class: "game-text" }, x.text),
+          h("span", { class: `badge ${x.ok ? "good" : ""}` }, x.state),
+          h("span", { class: "btn small", style: "margin-top:auto" }, t("play"))))));
+  }
+
+  const questsView = () => h("div", { class: "stack" }, bonusCard(), questsCard());
 
   // Espace annonceur : l'annonceur paie sur la page FaucetPay, la campagne passe ensuite en verification.
   let adForm = { title: "", url: "https://", duration: 10, views: 1000 };
@@ -975,11 +1030,14 @@
     const route = routeNow();
     header = h("header", { class: "topline" });
     updateHeader();
-    const views = { "": homeView, earn: earnView, games: gamesView, wallet: walletView, profile: profileView, advertise: advertiseView };
-    const gamesReady = !me.wheel_done || !me.daily_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0 || me.challenges.some((c) => !c.done && me.claims_today >= c.target);
+    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView };
+    const dots = {
+      games: !me.wheel_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0,
+      quests: !me.daily_done || me.challenges.some((c) => !c.done && me.claims_today >= c.target),
+    };
     const nav = h("nav", { class: "tabbar", ariaLabel: "Menu" }, TABS.map(([k, label]) =>
       h("a", { class: "tab", href: `#${k}`, "aria-current": k === route ? "page" : undefined },
-        icon(label), t(label), k === "games" && gamesReady && me.claims_today > 0 ? h("span", { class: "dot" }) : null)));
+        icon(label), h("span", { class: "tab-label" }, t(label)), dots[k] && me.claims_today > 0 ? h("span", { class: "dot" }) : null)));
     return h("div", {},
       ticker(),
       h("div", { class: "shell" },

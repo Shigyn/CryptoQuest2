@@ -206,7 +206,9 @@ function usersTab() {
 // Reglages -----------------------------------------------------------------
 const FIELDS = [
   ["faucet_reward_tokens", `Récompense du faucet (${TK})`],
-  ["cooldown_seconds", "Délai entre deux réclamations (secondes)"],
+  ["cooldown_seconds", "Délai minimum entre deux tirages (secondes)"],
+  ["claims_window_count", "Tirages au plus par période"],
+  ["claims_window_seconds", "Durée de cette période (secondes, 600 = 10 min)"],
   ["max_claims_account_day", "Réclamations par compte, sur 24 h"],
   ["max_claims_ip_day", "Réclamations par IP, sur 24 h"],
   ["max_claims_site_hour", "Coupe-circuit : réclamations du site par heure"],
@@ -215,6 +217,7 @@ const FIELDS = [
   ["daily_bonus_tokens", `Bonus quotidien (${TK})`],
   ["daily_bonus_min_claims", "Réclamations requises pour le bonus"],
   ["wheel_min_claims", "Réclamations requises pour la roue du jour"],
+  ["wheel_hours", "Roue : un tour toutes les X heures"],
   ["mines_daily_plays", "Mines : parties gratuites par jour"],
   ["dice_daily_plays", "Dice : lancers gratuits par jour"],
   ["dice_unit", `Dice : gain de base (${TK}, multiplié par 100 / cible)`],

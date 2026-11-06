@@ -19,7 +19,9 @@ create table settings (
   pause_reason text,
   tokens_per_eur int not null default 10000 check (tokens_per_eur > 0),
   faucet_reward_tokens int not null default 2 check (faucet_reward_tokens >= 0),
-  cooldown_seconds int not null default 300 check (cooldown_seconds >= 10),
+  cooldown_seconds int not null default 30 check (cooldown_seconds >= 10),
+  claims_window_count int not null default 5 check (claims_window_count >= 1),
+  claims_window_seconds int not null default 600 check (claims_window_seconds >= 60),
   max_claims_account_day int not null default 48 check (max_claims_account_day >= 1),
   max_claims_ip_day int not null default 48 check (max_claims_ip_day >= 1),
   max_claims_site_hour int not null default 200 check (max_claims_site_hour >= 1),
@@ -30,6 +32,7 @@ create table settings (
   -- Roue du jour : gratuite, un tour par jour, sans mise. Chaque case a la meme chance.
   wheel_prizes int[] not null default '{1,1,2,2,3,3,5,10,20}' check (cardinality(wheel_prizes) between 2 and 16),
   wheel_min_claims int not null default 1 check (wheel_min_claims >= 0),
+  wheel_hours int not null default 4 check (wheel_hours >= 1),
   -- Taux de change mis a jour par le lot horaire (un seul appel CoinGecko par heure).
   auto_rates boolean not null default true,
   -- Jeux gratuits, sans mise : quelques parties par jour, apres un premier tirage.
@@ -41,7 +44,7 @@ create table settings (
   ad_price_eur_per_view numeric not null default 0.002 check (ad_price_eur_per_view > 0),
   ad_reward_share numeric not null default 50 check (ad_reward_share between 0 and 100),
   -- Tirage gratuit du faucet : nombre de 0 a 99 999. Sous le premier palier, la recompense de base.
-  roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 100}, {"from": 99999, "tokens": 10000}]',
+  roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 1000}, {"from": 99999, "tokens": 100000}]',
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
   offer_share_percent numeric not null default 50 check (offer_share_percent >= 0 and offer_share_percent <= 100),
   updated_at timestamptz not null default now()
@@ -94,6 +97,7 @@ create table users (
   validated bigint not null default 0,
   last_daily_day date,
   last_wheel_day date,
+  last_wheel_at timestamptz,
   signup_ip_hash text not null,
   last_ip_hash text,
   banned boolean not null default false,
@@ -469,6 +473,14 @@ begin
     return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after',
       ceil(extract(epoch from last_at + make_interval(secs => s.cooldown_seconds) - now()))::int);
   end if;
+  -- Fenetre : au plus N tirages sur la periode ; on rouvre quand le plus ancien en sort.
+  select count(*), min(at) into n, last_at from (
+    select at from claims where at > now() - make_interval(secs => s.claims_window_seconds)
+      and (user_id = p_user or ip_hash = p_ip_hash) order by at desc limit s.claims_window_count) w;
+  if n >= s.claims_window_count then
+    return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after',
+      ceil(extract(epoch from last_at + make_interval(secs => s.claims_window_seconds) - now()))::int);
+  end if;
 
   select count(*) into n from claims where user_id = p_user and at > now() - interval '24 hours';
   if n >= s.max_claims_account_day then return jsonb_build_object('ok', false, 'code', 'daily_limit'); end if;
@@ -529,14 +541,17 @@ begin
   select * into s from settings where id = 1;
   blk := user_block(u, p_ip_hash);
   if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
-  if u.last_wheel_day = today then return jsonb_build_object('ok', false, 'code', 'already_done'); end if;
+  if u.last_wheel_at > now() - make_interval(hours => s.wheel_hours) then
+    return jsonb_build_object('ok', false, 'code', 'already_done', 'retry_after',
+      ceil(extract(epoch from u.last_wheel_at + make_interval(hours => s.wheel_hours) - now()))::int);
+  end if;
   select count(*) into n from claims where user_id = p_user and (at at time zone 'utc')::date = today;
   if n < s.wheel_min_claims then return jsonb_build_object('ok', false, 'code', 'not_reached'); end if;
   -- Tirage cote serveur : le navigateur ne fait qu'afficher le resultat.
   idx := floor(random() * cardinality(s.wheel_prizes))::int + 1;
   prize := s.wheel_prizes[idx];
-  update users set last_wheel_day = today where id = p_user;
-  perform move_tokens(p_user, 'available', prize, 'wheel', today::text);
+  update users set last_wheel_day = today, last_wheel_at = now() where id = p_user;
+  perform move_tokens(p_user, 'available', prize, 'wheel', now()::text);
   return jsonb_build_object('ok', true, 'tokens', prize, 'index', idx - 1);
 end $$;
 
@@ -1095,7 +1110,12 @@ returns jsonb language sql stable set search_path = public as $$
     'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
-    'wheel_done', u.last_wheel_day = (now() at time zone 'utc')::date,
+    'wheel_done', coalesce(u.last_wheel_at > now() - make_interval(hours => s.wheel_hours), false),
+    'wheel_retry_after', greatest(coalesce(ceil(extract(epoch from u.last_wheel_at + make_interval(hours => s.wheel_hours) - now()))::int, 0), 0),
+    'wheel_hours', s.wheel_hours,
+    'window_count', s.claims_window_count,
+    'window_minutes', s.claims_window_seconds / 60,
+    'window_used', (select count(*) from claims where user_id = u.id and at > now() - make_interval(secs => s.claims_window_seconds)),
     'wheel_prizes', s.wheel_prizes,
     'wheel_min_claims', s.wheel_min_claims,
     'daily_bonus_tokens', s.daily_bonus_tokens,
@@ -1107,7 +1127,12 @@ returns jsonb language sql stable set search_path = public as $$
       'dice_unit', s.dice_unit,
       'mines_active', (select mines_public(g, s.mines_rewards) from game_plays g where g.user_id = u.id and g.game = 'mines' and g.status = 'active')),
     'claims_today', (select count(*) from claims where user_id = u.id and (at at time zone 'utc')::date = (now() at time zone 'utc')::date),
-    'retry_after', greatest(coalesce((select ceil(extract(epoch from max(at) + make_interval(secs => s.cooldown_seconds) - now()))::int from claims where user_id = u.id), 0), 0),
+    'retry_after', greatest(
+      coalesce((select ceil(extract(epoch from max(at) + make_interval(secs => s.cooldown_seconds) - now()))::int from claims where user_id = u.id), 0),
+      coalesce((select case when count(*) >= s.claims_window_count
+                       then ceil(extract(epoch from min(at) + make_interval(secs => s.claims_window_seconds) - now()))::int end
+                from (select at from claims where user_id = u.id and at > now() - make_interval(secs => s.claims_window_seconds)
+                      order by at desc limit s.claims_window_count) w), 0), 0),
     -- Gamification : total gagne (niveau) et serie de jours consecutifs avec au moins une reclamation.
     'earned_total', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and delta > 0
                       and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer')),
@@ -1274,6 +1299,9 @@ begin
     daily_bonus_tokens = coalesce((p->>'daily_bonus_tokens')::int, daily_bonus_tokens),
     daily_bonus_min_claims = coalesce((p->>'daily_bonus_min_claims')::int, daily_bonus_min_claims),
     wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
+    wheel_hours = coalesce((p->>'wheel_hours')::int, wheel_hours),
+    claims_window_count = coalesce((p->>'claims_window_count')::int, claims_window_count),
+    claims_window_seconds = coalesce((p->>'claims_window_seconds')::int, claims_window_seconds),
     auto_rates = coalesce((p->>'auto_rates')::boolean, auto_rates),
     mines_daily_plays = coalesce((p->>'mines_daily_plays')::int, mines_daily_plays),
     dice_daily_plays = coalesce((p->>'dice_daily_plays')::int, dice_daily_plays),
