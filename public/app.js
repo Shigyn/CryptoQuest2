@@ -24,6 +24,16 @@
     won: ["gagnés !", "won!"], free: ["Gratuit, sans mise. Le serveur tire un nombre de 0 à 99 999.", "Free, no stake. The server draws a number from 0 to 99,999."],
     ptc: ["Pubs", "Ads"], links: ["Liens", "Links"], offers: ["Offres", "Offers"],
     pendingNote: ["Ces gains sont vérifiés, puis partent seuls sur FaucetPay au paiement de chaque heure.", "These earnings are reviewed, then sent to FaucetPay automatically every hour."],
+    pickTask: ["Choisis une tâche", "Pick a task"], ptcShort: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
+    linksShort: ["Passe un lien raccourci jusqu’au bout.", "Go through a short link."],
+    offersShort: ["Jeux, sondages, inscriptions : les plus gros gains.", "Games, surveys, sign-ups: the biggest rewards."],
+    availableN: ["dispo", "available"], noneNow: ["Rien pour l’instant", "Nothing right now"], walls: ["réseaux", "networks"], wall1: ["réseau", "network"],
+    nextPayout: ["Prochain paiement", "Next payout"],
+    ptcHow: ["Ouvre la pub, laisse-la ouverte jusqu’à la fin du compteur, puis valide.", "Open the ad, keep it open until the timer ends, then confirm."],
+    linksHow: ["Valide le captcha, ouvre un lien et va jusqu’au bout : tu reviens ici crédité.", "Complete the captcha, open a link and go to the end: you come back here credited."],
+    offersHow: ["Choisis un réseau. Une offre terminée est créditée dès que le réseau la confirme.", "Pick a network. A completed offer is credited as soon as the network confirms it."],
+    wallHint: ["Les gains arrivent dans « À valider ».", "Earnings show under “Under review”."],
+    oneAtATime: ["Une pub à la fois.", "One ad at a time."], comeBack: ["Reviens demain", "Come back tomorrow"], doneToday: ["Fait", "Done"],
     noPtc: ["Aucune pub pour le moment. Reviens plus tard.", "No ads right now. Come back later."],
     noLinks: ["Aucun lien pour le moment. Reviens plus tard.", "No links right now. Come back later."],
     noOffers: ["Aucune offre pour le moment. Reviens plus tard.", "No offers right now. Come back later."],
@@ -406,7 +416,7 @@
     const r = location.hash.replace("#", "");
     return TABS.some(([k]) => k === r) || r === "advertise" ? r : "";
   };
-  let earnTab = "ptc";
+  let earnTab = null;
   let walletTab = "withdrawals";
   let earn = null;
   let timers = [];
@@ -538,96 +548,184 @@
     return h("div", { class: "stack" }, statsHost, rollCard(), adSlot("top"));
   }
 
-  // Gagner : pubs, liens, offres
+  // Gagner : menu de categories, puis la liste choisie.
   async function loadEarn() {
     const r = await api("earn_list");
     if (r.ok) earn = r;
     return r;
   }
 
-  function earnView() {
-    const body = h("div", {}, h("p", { class: "empty" }, "…"));
-    const seg = h("div", { class: "seg", role: "tablist" },
-      [["ptc", t("ptc")], ["links", t("links")], ["offers", t("offers")]].map(([k, label]) =>
-        h("button", { type: "button", role: "tab", "aria-selected": String(earnTab === k), onclick: () => { earnTab = k; render(); } }, label)));
+  const sumRewards = (list) => list.reduce((n, x) => n + (Number(x.reward_tokens) || 0) * (x.remaining ?? 1), 0);
+  const nextPayout = () => {
+    const d = new Date();
+    const left = 3600 - (d.getUTCMinutes() * 60 + d.getUTCSeconds());
+    return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  };
+  let wallSel = null;
 
-    const ptcList = () => {
-      if (!earn.ptc.length) return h("p", { class: "empty" }, t("noPtc"));
-      return h("div", {}, earn.ptc.map((c) => {
-        const action = h("div", {});
+  function earnView() {
+    const wrap = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
+    const back = () => h("button", { class: "btn ghost small", type: "button", style: "align-self:flex-start",
+      onclick: () => { earnTab = null; render(); } }, `← ${t("pickTask")}`);
+
+    // Bandeau : gains a valider, valides, et prochain paiement automatique (chaque heure pile).
+    const payoutLine = h("b", {}, nextPayout());
+    every(() => { payoutLine.textContent = nextPayout(); }, 1000);
+    const summary = () => h("section", { class: "panel earn-sum" },
+      h("div", {}, h("div", { class: "earn-sum-label" }, t("pending")),
+        h("div", { class: "earn-sum-val" }, coin(), tk(me.pending || 0))),
+      h("div", {}, h("div", { class: "earn-sum-label" }, t("validated")),
+        h("div", { class: "earn-sum-val" }, coin(), tk(me.validated || 0))),
+      h("div", {}, h("div", { class: "earn-sum-label" }, t("nextPayout")),
+        h("div", { class: "earn-sum-val" }, payoutLine)));
+
+    const menu = () => {
+      const linksLeft = earn.shortlinks.reduce((a, p) => a + p.remaining, 0);
+      const cats = [
+        { key: "ptc", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
+        { key: "links", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
+        { key: "offers", ico: "gift", name: t("offers"), text: t("offersShort"), n: earn.offerwalls.length, sum: null },
+      ];
+      return h("div", { class: "stack" },
+        summary(),
+        h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickTask")),
+        h("div", { class: "game-menu" }, cats.map((c) =>
+          h("button", { type: "button", class: `game-tile${c.n > 0 ? " ready" : ""}`, onclick: () => { earnTab = c.key; render(); } },
+            h("span", { class: "game-ico" }, icon(c.ico)),
+            h("span", { class: "game-name" }, c.name),
+            h("span", { class: "game-text" }, c.text),
+            h("span", { class: `badge ${c.n > 0 ? "good" : ""}` },
+              c.n < 1 ? t("noneNow") : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
+            h("span", { class: "btn small", style: "margin-top:auto" }, t("open"))))),
+        h("p", { class: "note", style: "text-align:center" }, t("pendingNote")),
+        adSlot("bottom"));
+    };
+
+    const emptyBox = (ico, text) => h("div", { class: "empty" }, h("div", { class: "empty-ico" }, icon(ico)), h("p", {}, text));
+
+    // PTC : une carte par pub, barre de visionnage, puis captcha et validation sur place.
+    const ptcPanel = () => {
+      const list = earn.ptc;
+      const head = h("div", { class: "panel-title" }, h("span", {}, t("ptc")),
+        list.length ? h("span", { class: "badge good" }, `${list.length} ${t("availableN")} · ${tk(sumRewards(list))}`) : null);
+      if (!list.length) return h("section", { class: "panel" }, head, emptyBox("eye", t("noPtc")));
+      let busy = false;
+      const cards = list.map((c) => {
+        const foot = h("div", { class: "task-foot" });
+        const card = h("div", { class: "task" },
+          h("div", { class: "task-top" },
+            h("div", { class: "row-ico" }, icon("eye")),
+            h("div", { class: "row-main" }, h("h3", {}, c.title), h("div", { class: "row-sub" }, `${c.duration_seconds} s`)),
+            h("span", { class: "task-reward" }, coin(), fmtInt(c.reward_tokens))),
+          foot);
         const start = h("button", {
-          class: "btn small",
+          class: "btn small", type: "button",
           onclick: async () => {
+            if (busy) { toast(t("oneAtATime"), "bad"); return; }
+            busy = true;
             const win = window.open("about:blank", "_blank");
             const r = await api("ptc_start", { id: c.id });
-            if (!r.ok) { win?.close(); toast(message(r), "bad"); return; }
+            if (!r.ok) { busy = false; win?.close(); toast(message(r), "bad"); return; }
             if (win) { win.opener = null; win.location = r.url; }
-            let left = r.duration_seconds;
-            const label = h("span", { class: "badge warn" }, `${t("watch")} ${left} s`);
-            action.replaceChildren(label);
+            card.classList.add("on");
+            const total = r.duration_seconds;
+            let left = total;
+            const fill = h("i", {});
+            const label = h("span", { class: "row-sub" }, `${t("watch")} ${left} s`);
+            foot.replaceChildren(h("div", { class: "task-bar" }, fill), label);
             const id = every(() => {
               left -= 1;
+              fill.style.width = `${Math.min(100, ((total - left) / total) * 100)}%`;
               if (left > 0) { label.textContent = `${t("watch")} ${left} s`; return; }
               clearInterval(id);
               const cap = captchaBox();
               const ok = h("button", {
-                class: "btn small gold",
+                class: "btn small gold", type: "button",
                 onclick: async () => {
                   if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+                  ok.disabled = true;
                   const done = await api("ptc_complete", { id: c.id, captcha: captchaToken(cap) || "dev" });
                   captchaReset(cap);
+                  ok.disabled = false;
                   if (done.ok) burst(ok, `+${tk(done.tokens)}`);
                   toast(done.ok ? `${tk(done.tokens)} ${t("credited")}` : message(done), done.ok ? "good" : "bad");
-                  if (done.ok || done.code === "already_done") { await loadEarn(); await refreshMe(); draw(); }
+                  if (done.ok || done.code === "already_done") { busy = false; await loadEarn(); await refreshMe(); render(); }
                 },
-              }, t("confirm"));
-              action.replaceChildren(h("div", {}, cap, ok));
+              }, `${t("confirm")} +${fmtInt(c.reward_tokens)}`);
+              foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
             }, 1000);
           },
         }, t("view"));
-        action.append(start);
-        return h("div", { class: "row" },
-          h("div", { class: "row-ico" }, icon("eye")),
-          h("div", { class: "row-main" }, h("h3", {}, c.title), h("div", { class: "row-sub" }, `${c.duration_seconds} s · `, h("span", { class: "reward" }, coin(), fmtInt(c.reward_tokens)))),
-          action);
-      }));
+        foot.append(start);
+        return card;
+      });
+      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t("ptcHow")), h("div", { class: "task-grid" }, cards));
     };
 
-    const linksList = () => {
-      if (!earn.shortlinks.length) return h("p", { class: "empty" }, t("noLinks"));
+    // Raccourcis : un captcha commun, puis une carte par reseau avec ses passages restants.
+    const linksPanel = () => {
+      const list = earn.shortlinks;
+      const total = list.reduce((a, p) => a + p.remaining, 0);
+      const head = h("div", { class: "panel-title" }, h("span", {}, t("links")),
+        list.length ? h("span", { class: `badge ${total ? "good" : ""}` }, `${total} ${t("left")}`) : null);
+      if (!list.length) return h("section", { class: "panel" }, head, emptyBox("link", t("noLinks")));
       const cap = captchaBox();
-      return h("div", {}, cap, earn.shortlinks.map((p) => h("div", { class: "row" },
-        h("div", { class: "row-ico" }, icon("link")),
-        h("div", { class: "row-main" }, h("h3", {}, p.name), h("div", { class: "row-sub" }, `${p.remaining} ${t("left")} · `, h("span", { class: "reward" }, coin(), fmtInt(p.reward_tokens)))),
-        h("button", {
-          class: "btn small", disabled: p.remaining < 1,
-          onclick: async () => {
-            if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
-            const r = await api("shortlink_start", { id: p.id, captcha: captchaToken(cap) || "dev" });
-            captchaReset(cap);
-            if (r.ok) location.href = r.url;
-            else toast(message(r), "bad");
-          },
-        }, t("open")))));
+      return h("section", { class: "panel" }, head,
+        h("p", { class: "note" }, t("linksHow")),
+        h("div", { class: "task-cap" }, cap),
+        h("div", { class: "task-grid" }, list.map((p) => {
+          const btn = h("button", {
+            class: "btn small", type: "button", disabled: p.remaining < 1,
+            onclick: async () => {
+              if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+              btn.disabled = true;
+              const r = await api("shortlink_start", { id: p.id, captcha: captchaToken(cap) || "dev" });
+              captchaReset(cap);
+              if (r.ok) { location.href = r.url; return; }
+              btn.disabled = false;
+              toast(message(r), "bad");
+            },
+          }, p.remaining > 0 ? t("open") : t("doneToday"));
+          return h("div", { class: `task${p.remaining < 1 ? " done" : ""}` },
+            h("div", { class: "task-top" },
+              h("div", { class: "row-ico" }, icon("link")),
+              h("div", { class: "row-main" }, h("h3", {}, p.name),
+                h("div", { class: "row-sub" }, p.remaining > 0 ? `${p.remaining} ${t("left")}` : t("comeBack"))),
+              h("span", { class: "task-reward" }, coin(), fmtInt(p.reward_tokens))),
+            h("div", { class: "task-foot" }, btn));
+        })));
     };
 
-    const offersBlock = () => {
-      if (!earn.offerwalls.length) return h("p", { class: "empty" }, t("noOffers"));
-      const frame = h("div", { style: "margin-top:12px" });
-      const open = (w) => frame.replaceChildren(h("iframe", { class: "wall", src: w.iframe_url.replaceAll("{user}", encodeURIComponent(me.ref_code)), title: w.name }));
-      open(earn.offerwalls[0]);
-      return h("div", {},
-        earn.offerwalls.length > 1 ? h("div", { class: "seg" }, earn.offerwalls.map((w) => h("button", { type: "button", onclick: () => open(w) }, w.name))) : null,
-        frame);
+    // Offerwalls : une tuile par reseau, le mur choisi s'ouvre en dessous.
+    const offersPanel = () => {
+      const list = earn.offerwalls;
+      const head = h("div", { class: "panel-title" }, h("span", {}, t("offers")),
+        list.length ? h("span", { class: "badge" }, `${list.length} ${t(list.length > 1 ? "walls" : "wall1")}`) : null);
+      if (!list.length) return h("section", { class: "panel" }, head, emptyBox("gift", t("noOffers")));
+      const area = h("div", {});
+      const tiles = list.map((w) => h("button", { type: "button", class: "wall-tile", "data-code": w.code, onclick: () => pick(w) },
+        h("span", { class: "wall-logo" }, w.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase()),
+        h("span", { class: "wall-name" }, w.name)));
+      function pick(w) {
+        wallSel = w.code;
+        tiles.forEach((x) => x.setAttribute("aria-selected", String(x.dataset.code === w.code)));
+        area.replaceChildren(
+          h("div", { class: "wall-bar" }, h("b", {}, w.name), h("span", { class: "row-sub" }, t("wallHint"))),
+          h("iframe", { class: "wall", src: w.iframe_url.replaceAll("{user}", encodeURIComponent(me.ref_code)), title: w.name }));
+      }
+      pick(list.find((w) => w.code === wallSel) || list[0]);
+      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t("offersHow")), h("div", { class: "wall-grid" }, tiles), area);
     };
 
     const draw = () => {
       if (!earn) return;
-      body.replaceChildren(h("p", { class: "note" }, t("pendingNote")),
-        earnTab === "ptc" ? ptcList() : earnTab === "links" ? linksList() : offersBlock());
+      if (!earnTab) { wrap.replaceChildren(menu()); return; }
+      const panel = earnTab === "ptc" ? ptcPanel() : earnTab === "links" ? linksPanel() : offersPanel();
+      wrap.replaceChildren(...[back(), panel, adSlot("bottom")].filter(Boolean));
     };
+    if (earn) draw();
     loadEarn().then(draw);
-    return h("div", { class: "stack" }, h("section", { class: "panel" }, seg, body), adSlot("bottom"));
+    return wrap;
   }
 
   // Jeux : roue, bonus, quetes
