@@ -57,6 +57,16 @@
     diceWin: ["Gagne si le dé fait moins de", "Win if the roll is under"], chance: ["chance", "chance"], diceGo: ["Lancer le dé", "Roll the die"],
     rollsLeft: ["lancers restants aujourd'hui", "rolls left today"], diceLost: ["Raté, retente ta chance !", "Missed, try again!"],
     needRoll: ["Fais d'abord un tirage au faucet aujourd'hui.", "Make a faucet roll first today."],
+    vip: ["VIP", "VIP"], vipTitle: ["Passe VIP", "Go VIP"], vipActive: ["VIP actif", "VIP active"],
+    vipText: ["Un abonnement simple pour profiter du site sans pub et gagner plus sur tes tâches.", "A simple subscription to enjoy the site ad-free and earn more on your tasks."],
+    vipNoAds: ["Zéro pub sur le site", "No ads on the site"], vipNoAdsSub: ["Les bannières disparaissent partout.", "Banners disappear everywhere."],
+    vipTasks: ["sur les pubs, liens et offres", "on ads, links and offers"], vipTasksSub: ["Ajouté automatiquement à chaque tâche validée.", "Added automatically to every approved task."],
+    vipRef: ["de parrainage", "referral share"], vipRefInstead: ["au lieu de", "instead of"],
+    vipBadge: ["Badge VIP doré", "Golden VIP badge"], vipBadgeSub: ["Couronne sur ton profil.", "Crown on your profile."],
+    vipFor: ["jours", "days"], vipPay: ["Payer avec FaucetPay", "Pay with FaucetPay"], vipExtend: ["Prolonger", "Extend"],
+    vipUntil: ["Actif jusqu’au", "Active until"], vipDelay: ["Après le paiement, l’activation prend une à deux minutes.", "After payment, activation takes one to two minutes."],
+    vipFair: ["Le VIP ne donne aucun tirage, aucun tour de roue ni aucune chance de gain en plus : uniquement des avantages fixes. Pas de renouvellement automatique.", "VIP gives no extra rolls, spins or winning chances: fixed perks only. No automatic renewal."],
+    vipRefresh: ["Actualiser", "Refresh"], vipLink: ["Zéro pub, plus de gains sur tes tâches.", "No ads, more from your tasks."],
     advertise: ["Faire de la pub", "Advertise"], adText: ["Montre ton site à nos membres : chaque vue est une vraie visite de plusieurs secondes.", "Show your site to our members: every view is a real visit lasting several seconds."],
     adTitle: ["Titre de l'annonce", "Ad title"], adUrl: ["Adresse de ton site (https://…)", "Your site address (https://…)"], adDuration: ["Durée de chaque vue", "Length of each view"],
     adViews: ["Nombre de vues", "Number of views"], adPay: ["Payer avec FaucetPay", "Pay with FaucetPay"], adTotal: ["Total", "Total"],
@@ -111,6 +121,7 @@
     bad_title: ["Le titre doit faire entre 3 et 60 caractères.", "The title must be 3 to 60 characters long."],
     bad_url: ["L'adresse doit commencer par https://", "The address must start with https://"],
     bad_views: ["Choisis entre 100 et 100 000 vues.", "Pick between 100 and 100,000 views."],
+    vip_unavailable: ["Le VIP ouvre bientôt. Reviens dans quelques jours.", "VIP opens soon. Come back in a few days."],
     ads_unavailable: ["L'espace annonceur ouvre bientôt. Reviens dans quelques jours.", "Advertising opens soon. Come back in a few days."],
   };
   const message = (r) => (r.code === "offline" ? t("offline") : (ERR[r.code] || ERR.try_later)[FR ? 0 : 1]);
@@ -155,6 +166,8 @@
     flag: "M5 21V4m0 0h12l-2 4 2 4H5",
     check: "M5 12l5 5L20 7",
     bomb: "M11 7a7 7 0 1 0 6 3.4M15 4l2 2M18 3v2M20 5h-2M15.5 7.5 17 6",
+    crown: "M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z",
+    check: "M5 12.5l4.5 4.5L19 7",
     megaphone: "M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zm13-3a5 5 0 0 1 0 8",
   };
   function icon(name) {
@@ -294,6 +307,7 @@
 
   // Emplacement pub. Vide et "reserve" : propose aux visiteurs d'y mettre leur pub.
   const adSlot = (slot, reserved = false) => {
+    if (me?.vip) return null;
     const html = cfg.ADS?.[slot];
     if (!html) {
       if (!reserved) return null;
@@ -414,7 +428,7 @@
   const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["quests", "quests"], ["wallet", "wallet"], ["profile", "profile"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "");
-    return TABS.some(([k]) => k === r) || r === "advertise" ? r : "";
+    return TABS.some(([k]) => k === r) || r === "advertise" || r === "vip" ? r : "";
   };
   let earnTab = null;
   let walletTab = "withdrawals";
@@ -435,7 +449,8 @@
     const lv = levelOf(me.earned_total || 0);
     header.replaceChildren(
       h("div", { class: "who" },
-        h("div", { class: "avatar" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl))),
+        h("div", { class: `avatar${me.vip ? " vip" : ""}` }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
+          me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         h("div", { class: "who-text" },
           h("div", { class: "who-name" }, shortAddr(me.fp_address)),
           h("div", { class: "xp", title: `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}` }, h("i", { style: `width:${lv.pct}%` })))),
@@ -947,12 +962,55 @@
 
   const questsView = () => h("div", { class: "stack" }, bonusCard(), questsCard());
 
+  // VIP : abonnement paye sur la page FaucetPay, active au retour du paiement.
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
+  function vipView() {
+    const s = status || {};
+    const usdt = Math.ceil(+((s.vip_price_eur || 0) * (s.usdt_per_eur || 1) * 10000).toFixed(6)) / 10000;
+    const eur = (s.vip_price_eur || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const msg = h("div", { role: "alert" });
+    const pay = h("button", {
+      class: "btn big gold", type: "button", style: "width:100%",
+      onclick: async () => {
+        pay.disabled = true;
+        const r = await api("vip_order");
+        pay.disabled = false;
+        if (!r.ok) { msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:12px" }, message(r))); return; }
+        const f = h("form", { method: "post", action: r.form.action, style: "display:none" },
+          Object.entries(r.form.fields).map(([name, value]) => h("input", { type: "hidden", name, value })));
+        document.body.append(f);
+        f.submit();
+      },
+    }, me.vip ? t("vipExtend") : t("vipPay"));
+    const perk = (ico, title, sub) => h("div", { class: "vip-perk" },
+      h("span", { class: "vip-perk-ico" }, icon(ico)), h("div", {}, h("b", {}, title), h("div", { class: "row-sub" }, sub)));
+    return h("div", { class: "stack" },
+      h("a", { class: "btn ghost small", href: "#profile", style: "align-self:flex-start;width:auto" }, `← ${t("back")}`),
+      h("section", { class: "panel vip-hero" },
+        h("div", { class: "vip-crown" }, icon("crown")),
+        h("h2", {}, me.vip ? t("vipActive") : t("vipTitle")),
+        me.vip ? h("p", { class: "vip-until" }, `${t("vipUntil")} ${fmtDate(me.vip_until)}`) : h("p", { class: "note", style: "margin:6px 0 0" }, t("vipText")),
+        h("div", { class: "vip-price" }, h("b", {}, `${eur} €`), h("span", {}, ` / ${s.vip_days || 30} ${t("vipFor")}`)),
+        h("div", { class: "row-sub" }, `≈ ${usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`)),
+      h("section", { class: "panel" },
+        h("div", { class: "vip-perks" },
+          perk("eye", t("vipNoAds"), t("vipNoAdsSub")),
+          perk("earn", `+${s.vip_task_bonus ?? 0} % ${t("vipTasks")}`, t("vipTasksSub")),
+          perk("profile", `${s.vip_referral_percent ?? 0} % ${t("vipRef")}`, `${t("vipRefInstead")} ${s.referral_percent ?? 0} %`),
+          perk("crown", t("vipBadge"), t("vipBadgeSub"))),
+        h("div", { style: "margin-top:16px" }, pay, msg),
+        h("p", { class: "note", style: "margin:10px 0 0;font-style:italic;text-align:center" }, t("vipDelay")),
+        h("div", { style: "text-align:center;margin-top:8px" }, h("button", { class: "btn ghost small", type: "button",
+          onclick: async () => { await refreshMe(); render(); } }, t("vipRefresh"))),
+        h("p", { class: "note", style: "margin:14px 0 0" }, t("vipFair"))));
+  }
+
   // Espace annonceur : l'annonceur paie sur la page FaucetPay, la campagne passe ensuite en verification.
   let adForm = { title: "", url: "https://", duration: 10, views: 1000 };
   function advertiseView() {
     const price = () => {
       const eurv = adForm.views * (status?.ad_price_eur_per_view || 0) * adForm.duration / 10;
-      return { eur: eurv, usdt: Math.ceil(eurv * (status?.usdt_per_eur || 1) * 10000) / 10000 };
+      return { eur: eurv, usdt: Math.ceil(+(eurv * (status?.usdt_per_eur || 1) * 10000).toFixed(6)) / 10000 };
     };
     const total = h("div", { class: "ad-total" });
     const showTotal = () => { const p = price(); total.replaceChildren(h("span", {}, t("adTotal")), h("b", {}, `${p.usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`), h("span", { class: "row-sub" }, `≈ ${p.eur.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`)); };
@@ -1070,14 +1128,16 @@
     const save = h("button", { class: "btn", type: "submit", style: "width:100%" }, me.secured ? t("secChange") : t("secSave"));
     return h("div", { class: "stack" },
       h("section", { class: "panel", style: "text-align:center" },
-        h("div", { class: "avatar", style: "width:72px;height:72px;margin:0 auto;font-size:28px;border-radius:20px" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl))),
+        h("div", { class: `avatar${me.vip ? " vip" : ""}`, style: "width:72px;height:72px;margin:0 auto;font-size:28px;border-radius:20px" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
+          me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
+        me.vip ? h("div", { style: "margin-top:12px" }, h("span", { class: "badge vip-badge" }, icon("crown"), t("vip"))) : null,
         h("h2", { style: "margin-top:14px;overflow-wrap:anywhere" }, me.fp_address),
         h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`),
         h("div", { class: "xp", style: "width:100%;height:10px" }, h("i", { style: `width:${lv.pct}%` }))),
       h("div", { class: "grid2" },
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("referral")),
-          h("p", { class: "note" }, `${status?.referral_percent ?? 0} % ${t("refText")}`),
+          h("p", { class: "note" }, `${me.vip ? status?.vip_referral_percent ?? 0 : status?.referral_percent ?? 0} % ${t("refText")}`),
           h("div", { class: "copy" }, field, h("button", {
             class: "btn small", type: "button",
             onclick: async () => {
@@ -1106,6 +1166,11 @@
               } else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
             },
           }, h("label", { class: "field" }, t("secNew"), h("div", { class: "input" }, icon("lock"), pass)), save, msg))),
+      h("a", { class: "row ad-link vip-link", href: "#vip" },
+        h("div", { class: "row-ico vip-ico" }, icon("crown")),
+        h("div", { class: "row-main" }, h("h3", {}, me.vip ? t("vipActive") : t("vipTitle")),
+          h("div", { class: "row-sub" }, me.vip ? `${t("vipUntil")} ${fmtDate(me.vip_until)}` : t("vipLink"))),
+        h("span", { class: "chev" }, "›")),
       h("a", { class: "row ad-link", href: "#advertise" },
         h("div", { class: "row-ico", style: "background:rgba(255,204,61,.14);color:var(--gold)" }, icon("megaphone")),
         h("div", { class: "row-main" }, h("h3", {}, t("advertise")), h("div", { class: "row-sub" }, t("adText"))),
@@ -1128,7 +1193,7 @@
     const route = routeNow();
     header = h("header", { class: "topline" });
     updateHeader();
-    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView };
+    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView, vip: vipView };
     const dots = {
       games: !me.wheel_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0,
       quests: !me.daily_done || me.challenges.some((c) => !c.done && me.claims_today >= c.target),

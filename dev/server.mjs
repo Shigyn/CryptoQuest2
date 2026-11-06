@@ -52,6 +52,13 @@ createServer(async (req, res) => {
     res.writeHead(302, { Location: url.searchParams.get("to") }).end();
     return;
   }
+  // Paiement FaucetPay simule : regle la derniere commande VIP en attente.
+  if (url.pathname === "/dev/payer-vip") {
+    const o = (await h.pg.query("select id, amount_usdt from vip_orders where status = 'pending' order by created_at desc limit 1")).rows[0];
+    const r = o ? await h.rpc("pay_vip_order", { p_id: o.id, p_tx: "dev-" + Date.now(), p_amount: Number(o.amount_usdt), p_currency: "USDT" }) : { ok: false };
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(r));
+    return;
+  }
   if (url.pathname === "/mur-essai") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(`<p style="font-family:sans-serif;padding:20px">Mur d'offres simulé pour ${url.searchParams.get("user")?.replace(/[^a-z0-9]/gi, "")}.</p>`);

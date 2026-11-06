@@ -824,3 +824,51 @@ test("roue : un tour toutes les 4 heures", async () => {
   assert.equal((await me(h, u)).wheel_done, false);
   assert.equal((await api(h, "wheel", { session: u.session }, u.ip)).body.ok, true);
 });
+
+test("VIP : paiement verifie, avantages fixes sur les taches et le parrainage", async () => {
+  const h = await createHarness();
+  const parrain = await newUser(h);
+  const o = (await api(h, "vip_order", { session: parrain.session }, parrain.ip)).body;
+  assert.equal(o.ok, true);
+  // 2,99 € x 1,10 USDT = 3,289 USDT
+  assert.equal(Number(o.amount_usdt), 3.289);
+  assert.equal(o.form.fields.success_url.endsWith("#vip"), true);
+  const id = o.form.fields.custom;
+  const ipn = async (token) => (await handleMerchant(new Request("http://x/merchant", { method: "POST", body: new URLSearchParams({ token, custom: id }) }), h.deps));
+  h.mock.merchantPayments.set("v1", { valid: true, merchant_username: "marchand", custom: id, amount1: "1", currency1: "USDT", transaction_id: "v1" });
+  assert.equal((await ipn("v1")).status, 400, "montant trop faible");
+  assert.equal((await api(h, "me", { session: parrain.session }, parrain.ip)).body.vip, false);
+  h.mock.merchantPayments.set("v2", { valid: true, merchant_username: "marchand", custom: id, amount1: "3.289", currency1: "USDT", transaction_id: "v2" });
+  assert.equal((await ipn("v2")).status, 200);
+  const me1 = (await api(h, "me", { session: parrain.session }, parrain.ip)).body;
+  assert.equal(me1.vip, true);
+  const until1 = new Date(me1.vip_until).getTime();
+  assert.ok(until1 > Date.now() + 29 * 86400e3);
+  // Nouvel essai de FaucetPay : pas de double prolongation.
+  h.mock.merchantPayments.delete("v2");
+  assert.equal((await ipn("v2")).status, 200);
+  assert.equal(new Date((await api(h, "me", { session: parrain.session }, parrain.ip)).body.vip_until).getTime(), until1);
+  assert.match(h.alerts.at(-1), /VIP/);
+  const ov = (await admin(h, { action: "overview" })).body;
+  assert.equal(ov.stats.vip_active, 1);
+
+  // Bonus fixe de 10 % sur ses taches, et 15 % au parrain VIP au lieu de 10 %.
+  await admin(h, { action: "save_ptc", item: { title: "Pub", url: "https://exemple.com", reward_tokens: 100, duration_seconds: 5, max_views: 10 } });
+  const pid = (await admin(h, { action: "overview" })).body.ptc[0].id;
+  const filleul = await newUser(h, { ref: me1.ref_code });
+  for (const u of [parrain, filleul]) {
+    await api(h, "ptc_start", { session: u.session, id: pid }, u.ip);
+    await h.pg.query("update ptc_views set started_at = now() - interval '6 seconds'");
+    await api(h, "ptc_complete", { session: u.session, id: pid }, u.ip);
+  }
+  assert.equal((await me(h, parrain)).pending, 110, "VIP : 100 + 10 %");
+  assert.equal((await me(h, filleul)).pending, 100, "membre normal : pas de bonus");
+  await admin(h, { action: "validate", all_clean: true });
+  assert.equal((await me(h, parrain)).available, 15, "parrain VIP : 15 % de 100");
+});
+
+test("VIP : indisponible sans compte marchand configure", async () => {
+  const h = await createHarness({ merchantUsername: "" });
+  const u = await newUser(h);
+  assert.equal((await api(h, "vip_order", { session: u.session }, u.ip)).body.code, "vip_unavailable");
+});

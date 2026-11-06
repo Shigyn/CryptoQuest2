@@ -314,6 +314,30 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
       });
     }
 
+    case "vip_order": {
+      if (!d.merchantUsername) return refuse(d, 503, "vip_unavailable");
+      const r = await d.rpc("create_vip_order", { p_user: userId });
+      if (!r.ok) return result(d, r);
+      return json(d, 200, {
+        ok: true,
+        amount_usdt: r.amount_usdt,
+        form: {
+          action: "https://faucetpay.io/merchant/webscr",
+          fields: {
+            merchant_username: d.merchantUsername,
+            item_description: `VIP ${r.days} jours`,
+            amount1: String(r.amount_usdt),
+            currency1: "USDT",
+            currency2: "",
+            custom: r.id,
+            callback_url: `${d.functionsBase}/merchant`,
+            success_url: `${d.siteUrl}#vip`,
+            cancel_url: `${d.siteUrl}#vip`,
+          },
+        },
+      });
+    }
+
     case "ad_orders":
       return json(d, 200, { ok: true, orders: await d.rpc("my_ad_orders", { p_user: userId }) });
 
@@ -387,17 +411,29 @@ export async function handleMerchant(req: Request, d: Deps): Promise<Response> {
   const p = await d.verifyMerchant(token);
   if (!p || p.valid !== true) {
     // Jeton deja utilise lors d'un essai precedent : la commande est peut-etre deja payee.
-    return (await d.rpc("ad_order_paid", { p_id: custom })) ? new Response("ok") : new Response("invalid", { status: 400 });
+    const paid = (await d.rpc("ad_order_paid", { p_id: custom })) || (await d.rpc("vip_order_paid", { p_id: custom }));
+    return paid ? new Response("ok") : new Response("invalid", { status: 400 });
   }
   if (String(p.merchant_username ?? "").toLowerCase() !== d.merchantUsername.toLowerCase() || String(p.custom ?? "") !== custom) {
     return new Response("mismatch", { status: 400 });
   }
-  const r = await d.rpc("pay_ad_order", {
+  const args = {
     p_id: custom,
     p_tx: String(p.transaction_id ?? token),
     p_amount: Number(p.amount1),
     p_currency: String(p.currency1 ?? ""),
-  });
+  };
+  // Meme compte marchand pour la pub et le VIP : la commande dit de quoi il s'agit.
+  let r = await d.rpc("pay_ad_order", args);
+  if (!r.ok && r.code === "not_found") {
+    r = await d.rpc("pay_vip_order", args);
+    if (!r.ok) {
+      await d.alert(`Paiement VIP refusé (${r.code}) pour la commande ${custom}.`);
+      return new Response(r.code, { status: 400 });
+    }
+    if (!r.duplicate) await d.alert("Nouvel abonnement VIP payé.");
+    return new Response("ok");
+  }
   if (!r.ok) {
     await d.alert(`Paiement annonceur refusé (${r.code}) pour la commande ${custom}.`);
     return new Response(r.code, { status: 400 });

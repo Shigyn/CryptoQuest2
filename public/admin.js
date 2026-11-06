@@ -96,6 +96,7 @@ function overviewTab() {
       stat(fmt(st.claims_day), "réclamations sur 24 h"),
       stat(fmt(st.earnings_to_review), "gains à valider"),
       stat(fmt(st.attention), "retraits à vérifier"),
+      stat(fmt(st.vip_active), `VIP actifs · ${money(st.vip_paid_eur_30d)} sur 30 j`),
       stat(money(st.paid_tokens_day / s.tokens_per_eur, 4), `payés sur 24 h (plafond ${money(s.max_payout_eur_day)})`)),
     card("Trésorerie",
       h("div", { class: "grid" },
@@ -224,6 +225,10 @@ const FIELDS = [
   ["ad_price_eur_per_view", "Annonceurs : prix d'une vue de 10 s (€)"],
   ["ad_reward_share", "Annonceurs : part reversée aux membres (%)"],
   ["referral_percent", "Part du parrain (%)"],
+  ["vip_price_eur", "VIP : prix de l'abonnement (€)"],
+  ["vip_days", "VIP : durée (jours)"],
+  ["vip_task_bonus", "VIP : bonus sur pubs, liens et offres (%)"],
+  ["vip_referral_percent", "VIP : part du parrain (%)"],
   ["offer_share_percent", "Part des offerwalls reversée (%)"],
 ];
 

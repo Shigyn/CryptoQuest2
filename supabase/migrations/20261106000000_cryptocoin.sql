@@ -1,7 +1,7 @@
 -- CryptoCoin : schema complet. Rejouable : efface d'abord l'ancienne version, sans donnees reelles a ce stade.
 -- Toute regle d'argent est ici. Tables fermees (RLS sans politique), fonctions reservees a service_role.
 
-drop table if exists game_plays, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
+drop table if exists game_plays, vip_orders, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
   shortlink_providers, earnings, withdrawals, claims, ledger, sessions, users, bans, coins, settings cascade;
 do $$
 declare f record;
@@ -43,6 +43,11 @@ create table settings (
   -- Espace annonceur : prix par vue de 10 s, et part reversee aux membres.
   ad_price_eur_per_view numeric not null default 0.002 check (ad_price_eur_per_view > 0),
   ad_reward_share numeric not null default 50 check (ad_reward_share between 0 and 100),
+  -- VIP : abonnement paye via FaucetPay. Avantages fixes, jamais de tirage ni de chance de gain en plus.
+  vip_price_eur numeric not null default 2.99 check (vip_price_eur > 0),
+  vip_days int not null default 30 check (vip_days between 1 and 365),
+  vip_task_bonus numeric not null default 10 check (vip_task_bonus between 0 and 100),
+  vip_referral_percent numeric not null default 15 check (vip_referral_percent between 0 and 50),
   -- Tirage gratuit du faucet : nombre de 0 a 99 999. Sous le premier palier, la recompense de base.
   roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 1000}, {"from": 99999, "tokens": 100000}]',
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
@@ -90,6 +95,7 @@ create table users (
   -- Verrou apres 5 mauvais mots de passe en 15 minutes.
   failed_logins int not null default 0,
   locked_until timestamptz,
+  vip_until timestamptz,
   payout_coin text not null default 'USDT' references coins (code),
   -- available : retirable tout de suite. pending : a valider. validated : part au prochain lot horaire.
   available bigint not null default 0,
@@ -267,6 +273,19 @@ create table ad_orders (
 );
 create index ad_orders_user_idx on ad_orders (user_id, created_at desc);
 
+create table vip_orders (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id uuid not null references users (id),
+  days int not null,
+  price_eur numeric not null,
+  amount_usdt numeric not null,
+  status text not null default 'pending' check (status in ('pending', 'paid')),
+  tx_id text unique,
+  paid_at timestamptz
+);
+create index vip_orders_user_idx on vip_orders (user_id, created_at desc);
+
 create table challenges (
   id bigint generated always as identity primary key,
   name text not null,
@@ -301,6 +320,7 @@ alter table challenges enable row level security;
 alter table challenge_done enable row level security;
 alter table game_plays enable row level security;
 alter table ad_orders enable row level security;
+alter table vip_orders enable row level security;
 
 -- Mouvements -------------------------------------------------------------
 
@@ -326,7 +346,8 @@ declare
 begin
   select referrer_id into rid from users where id = p_user;
   if rid is null then return; end if;
-  select referral_percent into pct from settings where id = 1;
+  select case when r.vip_until > now() then s.vip_referral_percent else s.referral_percent end into pct
+    from settings s, users r where s.id = 1 and r.id = rid;
   update users set referral_carry = referral_carry + p_tokens * pct / 100 where id = rid
     returning referral_carry into carry;
   whole := floor(carry);
@@ -588,18 +609,24 @@ declare
   risk_txt text;
   n int;
   new_id bigint;
+  tokens bigint := p_tokens;
+  bonus numeric;
 begin
   select * into u from users where id = p_user for update;
   if not found then return jsonb_build_object('ok', false, 'code', 'unknown_user'); end if;
+  if u.vip_until > now() then
+    select vip_task_bonus into bonus from settings where id = 1;
+    tokens := p_tokens + floor(p_tokens * bonus / 100);
+  end if;
   select count(*) into n from users where last_ip_hash = u.last_ip_hash and id <> p_user;
   if n > 0 then risk_txt := 'IP partagée avec ' || n || ' autre(s) compte(s)'; end if;
   if u.banned then risk_txt := 'Compte banni'; end if;
   insert into earnings (user_id, source, ref, label, tokens, revenue_eur, risk)
-  values (p_user, p_source, p_ref, p_label, p_tokens, p_revenue, risk_txt)
+  values (p_user, p_source, p_ref, p_label, tokens, p_revenue, risk_txt)
   on conflict (source, ref) do nothing returning id into new_id;
   if new_id is null then return jsonb_build_object('ok', true, 'duplicate', true); end if;
-  perform move_tokens(p_user, 'pending', p_tokens, p_source, p_ref);
-  return jsonb_build_object('ok', true, 'tokens', p_tokens);
+  perform move_tokens(p_user, 'pending', tokens, p_source, p_ref);
+  return jsonb_build_object('ok', true, 'tokens', tokens);
 end $$;
 
 create function ptc_list(p_user uuid)
@@ -1071,6 +1098,50 @@ returns jsonb language sql stable set search_path = public as $fn$
   where o.user_id = p_user and (o.status = 'paid' or o.created_at > now() - interval '1 day');
 $fn$;
 
+
+-- VIP ------------------------------------------------------------------------
+
+create function create_vip_order(p_user uuid)
+returns jsonb language plpgsql set search_path = public as $fn$
+declare
+  s settings;
+  rate numeric;
+  usdt numeric;
+  new_id uuid;
+begin
+  select * into s from settings where id = 1;
+  select per_eur into rate from coins where code = 'USDT';
+  if rate is null then return jsonb_build_object('ok', false, 'code', 'vip_unavailable'); end if;
+  usdt := ceil(s.vip_price_eur * rate * 10000) / 10000;
+  insert into vip_orders (user_id, days, price_eur, amount_usdt)
+  values (p_user, s.vip_days, s.vip_price_eur, usdt) returning id into new_id;
+  return jsonb_build_object('ok', true, 'id', new_id, 'amount_usdt', usdt, 'days', s.vip_days);
+end $fn$;
+
+-- Appele apres verification du paiement aupres de FaucetPay. Rejouable sans prolonger deux fois.
+create function pay_vip_order(p_id uuid, p_tx text, p_amount numeric, p_currency text)
+returns jsonb language plpgsql set search_path = public as $fn$
+declare
+  o vip_orders;
+  until_at timestamptz;
+begin
+  select * into o from vip_orders where id = p_id for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if o.status = 'paid' then return jsonb_build_object('ok', true, 'duplicate', true); end if;
+  if upper(p_currency) <> 'USDT' or p_amount < o.amount_usdt * 0.999 then
+    return jsonb_build_object('ok', false, 'code', 'amount_mismatch');
+  end if;
+  update users set vip_until = greatest(coalesce(vip_until, now()), now()) + make_interval(days => o.days)
+  where id = o.user_id returning vip_until into until_at;
+  update vip_orders set status = 'paid', tx_id = p_tx, paid_at = now() where id = p_id;
+  return jsonb_build_object('ok', true, 'vip', true, 'vip_until', until_at);
+end $fn$;
+
+create function vip_order_paid(p_id uuid)
+returns boolean language sql stable set search_path = public as $fn$
+  select exists (select 1 from vip_orders where id = p_id and status = 'paid');
+$fn$;
+
 create function pause_faucet(p_reason text)
 returns void language sql set search_path = public as $$
   update settings set paused = true, pause_reason = p_reason, updated_at = now() where id = 1;
@@ -1086,6 +1157,8 @@ returns jsonb language sql stable set search_path = public as $$
     'faucet_reward_tokens', s.faucet_reward_tokens,
     'roll_tiers', s.roll_tiers,
     'ad_price_eur_per_view', s.ad_price_eur_per_view,
+    'vip_price_eur', s.vip_price_eur, 'vip_days', s.vip_days,
+    'vip_task_bonus', s.vip_task_bonus, 'vip_referral_percent', s.vip_referral_percent,
     'usdt_per_eur', (select per_eur from coins where code = 'USDT'),
     'cooldown_seconds', s.cooldown_seconds,
     'referral_percent', s.referral_percent,
@@ -1107,7 +1180,8 @@ $$;
 create function user_profile(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select jsonb_build_object(
-    'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
+    'ref_code', u.ref_code, 'secured', u.password_hash is not null,
+    'vip', coalesce(u.vip_until > now(), false), 'vip_until', u.vip_until, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
     'wheel_done', coalesce(u.last_wheel_at > now() - make_interval(hours => s.wheel_hours), false),
@@ -1177,6 +1251,8 @@ returns jsonb language sql stable set search_path = public as $$
       'paid_tokens_day', (select coalesce(sum(tokens), 0) from withdrawals where status = 'paid' and created_at > now() - interval '24 hours'),
       'earnings_to_review', (select count(*) from earnings where status = 'pending'),
       'ads_to_review', (select count(*) from ptc_campaigns where needs_review),
+      'vip_active', (select count(*) from users where vip_until > now()),
+      'vip_paid_eur_30d', (select coalesce(sum(price_eur), 0) from vip_orders where status = 'paid' and paid_at > now() - interval '30 days'),
       'attention', (select count(*) from withdrawals where status = 'unknown' or (status = 'reserved' and created_at < now() - interval '2 minutes'))
     ),
     'week', jsonb_build_object(
@@ -1308,6 +1384,10 @@ begin
     dice_unit = coalesce((p->>'dice_unit')::int, dice_unit),
     ad_price_eur_per_view = coalesce((p->>'ad_price_eur_per_view')::numeric, ad_price_eur_per_view),
     ad_reward_share = coalesce((p->>'ad_reward_share')::numeric, ad_reward_share),
+    vip_price_eur = coalesce((p->>'vip_price_eur')::numeric, vip_price_eur),
+    vip_days = coalesce((p->>'vip_days')::int, vip_days),
+    vip_task_bonus = coalesce((p->>'vip_task_bonus')::numeric, vip_task_bonus),
+    vip_referral_percent = coalesce((p->>'vip_referral_percent')::numeric, vip_referral_percent),
     mines_rewards = case when jsonb_typeof(p->'mines_rewards') = 'array'
                          then (select array_agg(x::int) from jsonb_array_elements_text(p->'mines_rewards') x)
                          else mines_rewards end,

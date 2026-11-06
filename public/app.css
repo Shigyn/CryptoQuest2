@@ -328,3 +328,25 @@ iframe.wall { width: 100%; height: 68vh; border: 0; border-radius: 14px; backgro
   .earn-sum-val { font-size: 16px; }
   .earn-sum-label { font-size: 10px; letter-spacing: .05em; }
 }
+
+/* VIP */
+.avatar .crown { position: absolute; left: -10px; top: -12px; transform: rotate(-28deg); width: 22px; height: 18px; z-index: 1; color: var(--gold); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); }
+.avatar .crown svg { width: 22px; height: 18px; fill: currentColor; }
+.avatar.vip { box-shadow: 0 0 0 2px var(--gold), 0 8px 22px rgba(255, 204, 61, .35); }
+.vip-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255, 204, 61, .16); color: var(--gold); }
+.vip-badge svg { width: 13px; height: 13px; fill: currentColor; }
+.vip-ico { background: rgba(255, 204, 61, .14) !important; color: var(--gold) !important; }
+.vip-link { border-color: rgba(255, 204, 61, .3); }
+.vip-hero { text-align: center; background: radial-gradient(120% 90% at 50% 0%, rgba(255, 204, 61, .16), transparent 60%), var(--panel); border-color: rgba(255, 204, 61, .3); }
+.vip-crown { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 20px; display: grid; place-items: center; color: #3a2600;
+  background: linear-gradient(135deg, #ffe48a, var(--gold) 55%, #e09a12); box-shadow: 0 10px 26px rgba(255, 204, 61, .35); }
+.vip-crown svg { width: 34px; height: 34px; fill: currentColor; }
+.vip-until { margin-top: 6px; color: var(--gold); font-weight: 600; }
+.vip-price { margin-top: 14px; font-family: var(--display); color: var(--muted); }
+.vip-price b { font-size: 34px; font-weight: 900; color: var(--ink); }
+.vip-perks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.vip-perk { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, .03); border: 1px solid var(--line); }
+.vip-perk b { color: var(--ink); font-family: var(--display); }
+.vip-perk-ico { flex: none; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(255, 204, 61, .14); color: var(--gold); }
+.vip-perk-ico svg { width: 19px; height: 19px; }
+@media (max-width: 720px) { .vip-perks { grid-template-columns: minmax(0, 1fr); } }
