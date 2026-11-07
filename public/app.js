@@ -8,20 +8,22 @@
 
   // Textes : [francais, anglais]
   const W = {
-    gateSub: ["Retraits instantanés · Réclame toutes les 5 min", "Instant withdrawals · Claim every 5 min"],
+    gateSub: ["Tirages gratuits, mini-jeux et retraits instantanés", "Free rolls, mini-games and instant withdrawals"],
     fpField: ["Ton e-mail, pseudo ou adresse FaucetPay", "Your FaucetPay email, username or address"],
     enter: ["Entrer et jouer", "Enter and play"],
     passwordShort: ["Mot de passe", "Password"],
     passwordAsk: ["Ce compte est protégé par un mot de passe.", "This account is protected by a password."],
     noFp: ["Pas de compte FaucetPay ?", "No FaucetPay account?"], createFp: ["Créer un compte gratuit", "Create a free account"],
-    chipInstant: ["Retrait instantané", "Instant withdrawal"], chipFree: ["100 % gratuit", "100% free"], chipJackpot: ["Jackpot 1 €", "€1 jackpot"],
+    chipInstant: ["Retrait instantané", "Instant withdrawal"], chipFree: ["100 % gratuit", "100% free"], chipJackpot: ["Jackpot", "Jackpot"],
     home: ["Accueil", "Home"], earn: ["Gagner", "Earn"], games: ["Jeux", "Games"], wallet: ["Portefeuille", "Wallet"], profile: ["Profil", "Profile"],
     balance: ["Solde", "Balance"], claims: ["Tirages", "Rolls"], streak: ["Série", "Streak"], level: ["Niveau", "Level"],
     days: ["jours", "days"], today: ["aujourd'hui", "today"], toNext: ["avant le niveau", "to level"],
     payout: ["Table des gains", "Payout table"], jackpot: ["Jackpot", "Jackpot"],
     roll: ["Tirage", "Roll"], rollBtn: ["Lancer le tirage", "Roll now"], next: ["Prochain tirage dans", "Next roll in"],
     rolling: ["Tirage en cours…", "Rolling…"], closed: ["Faucet fermé", "Faucet closed"],
-    won: ["gagnés !", "won!"], free: ["Gratuit, sans mise. Le serveur tire un nombre de 0 à 99 999.", "Free, no stake. The server draws a number from 0 to 99,999."],
+    won: ["gagnés !", "won!"], free: ["Gratuit, sans mise. Fais 99 999 et tu décroches le jackpot !", "Free, no stake. Hit 99,999 to win the jackpot!"],
+    rollHead: ["Tente ta chance !", "Try your luck!"], lastWins: ["Derniers gains", "Latest wins"],
+    streakLbl: ["jours de suite", "day streak"], energyLbl: ["tirages prêts", "rolls ready"], prizes: ["Les gains", "Prizes"],
     ptc: ["Pubs", "Ads"], links: ["Liens", "Links"], offers: ["Offres", "Offers"],
     pendingNote: ["Ces gains sont vérifiés, puis partent seuls sur FaucetPay au paiement de chaque heure.", "These earnings are reviewed, then sent to FaucetPay automatically every hour."],
     pickTask: ["Choisis une tâche", "Pick a task"], ptcShort: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
@@ -322,7 +324,7 @@
     return box;
   };
 
-  // Fond : reseau de points relies, en pause quand l'onglet est cache.
+  // Fond : bulles de lumiere qui montent et etincelles qui scintillent, en pause quand l'onglet est cache.
   function background() {
     if (document.querySelector(".bg")) return;
     const layer = h("div", { class: "bg", "aria-hidden": "true" });
@@ -332,35 +334,49 @@
     if (reduceMotion) return;
     const ctx = canvas.getContext("2d");
     let w = 0, ht = 0, dpr = 1, pts = [];
+    const tints = ["90, 170, 255", "120, 140, 255", "255, 210, 90"];
+    const make = (anyY) => {
+      const spark = Math.random() < 0.45;
+      return {
+        spark, x: Math.random() * w, y: anyY ? Math.random() * ht : ht + 40 * dpr,
+        r: (spark ? 1.4 + Math.random() * 2.2 : 10 + Math.random() * 34) * dpr,
+        vy: (spark ? 0.08 + Math.random() * 0.18 : 0.12 + Math.random() * 0.3) * dpr,
+        a: spark ? 0.5 + Math.random() * 0.5 : 0.05 + Math.random() * 0.09,
+        tint: tints[spark ? (Math.random() < 0.35 ? 2 : 0) : Math.floor(Math.random() * 2)], ph: Math.random() * 6.28,
+      };
+    };
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = canvas.width = innerWidth * dpr;
       ht = canvas.height = innerHeight * dpr;
-      const n = Math.round(Math.min(80, (innerWidth * innerHeight) / 18000));
-      pts = Array.from({ length: n }, () => ({ x: Math.random() * w, y: Math.random() * ht, vx: (Math.random() - 0.5) * 0.3 * dpr, vy: (Math.random() - 0.5) * 0.3 * dpr }));
+      const n = Math.round(Math.min(46, (innerWidth * innerHeight) / 26000));
+      pts = Array.from({ length: n }, () => make(true));
     };
     resize();
     addEventListener("resize", resize);
-    const link = 140 * dpr;
-    const frame = () => {
+    const frame = (time) => {
       if (!document.hidden) {
         ctx.clearRect(0, 0, w, ht);
-        for (const p of pts) {
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0 || p.x > w) p.vx *= -1;
-          if (p.y < 0 || p.y > ht) p.vy *= -1;
-        }
-        for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-          const a = pts[i], b = pts[j];
-          const d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d < link) {
-            ctx.strokeStyle = `rgba(70, 150, 255, ${0.3 * (1 - d / link)})`;
-            ctx.lineWidth = dpr;
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i];
+          p.y -= p.vy;
+          if (p.y < -60 * dpr) { pts[i] = make(false); continue; }
+          const x = p.x + Math.sin(time / 2600 + p.ph) * 12 * dpr;
+          if (p.spark) {
+            const tw = p.a * (0.55 + 0.45 * Math.sin(time / 420 + p.ph * 3));
+            ctx.fillStyle = `rgba(${p.tint}, ${tw})`;
+            ctx.beginPath();
+            ctx.moveTo(x, p.y - p.r * 2.4); ctx.quadraticCurveTo(x, p.y, x + p.r * 2.4, p.y);
+            ctx.quadraticCurveTo(x, p.y, x, p.y + p.r * 2.4); ctx.quadraticCurveTo(x, p.y, x - p.r * 2.4, p.y);
+            ctx.quadraticCurveTo(x, p.y, x, p.y - p.r * 2.4); ctx.fill();
+          } else {
+            const g = ctx.createRadialGradient(x, p.y, 0, x, p.y, p.r);
+            g.addColorStop(0, `rgba(${p.tint}, ${p.a})`);
+            g.addColorStop(1, `rgba(${p.tint}, 0)`);
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
           }
         }
-        ctx.fillStyle = "rgba(110, 200, 255, .85)";
-        for (const p of pts) { ctx.beginPath(); ctx.arc(p.x, p.y, 1.7 * dpr, 0, Math.PI * 2); ctx.fill(); }
       }
       requestAnimationFrame(frame);
     };
@@ -373,7 +389,7 @@
     const items = list.map((r) => h("span", { class: "ticker-item" }, r.who, h("b", {}, `+${units(r.amount_units, r.decimals)} ${r.coin}`)));
     // Contenu double pour un defilement sans coupure.
     return h("div", { class: "ticker", "aria-label": FR ? "Derniers paiements" : "Latest payouts" },
-      h("span", { class: "ticker-live" }, "LIVE"),
+      h("span", { class: "ticker-live" }, icon("star"), t("lastWins")),
       h("div", { class: "ticker-track" }, items, items.map((n) => n.cloneNode(true))));
   }
 
@@ -421,7 +437,7 @@
           h("div", { class: "chips" },
             h("span", { class: "chip" }, icon("bolt"), t("chipInstant")),
             h("span", { class: "chip" }, icon("gift"), t("chipFree")),
-            h("span", { class: "chip" }, icon("star"), t("chipJackpot"))))));
+            h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)))));
   }
 
   // Application ------------------------------------------------------------
@@ -453,7 +469,7 @@
           me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         h("div", { class: "who-text" },
           h("div", { class: "who-name" }, shortAddr(me.fp_address)),
-          h("div", { class: "xp", title: `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}` }, h("i", { style: `width:${lv.pct}%` })))),
+          h("div", { class: "who-lvl" }, `${t("level")} ${lv.lvl}`))),
       h("div", { class: "coin-pill" }, coin(), fmtInt(me.available)));
   }
 
@@ -467,11 +483,23 @@
 
   function statsRow() {
     const lv = levelOf(me.earned_total || 0);
-    return h("section", { class: "stats" },
-      stat("wallet", "", t("balance"), tk(me.available), `${t("worth")} ${eur(me.available)}`),
-      stat("bolt", "green", t("claims"), `${me.window_used ?? 0}/${me.window_count ?? 5}`, `${t("perWindow")} ${me.window_minutes ?? 10} ${t("minutes")} · ${me.claims_today} ${t("today")}`),
-      stat("fire", "fire", t("streak"), `${me.streak}`, t("days")),
-      stat("star", "gold", t("level"), `${lv.lvl}`, `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`));
+    const cnt = me.window_count ?? 5;
+    const ready = Math.max(0, cnt - (me.window_used ?? 0));
+    return h("section", { class: "panel player" },
+      h("div", { class: "player-top" },
+        h("div", { class: "lvl-badge", title: t("level") }, icon("star"), h("b", {}, String(lv.lvl))),
+        h("div", { class: "player-main" },
+          h("div", { class: "player-name" }, `${t("level")} ${lv.lvl}`),
+          h("div", { class: "xpbar" }, h("i", { style: `width:${lv.pct}%` })),
+          h("div", { class: "player-sub" }, `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`))),
+      h("div", { class: "player-chips" },
+        h("div", { class: "pchip fire" }, h("span", { class: "pchip-ico" }, icon("fire")),
+          h("b", {}, fmtInt(me.streak)), h("span", {}, t("streakLbl"))),
+        h("div", { class: "pchip energy", title: `${t("perWindow")} ${me.window_minutes ?? 10} ${t("minutes")}` },
+          h("span", { class: "pips" }, [...Array(cnt).keys()].map((i) => h("i", { class: i < ready ? "on" : "" }))),
+          h("b", {}, `${ready}/${cnt}`), h("span", {}, t("energyLbl"))),
+        h("div", { class: "pchip money" }, coin(),
+          h("b", {}, fmtInt(me.available)), h("span", {}, `${t("worth")} ${eur(me.available)}`))));
   }
 
   // Tirage du faucet
@@ -494,10 +522,17 @@
   function rollCard() {
     const table = rows();
     const max = Math.max(...table.map((r) => r.tokens));
-    const rowEls = table.map((r) => h("div", { class: `payout-row${r.tokens === max && table.length > 1 ? " jackpot" : ""}` },
-      h("span", {}, r.from === r.to ? `${fmtInt(r.from)} · ${t("jackpot")}` : `${fmtInt(r.from)} – ${fmtInt(r.to)}`),
+    const rowEls = table.map((r, i) => h("div", { class: `payout-row t${Math.min(i, 3)}${r.tokens === max && table.length > 1 ? " jackpot" : ""}` },
+      h("span", { class: "tier" }, icon(r.tokens === max && table.length > 1 ? "crown" : "star")),
+      h("span", { class: "tier-range" }, r.from === r.to ? `${fmtInt(r.from)} · ${t("jackpot")}` : `${fmtInt(r.from)} – ${fmtInt(r.to)}`),
       h("b", {}, tk(r.tokens))));
-    const digits = h("div", { class: "roll-digits", "aria-live": "polite" }, "00000");
+    const reels = [...Array(5)].map(() => h("span", { class: "reel" }, "0"));
+    const digits = h("div", { class: "reels", role: "img", "aria-label": "00000" }, reels);
+    const setReels = (n) => {
+      const str = String(n).padStart(5, "0");
+      reels.forEach((el, i) => { el.textContent = str[i]; });
+      digits.setAttribute("aria-label", str);
+    };
     const fill = h("i", {});
     const cap = captchaBox();
     const btn = h("button", { class: "btn big", type: "button" });
@@ -511,20 +546,29 @@
       if (busy) return;
       if (status?.paused) { btn.disabled = true; btn.textContent = t("closed"); }
       else if (left > 0) { btn.disabled = true; btn.textContent = `${t("next")} ${clock(left)}`; }
-      else { btn.disabled = false; btn.textContent = t("rollBtn"); }
+      else { btn.disabled = false; btn.textContent = t("rollBtn"); btn.classList.add("ready"); }
     };
     tick();
     every(tick, 1000);
 
     const animateTo = (target) => new Promise((resolve) => {
-      if (reduceMotion) { digits.textContent = String(target).padStart(5, "0"); resolve(); return; }
-      digits.classList.add("spinning");
-      const id = setInterval(() => { digits.textContent = String(Math.floor(Math.random() * 100000)).padStart(5, "0"); }, 50);
-      setTimeout(() => { clearInterval(id); digits.textContent = String(target).padStart(5, "0"); digits.classList.remove("spinning"); resolve(); }, 1300);
+      if (reduceMotion) { setReels(target); resolve(); return; }
+      const str = String(target).padStart(5, "0");
+      let stopped = 0;
+      reels.forEach((el) => { el.classList.remove("stop"); el.classList.add("spin"); });
+      const id = setInterval(() => { for (let i = stopped; i < 5; i++) reels[i].textContent = String(Math.floor(Math.random() * 10)); }, 55);
+      reels.forEach((el, i) => setTimeout(() => {
+        stopped = i + 1;
+        el.textContent = str[i];
+        el.classList.remove("spin");
+        el.classList.add("stop");
+        if (i === 4) { clearInterval(id); digits.setAttribute("aria-label", str); setTimeout(resolve, 250); }
+      }, 700 + i * 220));
     });
 
     btn.onclick = async () => {
       if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+      btn.classList.remove("ready");
       busy = true;
       btn.disabled = true;
       btn.textContent = t("rolling");
@@ -550,9 +594,9 @@
     };
 
     return h("div", { class: "grid2 roll-grid" },
-      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("payout"), h("span", {}, TK)), rowEls),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("prizes"), h("span", { class: "badge" }, TK)), rowEls),
       h("section", { class: "panel" },
-        h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("roll").toUpperCase()), digits),
+        h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("rollHead")), digits),
         h("div", { class: "cooldown" }, fill),
         cap, adSlot("roll_top", true), btn, adSlot("roll_bottom", true),
         h("p", { class: "note", style: "text-align:center;margin:12px 0 0" }, t("free"))));
@@ -597,16 +641,16 @@
     const menu = () => {
       const linksLeft = earn.shortlinks.reduce((a, p) => a + p.remaining, 0);
       const cats = [
-        { key: "ptc", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
-        { key: "links", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
-        { key: "offers", ico: "gift", name: t("offers"), text: t("offersShort"), n: earn.offerwalls.length, sum: null },
+        { key: "ptc", tone: "--c1:#4fd2ff;--c2:#2f6bff", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
+        { key: "links", tone: "--c1:#b48cff;--c2:#6b3dff", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
+        { key: "offers", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "gift", name: t("offers"), text: t("offersShort"), n: earn.offerwalls.length, sum: null },
       ];
       return h("div", { class: "stack" },
         summary(),
         h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickTask")),
         h("div", { class: "game-menu" }, cats.map((c) =>
           h("button", { type: "button", class: `game-tile${c.n > 0 ? " ready" : ""}`, onclick: () => { earnTab = c.key; render(); } },
-            h("span", { class: "game-ico" }, icon(c.ico)),
+            h("span", { class: "game-ico", style: c.tone }, icon(c.ico)),
             h("span", { class: "game-name" }, c.name),
             h("span", { class: "game-text" }, c.text),
             h("span", { class: `badge ${c.n > 0 ? "good" : ""}` },
@@ -819,7 +863,8 @@
           h("div", { class: "row-ico", style: c.done ? "background:rgba(49,214,138,.15);color:var(--green)" : "" }, icon(c.done ? "check" : "flag")),
           h("div", { class: "row-main" },
             h("h3", {}, FR ? c.name.replace("réclamations", "tirages") : `${c.target} ${t("rolls")} ${t("today")}`),
-            h("div", { class: "progress" }, h("i", { style: `width:${pct}%` }))),
+            h("div", { class: "progress" }, h("i", { style: `width:${pct}%` })),
+            h("div", { class: "row-sub" }, `${fmtInt(Math.min(me.claims_today, c.target))} / ${fmtInt(c.target)}`)),
           h("button", {
             class: `btn small ${ready ? "gold" : ""}`, disabled: !ready,
             onclick: async (e) => {
@@ -936,11 +981,11 @@
   function gamesView() {
     const g = me.games || {};
     const games = [
-      { key: "wheel", ico: "wheel", name: t("wheel"), text: t("wheelShort"), ok: !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1),
+      { key: "wheel", tone: "--c1:#ffd34d;--c2:#ff8f1c", ico: "wheel", name: t("wheel"), text: t("wheelShort"), ok: !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1),
         state: me.wheel_done ? `${t("wheelNext")} ${Math.ceil((me.wheel_retry_after || 0) / 60)} ${t("minutes")}` : t("ready"), card: wheelCard },
-      { key: "mines", ico: "grid", name: t("mines"), text: t("minesShort"), ok: (g.mines_left ?? 0) > 0 || Boolean(g.mines_active),
+      { key: "mines", tone: "--c1:#45e3a6;--c2:#11a771", ico: "grid", name: t("mines"), text: t("minesShort"), ok: (g.mines_left ?? 0) > 0 || Boolean(g.mines_active),
         state: `${g.mines_left ?? 0} ${t("playsLeft")}`, card: minesCard },
-      { key: "dice", ico: "dice", name: t("dice"), text: t("diceShort"), ok: (g.dice_left ?? 0) > 0,
+      { key: "dice", tone: "--c1:#b48cff;--c2:#6b3dff", ico: "dice", name: t("dice"), text: t("diceShort"), ok: (g.dice_left ?? 0) > 0,
         state: `${g.dice_left ?? 0} ${t("rollsLeft")}`, card: diceCard },
     ];
     const current = games.find((x) => x.key === gameSel);
@@ -953,7 +998,7 @@
       h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickGame")),
       h("div", { class: "game-menu" }, games.map((x) =>
         h("button", { type: "button", class: `game-tile${x.ok ? " ready" : ""}`, onclick: () => { gameSel = x.key; render(); } },
-          h("span", { class: "game-ico" }, icon(x.ico)),
+          h("span", { class: "game-ico", style: x.tone }, icon(x.ico)),
           h("span", { class: "game-name" }, x.name),
           h("span", { class: "game-text" }, x.text),
           h("span", { class: `badge ${x.ok ? "good" : ""}` }, x.state),
