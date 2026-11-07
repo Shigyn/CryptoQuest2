@@ -50,6 +50,19 @@ export function depsFromEnv(): Deps {
         return null;
       }
     },
+    fetchPage: async (pageUrl) => {
+      try {
+        const res = await fetch(pageUrl, { redirect: "follow", signal: AbortSignal.timeout(8000), headers: { "user-agent": "Mozilla/5.0 (verification de pub)" } });
+        const raw = (await res.text()).slice(0, 400_000);
+        // Balises retirees, mais titres, descriptions et texte gardes.
+        const text = raw.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+        const metas = [...raw.matchAll(/<meta[^>]+content="([^"]*)"/gi)].map((m) => m[1]).join(" ");
+        return { url: res.url || pageUrl, text: `${metas} ${text}` };
+      } catch (err) {
+        console.error("page annonceur", err);
+        return null;
+      }
+    },
     prices: async (ids) => {
       try {
         const url = `https://api.coingecko.com/api/v3/simple/price?vs_currencies=eur&ids=${encodeURIComponent(ids.join(","))}`;

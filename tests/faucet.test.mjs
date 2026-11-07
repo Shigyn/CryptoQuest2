@@ -984,3 +984,47 @@ test("tournoi de la semaine : classement sur les Coins gagnes, prix payes une fo
   assert.equal((await me(h, a)).available, 300 + 100000 + 3000);
   assert.equal((await api(h, "board", { session: a.session }, a.ip)).body.top.length, 0, "nouvelle semaine");
 });
+
+test("pub interdite : contenu sexuel = compte ferme et solde saisi ; jeux d'argent = refusee", async () => {
+  const pages = {
+    "https://page-adulte.com": { url: "https://page-adulte.com/home", text: "Best porn videos, free porn every day" },
+    "https://redirige.com": { url: "https://filles.xxx/", text: "" },
+    "https://essex-shop.com": { url: "https://essex-shop.com", text: "Sextant and compass shop in Essex. Middlesex delivery." },
+    "https://crypto-news.com": { url: "https://crypto-news.com", text: "Bitcoin news. One casino sponsor." },
+  };
+  const h = await createHarness({ pages });
+  const row = async (u) => (await h.pg.query("select banned, available, pending from users where fp_address = $1", [u.fp])).rows[0];
+  const ad = (u, title, url, action = "ad_buy_tokens") =>
+    api(h, action, { session: u.session, title, url, duration: 10, views: 100 }, u.ip);
+
+  // Faux positifs evites : mots entiers seulement, un seul « casino » dans la page ne suffit pas.
+  const ok = await newUser(h);
+  await give(h, ok, 50000);
+  assert.equal((await ad(ok, "Boutique de l'Essex", "https://essex-shop.com")).body.ok, true);
+  assert.equal((await ad(ok, "Actu crypto", "https://crypto-news.com")).body.ok, true);
+
+  // Jeux d'argent dans le titre : refusee, aucune sanction.
+  const casino = await newUser(h);
+  await give(h, casino, 5000);
+  const r1 = await ad(casino, "Best crypto casino", "https://site-normal.com");
+  assert.equal(r1.status, 400);
+  assert.equal(r1.body.code, "ad_forbidden");
+  assert.deepEqual(await row(casino), { banned: false, available: 5000, pending: 0 });
+
+  // Contenu sexuel dans la page : compte ferme, tout est saisi, y compris les gains a valider.
+  const bad = await newUser(h);
+  await give(h, bad, 30000);
+  await h.pg.query("select add_earning(id, 'ptc', 'b1', 'x', 400, 0) from users where fp_address = $1", [bad.fp]);
+  const r2 = await ad(bad, "Mon site", "https://page-adulte.com");
+  assert.equal(r2.status, 403);
+  assert.equal(r2.body.code, "ad_banned");
+  assert.deepEqual(await row(bad), { banned: true, available: 0, pending: 0 });
+  assert.equal((await h.pg.query("select status from earnings where ref = 'b1'")).rows[0].status, "rejected");
+  assert.match(h.alerts.at(-1), /30 400 Coins|30400 Coins/);
+  assert.equal((await api(h, "login", { address: bad.fp }, bad.ip)).body.code, "banned");
+
+  // Redirection vers un domaine adulte, et paiement FaucetPay : meme sanction.
+  const sneaky = await newUser(h);
+  assert.equal((await ad(sneaky, "Promo", "https://redirige.com", "ad_order")).body.code, "ad_banned");
+  assert.equal((await row(sneaky)).banned, true);
+});

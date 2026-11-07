@@ -9,6 +9,8 @@ export interface Deps {
   verifyCaptcha: (token: string, ip: string) => Promise<boolean>;
   alert: (text: string) => Promise<void>;
   shorten: (apiUrl: string, longUrl: string) => Promise<string | null>;
+  // Page d'un annonceur : texte brut et adresse finale apres redirections, ou null si injoignable.
+  fetchPage: (url: string) => Promise<{ url: string; text: string } | null>;
   // Prix en euros par identifiant CoinGecko. Un seul appel pour toutes les cryptos.
   prices: (ids: string[]) => Promise<Record<string, number> | null>;
   // Espace annonceur : ton nom d'utilisateur marchand FaucetPay, et la verification d'un paiement.
@@ -285,6 +287,8 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
 
     case "ad_order": {
       if (!d.merchantUsername) return refuse(d, 503, "ads_unavailable");
+      const blocked = await screenAd(d, userId, String(b.title ?? ""), String(b.url ?? "").trim());
+      if (blocked) return blocked;
       const r = await d.rpc("create_ad_order", {
         p_user: userId,
         p_title: String(b.title ?? ""),
@@ -351,7 +355,9 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "shop_equip":
       return result(d, await d.rpc("shop_equip", { p_user: userId, p_kind: String(b.kind ?? ""), p_code: String(b.code ?? "") }));
 
-    case "ad_buy_tokens":
+    case "ad_buy_tokens": {
+      const blocked = await screenAd(d, userId, String(b.title ?? ""), String(b.url ?? "").trim());
+      if (blocked) return blocked;
       return result(d, await d.rpc("ad_buy_with_tokens", {
         p_user: userId,
         p_title: String(b.title ?? ""),
@@ -360,6 +366,7 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
         p_views: Number(b.views),
         p_ip_hash: ipHash,
       }));
+    }
 
     case "board":
       return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: userId })) });
@@ -484,6 +491,38 @@ export async function handlePostback(req: Request, d: Deps): Promise<Response> {
   if (!Number.isFinite(usd)) return new Response("invalid", { status: 400 });
   const r = await d.rpc("offer_postback", { p_code: wall.code, p_tx: tx, p_ref_code: user, p_usd: usd });
   return r.ok ? new Response("ok") : new Response(r.code, { status: 400 });
+}
+
+// Controle des pubs avant paiement --------------------------------------------
+// Contenu sexuel : compte ferme et solde saisi (regle annoncee dans les conditions).
+// Jeux d'argent et arnaques : pub refusee, sans sanction (les mots se recoupent trop avec la crypto).
+// Mots entiers seulement : « Essex » ou « sextant » ne declenchent rien.
+const words = (list: string) => new RegExp(`(?<![\\p{L}\\p{N}])(?:${list})(?![\\p{L}\\p{N}])`, "giu");
+const SEVERE = words("porn\\p{L}*|xxx|sex|sexe|sexcam|nudes?|naked|nsfw|hentai|escorts?|onlyfans|camgirls?|xvideos|xhamster|pornhub|fetish\\p{L}*|erotic\\p{L}*|érotique\\p{L}*|milf");
+const SOFT = words("casinos?|gambling|sportsbook|paris sportifs|betting|poker|roulette|slots?|double your (?:bitcoin|btc|crypto)|doublez? vos (?:bitcoins?|cryptos?)|guaranteed (?:profit|returns?)|investment plan");
+const ADULT_TLD = /\.(xxx|porn|sex|adult|sexy)$/i;
+
+export function adVerdict(title: string, url: string, page: { url: string; text: string } | null): "ban" | "refuse" | null {
+  const hosts = [url, page?.url ?? ""].map((u) => { try { return new URL(u).hostname; } catch { return ""; } });
+  const head = `${title} ${url} ${page?.url ?? ""}`.toLowerCase();
+  const body = (page?.text ?? "").toLowerCase();
+  const count = (re: RegExp, s: string) => (s.match(re) ?? []).length;
+  if (hosts.some((x) => ADULT_TLD.test(x)) || count(SEVERE, head) > 0 || count(SEVERE, body) >= 2) return "ban";
+  if (count(SOFT, head) > 0 || count(SOFT, body) >= 3) return "refuse";
+  return null;
+}
+
+async function screenAd(d: Deps, userId: string, title: string, url: string): Promise<Response | null> {
+  if (!/^https:\/\/[^ ]{4,}$/.test(url)) return null; // Adresse invalide : la base la refuse ensuite.
+  const page = await d.fetchPage(url).catch(() => null);
+  const verdict = adVerdict(title, url, page);
+  if (verdict === "ban") {
+    const r = await d.rpc("ban_for_ad", { p_user: userId, p_reason: `Pub interdite : ${title.slice(0, 60)} ${url.slice(0, 120)}` });
+    await d.alert(`Compte fermé pour pub interdite (${url.slice(0, 120)}). Solde saisi : ${r?.seized ?? 0} Coins.`);
+    return refuse(d, 403, "ad_banned");
+  }
+  if (verdict === "refuse") return refuse(d, 400, "ad_forbidden");
+  return null;
 }
 
 // Met a jour les taux. Un ecart de plus de 50 % est ignore : prix douteux, on garde l'ancien.

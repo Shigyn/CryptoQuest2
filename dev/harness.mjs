@@ -88,6 +88,7 @@ export async function createHarness(options = {}) {
     fp: mock.fp,
     verifyCaptcha: async (token) => token !== "mauvais",
     alert: async (t) => void alerts.push(t),
+    fetchPage: async (url) => (options.pages?.[url] === undefined ? { url, text: "" } : options.pages[url]),
     shorten: async (_api, longUrl) => options.shortFails ? null : `/retour-simule?to=${encodeURIComponent(longUrl)}`,
     prices: async (ids) => (options.prices === null ? null : Object.fromEntries(ids.map((id) => [id, (options.prices ?? { tether: 0.9, litecoin: 80, bitcoin: 90000 })[id] ?? 0]))),
     merchantUsername: options.merchantUsername ?? "marchand",

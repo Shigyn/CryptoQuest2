@@ -46,7 +46,7 @@
     q_links: [["Passe {n} lien", "Passe {n} liens"], ["Complete {n} link", "Complete {n} links"]],
     q_surveys: [["Termine {n} sondage", "Termine {n} sondages"], ["Complete {n} survey", "Complete {n} surveys"]],
     q_offers: [["Termine {n} offre", "Termine {n} offres"], ["Complete {n} offer", "Complete {n} offers"]],
-    lvlShort: ["Niv.", "Lv."], shop: ["Boutique", "Shop"], shopText: ["Dépense tes Coins : bonus, VIP, pub et objets de style.", "Spend your Coins: boosts, VIP, ads and style items."],
+    unitPick: ["Afficher les montants en", "Show amounts in"], lvlShort: ["Niv.", "Lv."], shop: ["Boutique", "Shop"], shopText: ["Dépense tes Coins : bonus, VIP, pub et objets de style.", "Spend your Coins: boosts, VIP, ads and style items."],
     bonuses: ["Bonus", "Boosts"], boostName: ["Boost", "Boost"],
     boostText: ["En plus sur les pubs, liens, offres, sondages, le bonus quotidien et les quêtes, pendant", "Extra on ads, links, offers, surveys, the daily bonus and quests, for"],
     activeFor: ["Actif encore", "Active for"], extend: ["Prolonger", "Extend"], details: ["Voir le détail", "See details"],
@@ -141,6 +141,8 @@
     already_done: ["Déjà fait aujourd'hui.", "Already done today."],
     not_reached: ["Objectif pas encore atteint.", "Goal not reached yet."],
     too_soon: ["Reste encore quelques secondes sur la page.", "Stay on the page a few more seconds."],
+    ad_banned: ["Pub interdite : contenu sexuel. Ton compte est fermé et ton solde perdu, comme prévu par les conditions.", "Forbidden ad: sexual content. Your account is closed and your balance forfeited, as stated in the terms."],
+    ad_forbidden: ["Pub refusée : les jeux d'argent et les promesses de gains sont interdits.", "Ad refused: gambling and profit promises are not allowed."],
     not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
@@ -213,11 +215,60 @@
   }
   // Piece bleue CryptoQuest
   let coinSeq = 0;
-  function coin(cls = "coin") {
+  function coinSvg(cls = "coin") {
     const id = `cq${++coinSeq}`;
     const w = h("span", { style: "display:inline-flex" });
     w.innerHTML = `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9be6ff"/><stop offset=".5" stop-color="#3b82ff"/><stop offset="1" stop-color="#1640b8"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f9dff"/><stop offset="1" stop-color="#1d4fd6"/></linearGradient><radialGradient id="${id}s" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="31" fill="url(#${id}r)"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}f)"/><circle cx="32" cy="32" r="28.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.6" stroke-dasharray="1.6 3.4"/><circle cx="32" cy="32" r="25.5" fill="none" stroke="rgba(8,30,100,.45)" stroke-width="1.5"/><path d="M39.5 24.2a10.4 10.4 0 1 0 0 15.6" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/><path d="M30 16.5v5M30 42.5v5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}s)"/></svg>`;
     return w.firstChild;
+  }
+
+  // Unite d'affichage : Coins (par defaut), euro, ou une crypto FaucetPay. Tout reste en Coins cote serveur.
+  const UNITS = [["COINS"], ["EUR"], ["BTC", "bitcoin", "₿"], ["ETH", "ethereum", "Ξ"], ["LTC", "litecoin", "Ł"], ["DOGE", "dogecoin", "Ð"],
+    ["BCH", "bitcoin-cash", "Ƀ"], ["DASH", "dash", "D"], ["DGB", "digibyte", "Ɗ"], ["TRX", "tron", "T"], ["USDT", "tether", "₮"],
+    ["USDC", "usd-coin", "$"], ["BNB", "binancecoin", "B"], ["SOL", "solana", "◎"], ["ZEC", "zcash", "Z"]];
+  let unit = store.get("cc.unit") || "COINS";
+  let geckoRates = null;
+  try { geckoRates = JSON.parse(store.get("cc.rates") || "null"); } catch { geckoRates = null; }
+  // Taux d'affichage : ceux du site pour les cryptos de retrait, CoinGecko pour les autres (toutes les 10 min au plus).
+  async function loadRates() {
+    if (geckoRates && Date.now() - geckoRates.at < 600000) return;
+    try {
+      const ids = UNITS.filter((u) => u[1]).map((u) => u[1]).join(",");
+      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?vs_currencies=eur&ids=${ids}`);
+      const b = await r.json();
+      const perEur = {};
+      for (const [code, id] of UNITS) if (id && b[id]?.eur > 0) perEur[code] = 1 / b[id].eur;
+      geckoRates = { at: Date.now(), perEur };
+      store.set("cc.rates", JSON.stringify(geckoRates));
+    } catch { /* hors ligne : on garde les derniers taux, ou les Coins */ }
+  }
+  const perEurOf = (code) => Number(me?.coins?.find((c) => c.code === code)?.per_eur) || geckoRates?.perEur?.[code] || null;
+  const unitInfo = () => {
+    if (unit === "EUR") return { kind: "eur" };
+    const p = unit === "COINS" ? null : perEurOf(unit);
+    if (!p) return { kind: "coins" };
+    // Crypto qui vaut plus de 1 000 euros : affichee en satoshis (1/100 000 000), comme sur FaucetPay.
+    return { kind: "crypto", p, sat: p < 0.001 };
+  };
+  const unitLabel = () => {
+    const u = unitInfo();
+    return u.kind === "coins" ? TK : u.kind === "eur" ? "€" : u.sat ? (unit === "BTC" ? "sat" : `sat ${unit}`) : unit;
+  };
+  function num(tokens) {
+    const u = unitInfo();
+    if (u.kind === "coins") return Number(tokens).toLocaleString(FR ? "fr-FR" : "en-US");
+    const e = tokens / (status?.tokens_per_eur || 10000);
+    const loc = FR ? "fr-FR" : "en-US";
+    if (u.kind === "eur") return e.toLocaleString(loc, { minimumFractionDigits: e !== 0 && Math.abs(e) < 0.01 ? 4 : 2, maximumFractionDigits: 4 });
+    const v = e * u.p;
+    if (u.sat) { const sat = v * 1e8; return sat.toLocaleString(loc, { maximumFractionDigits: Math.abs(sat) < 10 ? 2 : 0 }); }
+    return v === 0 ? "0" : v.toLocaleString(loc, { maximumSignificantDigits: 6 });
+  }
+  function coin(cls = "coin") {
+    const u = unitInfo();
+    if (u.kind === "coins") return coinSvg(cls);
+    const sym = u.kind === "eur" ? "€" : (UNITS.find((x) => x[0] === unit)?.[2] || unit.slice(0, 1));
+    return h("span", { class: `${cls} unit-badge u-${unit}`, "aria-hidden": "true" }, sym);
   }
 
   // Serveur ----------------------------------------------------------------
@@ -289,7 +340,7 @@
   // Mise en forme
   const locale = FR ? "fr-FR" : "en-US";
   const fmtInt = (n) => Number(n).toLocaleString(locale);
-  const tk = (n) => `${fmtInt(n)} ${Math.abs(n) <= 1 && TK.endsWith("s") ? TK.slice(0, -1) : TK}`;
+  const tk = (n) => (unitInfo().kind === "coins" ? `${fmtInt(n)} ${Math.abs(n) <= 1 && TK.endsWith("s") ? TK.slice(0, -1) : TK}` : `${num(n)} ${unitLabel()}`);
   const eur = (tokens) => {
     const v = tokens / (status?.tokens_per_eur || 10000);
     return v.toLocaleString(locale, { minimumFractionDigits: v < 0.01 ? 4 : 2, maximumFractionDigits: 4 }) + " €";
@@ -454,7 +505,7 @@
       ticker(),
       h("main", { class: "gate" },
         h("section", { class: "gate-card" },
-          coin("coin coin-big"),
+          coinSvg("coin coin-big"),
           h("h1", {}, cfg.SITE_NAME),
           h("p", { class: "gate-sub" }, t("gateSub")),
           !status ? h("div", { class: "notice bad", style: "margin-bottom:14px" }, t("offline")) : null,
@@ -497,7 +548,13 @@
         h("div", { class: "who-text" },
           h("div", { class: `who-name${nameCls(me)}` }, shortAddr(me.fp_address)),
           h("div", { class: "who-lvl" }, me.title && cosmeticName(me.title) ? `${cosmeticName(me.title)} · ${t("lvlShort")} ${lv.lvl}` : `${t("level")} ${lv.lvl}`))),
-      h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), fmtInt(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null));
+      h("div", { class: "top-right" },
+        h("select", {
+          class: "unit-pick", "aria-label": t("unitPick"), title: t("unitPick"),
+          onchange: async (e) => { unit = e.target.value; store.set("cc.unit", unit); await loadRates(); render(); },
+        }, UNITS.filter(([c]) => c === "COINS" || c === "EUR" || perEurOf(c)).map(([c]) =>
+          h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c))),
+        h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null)));
   }
 
   function stat(ico, cls, label, value, sub) {
@@ -526,7 +583,7 @@
           h("span", { class: "pips" }, [...Array(cnt).keys()].map((i) => h("i", { class: i < ready ? "on" : "" }))),
           h("b", {}, `${ready}/${cnt}`), h("span", {}, t("energyLbl"))),
         h("div", { class: "pchip money" }, coin(),
-          h("b", {}, fmtInt(me.available)), h("span", {}, `${t("worth")} ${eur(me.available)}`))));
+          h("b", {}, num(me.available)), h("span", {}, unitInfo().kind === "eur" ? unitLabel() : `${t("worth")} ${eur(me.available)}`))));
   }
 
   // Tirage du faucet
@@ -621,7 +678,7 @@
     };
 
     return h("div", { class: "grid2 roll-grid" },
-      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("prizes"), h("span", { class: "badge" }, TK)), rowEls),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("prizes"), h("span", { class: "badge" }, unitLabel())), rowEls),
       h("section", { class: "panel" },
         h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("rollHead")), digits),
         h("div", { class: "cooldown" }, fill),
@@ -704,7 +761,7 @@
           h("div", { class: "task-top" },
             h("div", { class: "row-ico" }, icon("eye")),
             h("div", { class: "row-main" }, h("h3", {}, c.title), h("div", { class: "row-sub" }, `${c.duration_seconds} s`)),
-            h("span", { class: "task-reward" }, coin(), fmtInt(c.reward_tokens))),
+            h("span", { class: "task-reward" }, coin(), num(c.reward_tokens))),
           foot);
         const start = h("button", {
           class: "btn small", type: "button",
@@ -739,7 +796,7 @@
                   toast(done.ok ? `${tk(done.tokens)} ${t("credited")}` : message(done), done.ok ? "good" : "bad");
                   if (done.ok || done.code === "already_done") { busy = false; await loadEarn(); await refreshMe(); render(); }
                 },
-              }, `${t("confirm")} +${fmtInt(c.reward_tokens)}`);
+              }, `${t("confirm")} +${num(c.reward_tokens)}`);
               foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
             }, 1000);
           },
@@ -779,7 +836,7 @@
               h("div", { class: "row-ico" }, icon("link")),
               h("div", { class: "row-main" }, h("h3", {}, p.name),
                 h("div", { class: "row-sub" }, p.remaining > 0 ? `${p.remaining} ${t("left")}` : t("comeBack"))),
-              h("span", { class: "task-reward" }, coin(), fmtInt(p.reward_tokens))),
+              h("span", { class: "task-reward" }, coin(), num(p.reward_tokens))),
             h("div", { class: "task-foot" }, btn));
         })));
     };
@@ -835,7 +892,7 @@
   // Premier appui : demande confirmation. Deuxieme appui dans les 4 s : achete.
   function buyButton(label, price, onBuy, cls = "btn small gold") {
     let armed = false, timer = null;
-    const content = () => [coin(), fmtInt(price)];
+    const content = () => [coinSvg(), fmtInt(price)];
     const btn = h("button", {
       class: cls, type: "button", disabled: me.available < price,
       onclick: async () => {
@@ -915,7 +972,7 @@
         h("section", { class: "panel shop-hero" },
           h("div", { class: "shop-hero-ico" }, icon("shop")),
           h("div", {}, h("h2", {}, t("shop")), h("p", { class: "row-sub" }, t("shopText"))),
-          h("div", { class: "coin-pill" }, coin(), fmtInt(me.available))),
+          h("div", { class: "coin-pill" }, coin(), num(me.available))),
         h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("bonuses")), h("div", { class: "shop-list" }, boostCard, vipCard, adCard)),
         group("frame", t("frames")), group("color", t("colors")), group("title", t("titles")),
         h("p", { class: "note", style: "text-align:center" }, t("shopFair")));
@@ -940,15 +997,15 @@
         h("div", { class: "board-who" },
           h("div", { class: `board-name${nameCls(p)}` }, p.me ? t("you") : p.who),
           p.title && cosmeticName(p.title) ? h("span", { class: "title-tag small" }, cosmeticName(p.title)) : null),
-        h("div", { class: "board-score" }, fmtInt(p.score), prizes[p.rank - 1] ? h("span", { class: "board-prize" }, `+${fmtInt(prizes[p.rank - 1])}`) : null)));
+        h("div", { class: "board-score" }, num(p.score), prizes[p.rank - 1] ? h("span", { class: "board-prize" }, `+${num(prizes[p.rank - 1])}`) : null)));
       const mine = r.me && r.me.rank > 10
         ? h("div", { class: "board-row me" }, medal(r.me.rank), h("div", { class: `avatar mini${frameCls(me)}` }, (me.fp_address || "?").slice(0, 1).toUpperCase()),
-            h("div", { class: "board-who" }, h("div", { class: `board-name${nameCls(me)}` }, t("you"))), h("div", { class: "board-score" }, fmtInt(r.me.score)))
+            h("div", { class: "board-who" }, h("div", { class: `board-name${nameCls(me)}` }, t("you"))), h("div", { class: "board-score" }, num(r.me.score)))
         : null;
       box.replaceChildren(
         h("div", { class: "panel-title" }, h("span", {}, t("tourney")), h("span", { class: "badge warn" }, `${t("endsIn")} ${ends}`)),
         h("div", { class: "podium" }, [1, 0, 2].map((i) => prizes[i] ? h("div", { class: `pod p${i + 1}` },
-          h("span", { class: "pod-rank" }, `${i + 1}`), h("b", {}, fmtInt(prizes[i])), h("span", {}, TK)) : null)),
+          h("span", { class: "pod-rank" }, `${i + 1}`), h("b", {}, num(prizes[i])), h("span", {}, unitLabel())) : null)),
         rows.length ? h("div", { class: "board" }, rows, mine) : h("p", { class: "empty" }, t("tourneyEmpty")),
         h("p", { class: "note", style: "margin:12px 0 0" }, `${t("tourneyText")} ${prizes.length} ${t("tourneyText2")}`));
     });
@@ -1071,7 +1128,7 @@
             h("div", { class: "progress" }, h("i", { style: `width:${(progress / c.target) * 100}%` })),
             h("div", { class: "quest-sub" },
               h("span", { class: "row-sub" }, `${fmtP(progress)} / ${fmtP(c.target)}`),
-              h("span", { class: "reward" }, "+", coin(), fmtInt(boosted(c.reward_tokens))))),
+              h("span", { class: "reward" }, "+", coin(), num(boosted(c.reward_tokens))))),
           btn);
       }));
   }
@@ -1195,7 +1252,7 @@
       h("a", { class: "shop-banner", href: "#shop" },
         h("span", { class: "game-ico", style: "--c1:#ffd34d;--c2:#ff5f8f" }, icon("shop")),
         h("span", { class: "shop-banner-text" }, h("b", {}, t("shopTile")), h("span", {}, t("shopTileText"))),
-        h("span", { class: "coin-pill" }, coin(), fmtInt(me.available))),
+        h("span", { class: "coin-pill" }, coin(), num(me.available))),
       h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickGame")),
       h("div", { class: "game-menu" }, games.map((x) =>
         h("button", { type: "button", class: `game-tile${x.ok ? " ready" : ""}`, onclick: () => { gameSel = x.key; render(); } },
@@ -1262,7 +1319,7 @@
     const total = h("div", { class: "ad-total" });
     const showTotal = () => { const p = price();
       const tok = Math.ceil(+(p.eur * (status?.tokens_per_eur || 10000)).toFixed(4));
-      coinsLabel.replaceChildren(`${t("payCoins")} · `, coin(), fmtInt(tok));
+      coinsLabel.replaceChildren(`${t("payCoins")} · `, coinSvg(), fmtInt(tok));
       payCoins.disabled = (me.available || 0) < tok; total.replaceChildren(h("span", {}, t("adTotal")), h("b", {}, `${p.usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`), h("span", { class: "row-sub" }, `≈ ${p.eur.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`)); };
     const set = (k, cast = (v) => v) => (e) => { adForm[k] = cast(e.target.value); showTotal(); };
     const msg = h("div", { role: "alert" });
@@ -1361,7 +1418,7 @@
     return h("div", { class: "stack" },
       h("section", { class: "panel" },
         h("div", { class: "panel-title" }, t("available"), h("span", {}, t("rate"))),
-        h("div", { class: "wallet-amount" }, coin(), fmtInt(me.available)),
+        h("div", { class: "wallet-amount" }, coin(), num(me.available)),
         h("p", { class: "note", style: "margin:6px 0 14px" }, `${t("worth")} ${eur(me.available)}${c ? ` · ≈ ${est.toFixed(8).replace(/\.?0+$/, "")} ${c.code}` : ""}`),
         me.coins.length > 1 ? h("label", { class: "field" }, t("receiveIn"),
           h("select", {
@@ -1490,7 +1547,7 @@
 
   async function boot() {
     status = await publicStatus();
-    if (session) await Promise.all([refreshMe(), loadCatalog()]);
+    if (session) await Promise.all([refreshMe(), loadCatalog(), loadRates()]);
     const q = new URLSearchParams(location.search);
     const sl = q.get("sl");
     if (sl && session && me) {
