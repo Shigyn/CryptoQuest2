@@ -60,6 +60,12 @@ createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(r));
     return;
   }
+  // Essai de la boutique : 50 000 Coins pour chaque membre local.
+  if (url.pathname === "/dev/coins") {
+    await h.pg.query("select move_tokens(id, 'available', 50000, 'faucet', 'dev') from users");
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true }));
+    return;
+  }
   if (url.pathname === "/mur-essai") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(`<p style="font-family:sans-serif;padding:20px">Mur d'offres simulé pour ${url.searchParams.get("user")?.replace(/[^a-z0-9]/gi, "")}.</p>`);

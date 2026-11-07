@@ -97,6 +97,7 @@ function overviewTab() {
       stat(fmt(st.earnings_to_review), "gains à valider"),
       stat(fmt(st.attention), "retraits à vérifier"),
       stat(fmt(st.vip_active), `VIP actifs · ${money(st.vip_paid_eur_30d)} sur 30 j`),
+      stat(fmt(st.shop_tokens_30d || 0), `${TK} dépensés en boutique sur 30 j · tournoi ${fmt(st.tournament_tokens_30d || 0)}`),
       stat(money(st.paid_tokens_day / s.tokens_per_eur, 4), `payés sur 24 h (plafond ${money(s.max_payout_eur_day)})`)),
     card("Trésorerie",
       h("div", { class: "grid" },
@@ -230,6 +231,9 @@ const FIELDS = [
   ["vip_task_bonus", "VIP : bonus sur pubs, liens et offres (%)"],
   ["vip_referral_percent", "VIP : part du parrain (%)"],
   ["offer_share_percent", "Part des offerwalls reversée (%)"],
+  ["boost_price_tokens", `Boutique : prix du boost (${TK})`],
+  ["boost_percent", "Boutique : bonus du boost sur tâches, bonus quotidien et quêtes (%)"],
+  ["boost_hours", "Boutique : durée du boost (heures)"],
 ];
 
 function settingsTab() {
@@ -238,6 +242,8 @@ function settingsTab() {
   const prizes = h("input", { value: (s.wheel_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
   const prizeList = () => prizes.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const mines = h("input", { value: (s.mines_rewards || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const tourney = h("input", { value: (s.tournament_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const tourneyList = () => tourney.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const minesList = () => mines.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   return h("div", { class: "stack" },
     card("Récompenses et plafonds",
@@ -249,13 +255,17 @@ function settingsTab() {
           if (list.length < 2 || list.length > 16) { errorText = "La roue doit avoir entre 2 et 16 cases."; render(); return; }
           const ml = minesList();
           if (ml.length < 1 || ml.length > 20) { errorText = "Mines doit avoir entre 1 et 20 gains."; render(); return; }
-          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list, mines_rewards: ml } }));
+          const tl = tourneyList();
+          if (tl.length < 1 || tl.length > 50) { errorText = "Le tournoi doit avoir entre 1 et 50 prix."; render(); return; }
+          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list, mines_rewards: ml, tournament_prizes: tl } }));
         },
       },
         h("div", { class: "grid" }, FIELDS.map(([k, label]) => h("label", { class: "field" }, label, inputs[k]))),
         h("label", { class: "field" }, `Cases de la roue du jour (${TK}, séparées par des virgules, chaque case a la même chance)`, prizes),
         h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Gain moyen actuel : ${(prizeList().reduce((a, b) => a + b, 0) / Math.max(prizeList().length, 1)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${TK} par membre et par jour.`),
         h("label", { class: "field" }, `Mines : gain selon le nombre de cases ouvertes (${TK}, séparés par des virgules)`, mines),
+        h("label", { class: "field" }, `Tournoi de la semaine : prix par place, de la 1re à la dernière payée (${TK}, séparés par des virgules)`, tourney),
+        h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Coût par semaine : ${fmt(tourneyList().reduce((a, b) => a + b, 0))} ${TK} = ${money(tourneyList().reduce((a, b) => a + b, 0) / s.tokens_per_eur)}.`),
         h("button", { class: "btn" }, "Enregistrer les réglages"))),
     card("Cryptos de retrait",
       h("div", { class: "row between", style: "margin-bottom:12px" },

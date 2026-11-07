@@ -341,6 +341,29 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "ad_orders":
       return json(d, 200, { ok: true, orders: await d.rpc("my_ad_orders", { p_user: userId }) });
 
+    // Boutique : tout se paie avec le solde disponible, sans hasard.
+    case "shop":
+      return json(d, 200, { ok: true, ...(await d.rpc("shop_catalog", { p_user: userId })) });
+
+    case "shop_buy":
+      return result(d, await d.rpc("shop_buy", { p_user: userId, p_item: String(b.item ?? ""), p_ip_hash: ipHash }));
+
+    case "shop_equip":
+      return result(d, await d.rpc("shop_equip", { p_user: userId, p_kind: String(b.kind ?? ""), p_code: String(b.code ?? "") }));
+
+    case "ad_buy_tokens":
+      return result(d, await d.rpc("ad_buy_with_tokens", {
+        p_user: userId,
+        p_title: String(b.title ?? ""),
+        p_url: String(b.url ?? "").trim(),
+        p_duration: Number(b.duration),
+        p_views: Number(b.views),
+        p_ip_hash: ipHash,
+      }));
+
+    case "board":
+      return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: userId })) });
+
     case "challenge":
       return result(d, await d.rpc("claim_challenge", { p_user: userId, p_id: Number(b.id), p_ip_hash: ipHash }));
 
@@ -494,6 +517,8 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
   const started = Date.now();
   // Taux d'abord, pour payer au cours de l'heure.
   const rates = await refreshRates(d).catch((err) => ({ updated: [], skipped: [], error: String(err) }));
+  // Tournoi : les gagnants de la semaine passee sont payes une seule fois, au premier lot du lundi.
+  const tournament = await d.rpc("close_tournament").catch((err: unknown) => ({ ok: false, error: String(err) }));
   const users: string[] = await d.rpc("hourly_batch_users", { p_limit: 200 });
   let paid = 0, failed = 0, skipped = 0;
   for (const id of users) {
@@ -515,7 +540,7 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
     }
     await d.sleep(1000);
   }
-  return json(d, 200, { ok: true, paid, failed, skipped, candidates: users.length, rates });
+  return json(d, 200, { ok: true, paid, failed, skipped, candidates: users.length, rates, tournament });
 }
 
 export async function handleAdmin(req: Request, d: Deps): Promise<Response> {

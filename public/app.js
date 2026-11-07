@@ -46,6 +46,20 @@
     q_links: [["Passe {n} lien", "Passe {n} liens"], ["Complete {n} link", "Complete {n} links"]],
     q_surveys: [["Termine {n} sondage", "Termine {n} sondages"], ["Complete {n} survey", "Complete {n} surveys"]],
     q_offers: [["Termine {n} offre", "Termine {n} offres"], ["Complete {n} offer", "Complete {n} offers"]],
+    lvlShort: ["Niv.", "Lv."], shop: ["Boutique", "Shop"], shopText: ["Dépense tes Coins : bonus, VIP, pub et objets de style.", "Spend your Coins: boosts, VIP, ads and style items."],
+    bonuses: ["Bonus", "Boosts"], boostName: ["Boost", "Boost"],
+    boostText: ["En plus sur les pubs, liens, offres, sondages, le bonus quotidien et les quêtes, pendant", "Extra on ads, links, offers, surveys, the daily bonus and quests, for"],
+    activeFor: ["Actif encore", "Active for"], extend: ["Prolonger", "Extend"], details: ["Voir le détail", "See details"],
+    adCoinsText: ["Paie ta campagne avec tes Coins.", "Pay for your campaign with your Coins."],
+    frames: ["Cadres d’avatar", "Avatar frames"], colors: ["Couleur du pseudo", "Name color"], titles: ["Titres", "Titles"],
+    equip: ["Porter", "Wear"], unequip: ["Retirer", "Remove"], confirmBuy: ["Confirmer", "Confirm"], bought: ["Acheté !", "Bought!"],
+    shopFair: ["Tout est à effet connu d’avance : aucun achat ne donne de tirage, de tour de roue ou de chance en plus.", "Every item has a known effect: nothing here buys extra rolls, spins or winning chances."],
+    shopTile: ["Boutique", "Shop"], shopTileText: ["Boosts, VIP, pub et objets de style avec tes Coins.", "Boosts, VIP, ads and style items with your Coins."],
+    payCoins: ["Payer en Coins", "Pay with Coins"],
+    tourney: ["Tournoi de la semaine", "Weekly tournament"], endsIn: ["Fin dans", "Ends in"], d: ["j", "d"], you: ["Toi", "You"],
+    tourneyEmpty: ["Personne n’a encore marqué de points cette semaine. Fais un tirage pour prendre la tête !", "Nobody has scored yet this week. Make a roll to take the lead!"],
+    tourneyText: ["Gratuit : chaque Coin gagné cette semaine compte (tirages, jeux, tâches, parrainage ; pas les quêtes). Les", "Free: every Coin earned this week counts (rolls, games, tasks, referrals; not quests). The top"],
+    tourneyText2: ["premiers sont payés lundi matin.", "players are paid on Monday morning."],
     noPtc: ["Aucune pub pour le moment. Reviens plus tard.", "No ads right now. Come back later."],
     noLinks: ["Aucun lien pour le moment. Reviens plus tard.", "No links right now. Come back later."],
     noOffers: ["Aucune offre pour le moment. Reviens plus tard.", "No offers right now. Come back later."],
@@ -127,6 +141,7 @@
     already_done: ["Déjà fait aujourd'hui.", "Already done today."],
     not_reached: ["Objectif pas encore atteint.", "Goal not reached yet."],
     too_soon: ["Reste encore quelques secondes sur la page.", "Stay on the page a few more seconds."],
+    not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
     bad_request: ["Action impossible. Recharge la page et réessaie.", "Not possible. Reload the page and try again."],
@@ -179,6 +194,8 @@
     check: "M5 12l5 5L20 7",
     bomb: "M11 7a7 7 0 1 0 6 3.4M15 4l2 2M18 3v2M20 5h-2M15.5 7.5 17 6",
     crown: "M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z",
+    shop: "M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2",
+    trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4z",
     check: "M5 12.5l4.5 4.5L19 7",
     megaphone: "M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zm13-3a5 5 0 0 1 0 8",
   };
@@ -454,7 +471,7 @@
   const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["quests", "quests"], ["wallet", "wallet"], ["profile", "profile"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "");
-    return TABS.some(([k]) => k === r) || r === "advertise" || r === "vip" ? r : "";
+    return TABS.some(([k]) => k === r) || r === "advertise" || r === "vip" || r === "shop" ? r : "";
   };
   let earnTab = null;
   let walletTab = "withdrawals";
@@ -475,12 +492,12 @@
     const lv = levelOf(me.earned_total || 0);
     header.replaceChildren(
       h("div", { class: "who" },
-        h("div", { class: `avatar${me.vip ? " vip" : ""}` }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
+        h("div", { class: `avatar${me.vip ? " vip" : ""}${frameCls(me)}` }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
           me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         h("div", { class: "who-text" },
-          h("div", { class: "who-name" }, shortAddr(me.fp_address)),
-          h("div", { class: "who-lvl" }, `${t("level")} ${lv.lvl}`))),
-      h("div", { class: "coin-pill" }, coin(), fmtInt(me.available)));
+          h("div", { class: `who-name${nameCls(me)}` }, shortAddr(me.fp_address)),
+          h("div", { class: "who-lvl" }, me.title && cosmeticName(me.title) ? `${cosmeticName(me.title)} · ${t("lvlShort")} ${lv.lvl}` : `${t("level")} ${lv.lvl}`))),
+      h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), fmtInt(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null));
   }
 
   function stat(ico, cls, label, value, sub) {
@@ -800,6 +817,144 @@
     return wrap;
   }
 
+  // Boutique : depenser ses Coins, sans hasard -----------------------------
+  let catalog = null;
+  async function loadCatalog() {
+    const r = await api("shop");
+    if (r.ok) catalog = r;
+    return r;
+  }
+  const cosmeticName = (code) => {
+    const c = catalog?.cosmetics?.find((x) => x.code === code);
+    return c ? (FR ? c.name : c.name_en) : "";
+  };
+  const frameCls = (u) => (u?.frame ? ` fr-${u.frame}` : "");
+  const nameCls = (u) => (u?.name_color ? ` nc-${u.name_color}` : "");
+  const hoursLeft = (iso) => Math.max(0, Math.ceil((new Date(iso) - Date.now()) / 3600000));
+
+  // Premier appui : demande confirmation. Deuxieme appui dans les 4 s : achete.
+  function buyButton(label, price, onBuy, cls = "btn small gold") {
+    let armed = false, timer = null;
+    const content = () => [coin(), fmtInt(price)];
+    const btn = h("button", {
+      class: cls, type: "button", disabled: me.available < price,
+      onclick: async () => {
+        if (!armed) {
+          armed = true;
+          btn.replaceChildren(`${t("confirmBuy")} `, ...content());
+          timer = setTimeout(() => { armed = false; btn.replaceChildren(...(label ? [label, " · "] : []), ...content()); }, 4000);
+          return;
+        }
+        clearTimeout(timer);
+        btn.disabled = true;
+        const r = await onBuy();
+        if (r.ok) { burst(btn, `-${fmtInt(price)}`); toast(t("bought"), "good"); }
+        else toast(message(r), "bad");
+        await Promise.all([refreshMe(), loadCatalog()]);
+        render();
+      },
+    }, ...(label ? [label, " · "] : []), ...content());
+    return btn;
+  }
+
+  function shopView() {
+    const wrap = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
+    const draw = () => {
+      if (!catalog) return;
+      const b = catalog.boost;
+      const boostCard = h("div", { class: "shop-card" },
+        h("div", { class: "shop-ico", style: "--c1:#ffd34d;--c2:#ff8f1c" }, icon("bolt")),
+        h("div", { class: "shop-main" },
+          h("h3", {}, `${t("boostName")} +${b.percent} %`),
+          h("p", { class: "row-sub" }, `${t("boostText")} ${b.hours} h.`),
+          me.boost ? h("span", { class: "badge good" }, `${t("activeFor")} ${hoursLeft(me.boost_until)} h`) : null),
+        buyButton(me.boost ? t("extend") : "", b.price, () => api("shop_buy", { item: "boost" })));
+      const vipCard = h("div", { class: "shop-card" },
+        h("div", { class: "shop-ico", style: "--c1:#ffe27a;--c2:#e09a12" }, icon("crown")),
+        h("div", { class: "shop-main" },
+          h("h3", {}, `VIP · ${catalog.vip.days} ${t("vipFor")}`),
+          h("p", { class: "row-sub" }, t("vipLink")),
+          h("a", { href: "#vip", class: "shop-more" }, t("details"))),
+        buyButton(me.vip ? t("extend") : "", catalog.vip.price, () => api("shop_buy", { item: "vip" })));
+      const adCard = h("a", { class: "shop-card ad-link", href: "#advertise" },
+        h("div", { class: "shop-ico", style: "--c1:#4fd2ff;--c2:#2f6bff" }, icon("megaphone")),
+        h("div", { class: "shop-main" }, h("h3", {}, t("advertise")), h("p", { class: "row-sub" }, t("adCoinsText"))),
+        h("span", { class: "chev" }, "›"));
+
+      const group = (kind, title) => {
+        const items = catalog.cosmetics.filter((c) => c.kind === kind);
+        const worn = { frame: me.frame, color: me.name_color, title: me.title }[kind];
+        return h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, title),
+          h("div", { class: "cos-grid" }, items.map((c) => {
+            const on = worn === c.code;
+            const preview = kind === "frame"
+              ? h("div", { class: `avatar cos-avatar fr-${c.code}` }, (me.fp_address || "?").slice(0, 1).toUpperCase())
+              : kind === "color"
+                ? h("div", { class: `cos-name nc-${c.code}` }, shortAddr(me.fp_address).slice(0, 12))
+                : h("span", { class: "title-tag" }, FR ? c.name : c.name_en);
+            const action = !c.owned
+              ? buyButton("", c.price, () => api("shop_buy", { item: c.code }), "btn small gold")
+              : h("button", {
+                  class: `btn small ${on ? "ghost" : ""}`, type: "button",
+                  onclick: async () => {
+                    const r = await api("shop_equip", { kind, code: on ? "" : c.code });
+                    if (!r.ok) toast(message(r), "bad");
+                    await refreshMe();
+                    render();
+                  },
+                }, on ? t("unequip") : t("equip"));
+            return h("div", { class: `cos-item${on ? " on" : ""}` },
+              h("div", { class: "cos-preview" }, preview),
+              h("div", { class: "cos-label" }, FR ? c.name : c.name_en),
+              action);
+          })));
+      };
+
+      wrap.replaceChildren(
+        h("section", { class: "panel shop-hero" },
+          h("div", { class: "shop-hero-ico" }, icon("shop")),
+          h("div", {}, h("h2", {}, t("shop")), h("p", { class: "row-sub" }, t("shopText"))),
+          h("div", { class: "coin-pill" }, coin(), fmtInt(me.available))),
+        h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("bonuses")), h("div", { class: "shop-list" }, boostCard, vipCard, adCard)),
+        group("frame", t("frames")), group("color", t("colors")), group("title", t("titles")),
+        h("p", { class: "note", style: "text-align:center" }, t("shopFair")));
+    };
+    if (catalog) draw();
+    loadCatalog().then(draw);
+    return wrap;
+  }
+
+  // Tournoi de la semaine : gratuit, classement sur les Coins gagnes.
+  function tournamentCard() {
+    const box = h("section", { class: "panel tourney" }, h("div", { class: "panel-title" }, t("tourney")), h("p", { class: "empty" }, "…"));
+    Promise.all([api("board"), catalog ? null : loadCatalog()]).then(([r]) => {
+      if (!r.ok || !box.isConnected) return;
+      const left = Math.max(0, Math.floor((new Date(r.ends_at) - Date.now()) / 1000));
+      const ends = `${Math.floor(left / 86400)} ${t("d")} ${Math.floor((left % 86400) / 3600)} h`;
+      const prizes = r.prizes || [];
+      const medal = (rank) => h("span", { class: `rank r${Math.min(rank, 4)}` }, rank <= 3 ? icon("trophy") : String(rank));
+      const rows = r.top.map((p) => h("div", { class: `board-row${p.me ? " me" : ""}` },
+        medal(p.rank),
+        h("div", { class: `avatar mini${frameCls(p)}` }, (p.who || "?").slice(0, 1).toUpperCase()),
+        h("div", { class: "board-who" },
+          h("div", { class: `board-name${nameCls(p)}` }, p.me ? t("you") : p.who),
+          p.title && cosmeticName(p.title) ? h("span", { class: "title-tag small" }, cosmeticName(p.title)) : null),
+        h("div", { class: "board-score" }, fmtInt(p.score), prizes[p.rank - 1] ? h("span", { class: "board-prize" }, `+${fmtInt(prizes[p.rank - 1])}`) : null)));
+      const mine = r.me && r.me.rank > 10
+        ? h("div", { class: "board-row me" }, medal(r.me.rank), h("div", { class: `avatar mini${frameCls(me)}` }, (me.fp_address || "?").slice(0, 1).toUpperCase()),
+            h("div", { class: "board-who" }, h("div", { class: `board-name${nameCls(me)}` }, t("you"))), h("div", { class: "board-score" }, fmtInt(r.me.score)))
+        : null;
+      box.replaceChildren(
+        h("div", { class: "panel-title" }, h("span", {}, t("tourney")), h("span", { class: "badge warn" }, `${t("endsIn")} ${ends}`)),
+        h("div", { class: "podium" }, [1, 0, 2].map((i) => prizes[i] ? h("div", { class: `pod p${i + 1}` },
+          h("span", { class: "pod-rank" }, `${i + 1}`), h("b", {}, fmtInt(prizes[i])), h("span", {}, TK)) : null)),
+        rows.length ? h("div", { class: "board" }, rows, mine) : h("p", { class: "empty" }, t("tourneyEmpty")),
+        h("p", { class: "note", style: "margin:12px 0 0" }, `${t("tourneyText")} ${prizes.length} ${t("tourneyText2")}`));
+    });
+    return box;
+  }
+
   // Jeux : roue, bonus, quetes
   function wheelCard() {
     const prizes = me.wheel_prizes || [];
@@ -846,6 +1001,9 @@
       h("div", { style: "margin-top:18px" }, btn));
   }
 
+  // Boost en cours : le montant affiche est celui qui sera credite.
+  const boosted = (n) => (me?.boost ? n + Math.floor((n * (status?.boost_percent || 0)) / 100) : n);
+
   function bonusCard() {
     const btn = h("button", {
       class: "btn gold", style: "width:100%", disabled: me.daily_done || me.claims_today < 1,
@@ -857,7 +1015,7 @@
         await refreshMe();
         render();
       },
-    }, me.daily_done ? t("done") : `${t("collect")} ${tk(me.daily_bonus_tokens)}`);
+    }, me.daily_done ? t("done") : `${t("collect")} ${tk(boosted(me.daily_bonus_tokens))}`);
     return h("section", { class: "panel" },
       h("div", { class: "panel-title" }, t("bonus")),
       h("div", { style: "display:flex;align-items:center;gap:14px;margin-bottom:14px" },
@@ -913,7 +1071,7 @@
             h("div", { class: "progress" }, h("i", { style: `width:${(progress / c.target) * 100}%` })),
             h("div", { class: "quest-sub" },
               h("span", { class: "row-sub" }, `${fmtP(progress)} / ${fmtP(c.target)}`),
-              h("span", { class: "reward" }, "+", coin(), fmtInt(c.reward_tokens)))),
+              h("span", { class: "reward" }, "+", coin(), fmtInt(boosted(c.reward_tokens))))),
           btn);
       }));
   }
@@ -1034,6 +1192,10 @@
         h("div", { class: "game-solo" }, current.card()));
     }
     return h("div", { class: "stack" },
+      h("a", { class: "shop-banner", href: "#shop" },
+        h("span", { class: "game-ico", style: "--c1:#ffd34d;--c2:#ff5f8f" }, icon("shop")),
+        h("span", { class: "shop-banner-text" }, h("b", {}, t("shopTile")), h("span", {}, t("shopTileText"))),
+        h("span", { class: "coin-pill" }, coin(), fmtInt(me.available))),
       h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickGame")),
       h("div", { class: "game-menu" }, games.map((x) =>
         h("button", { type: "button", class: `game-tile${x.ok ? " ready" : ""}`, onclick: () => { gameSel = x.key; render(); } },
@@ -1044,7 +1206,7 @@
           h("span", { class: "btn small", style: "margin-top:auto" }, t("play"))))));
   }
 
-  const questsView = () => h("div", { class: "stack" }, bonusCard(), questsCard());
+  const questsView = () => h("div", { class: "stack" }, tournamentCard(), bonusCard(), questsCard());
 
   // VIP : abonnement paye sur la page FaucetPay, active au retour du paiement.
   const fmtDate = (iso) => new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
@@ -1083,6 +1245,7 @@
           perk("profile", `${s.vip_referral_percent ?? 0} % ${t("vipRef")}`, `${t("vipRefInstead")} ${s.referral_percent ?? 0} %`),
           perk("crown", t("vipBadge"), t("vipBadgeSub"))),
         h("div", { style: "margin-top:16px" }, pay, msg),
+        catalog?.vip ? h("div", { style: "margin-top:10px" }, buyButton(t("payCoins"), catalog.vip.price, () => api("shop_buy", { item: "vip" }), "btn big")) : null,
         h("p", { class: "note", style: "margin:10px 0 0;font-style:italic;text-align:center" }, t("vipDelay")),
         h("div", { style: "text-align:center;margin-top:8px" }, h("button", { class: "btn ghost small", type: "button",
           onclick: async () => { await refreshMe(); render(); } }, t("vipRefresh"))),
@@ -1097,11 +1260,28 @@
       return { eur: eurv, usdt: Math.ceil(+(eurv * (status?.usdt_per_eur || 1) * 10000).toFixed(6)) / 10000 };
     };
     const total = h("div", { class: "ad-total" });
-    const showTotal = () => { const p = price(); total.replaceChildren(h("span", {}, t("adTotal")), h("b", {}, `${p.usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`), h("span", { class: "row-sub" }, `≈ ${p.eur.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`)); };
-    showTotal();
+    const showTotal = () => { const p = price();
+      const tok = Math.ceil(+(p.eur * (status?.tokens_per_eur || 10000)).toFixed(4));
+      coinsLabel.replaceChildren(`${t("payCoins")} · `, coin(), fmtInt(tok));
+      payCoins.disabled = (me.available || 0) < tok; total.replaceChildren(h("span", {}, t("adTotal")), h("b", {}, `${p.usdt.toLocaleString(locale, { maximumFractionDigits: 4 })} USDT`), h("span", { class: "row-sub" }, `≈ ${p.eur.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`)); };
     const set = (k, cast = (v) => v) => (e) => { adForm[k] = cast(e.target.value); showTotal(); };
     const msg = h("div", { role: "alert" });
     const pay = h("button", { class: "btn big", type: "submit" }, t("adPay"));
+    const coinsLabel = h("span", {});
+    const payCoins = h("button", {
+      class: "btn big gold", type: "button", style: "margin-top:10px",
+      onclick: async () => {
+        payCoins.disabled = true;
+        const r = await api("ad_buy_tokens", adForm);
+        payCoins.disabled = false;
+        if (!r.ok) { msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:12px" }, message(r))); return; }
+        burst(payCoins, `-${fmtInt(r.tokens)}`);
+        msg.replaceChildren(h("div", { class: "notice good", style: "margin-top:12px" }, t("ad_review")));
+        await refreshMe();
+        render();
+      },
+    }, coinsLabel);
+    showTotal();
     const list = h("div", {}, h("p", { class: "empty" }, "…"));
     api("ad_orders").then((r) => {
       if (!r.ok) return;
@@ -1110,7 +1290,7 @@
         const [k, cls] = label(o);
         return h("div", { class: "list-line" },
           h("div", { style: "min-width:0" }, h("div", { style: "color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, o.title),
-            h("div", { class: "row-sub" }, `${fmtInt(o.shown)} / ${fmtInt(o.views)} ${t("views")} · ${o.duration} s · ${Number(o.amount_usdt)} USDT`)),
+            h("div", { class: "row-sub" }, `${fmtInt(o.shown)} / ${fmtInt(o.views)} ${t("views")} · ${o.duration} s · ${o.tokens_paid ? tk(o.tokens_paid) : `${Number(o.amount_usdt)} USDT`}`)),
           h("span", { class: `badge ${cls}` }, t(k)));
       }) : [h("p", { class: "empty" }, t("noAds"))]));
     });
@@ -1139,7 +1319,7 @@
             h("label", { class: "field" }, t("adDuration"), h("select", { style: "margin-top:6px", onchange: set("duration", Number) },
               [10, 15, 20, 30].map((s) => h("option", { value: s, selected: s === adForm.duration }, `${s} s`)))),
             h("label", { class: "field" }, t("adViews"), h("input", { type: "number", min: 100, max: 100000, step: 100, value: adForm.views, oninput: set("views", Number), style: "margin-top:6px" }))),
-          total, pay, msg,
+          total, pay, payCoins, msg,
           h("p", { class: "note", style: "margin:12px 0 0" }, t("adRules")))),
       h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("myAds")), list));
   }
@@ -1149,6 +1329,7 @@
     faucet: ["Tirage", "Roll"], daily: ["Bonus quotidien", "Daily bonus"], challenge: ["Quête", "Quest"], referral: ["Parrainage", "Referral"], wheel: ["Roue du jour", "Daily wheel"],
     ptc: ["Pub", "Ad"], shortlink: ["Lien", "Link"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
     mines: ["Mines", "Mines"], dice: ["Dice", "Dice"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
+    shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
   };
   function walletView() {
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
@@ -1212,10 +1393,12 @@
     const save = h("button", { class: "btn", type: "submit", style: "width:100%" }, me.secured ? t("secChange") : t("secSave"));
     return h("div", { class: "stack" },
       h("section", { class: "panel", style: "text-align:center" },
-        h("div", { class: `avatar${me.vip ? " vip" : ""}`, style: "width:72px;height:72px;margin:0 auto;font-size:28px;border-radius:20px" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
+        h("div", { class: `avatar${me.vip ? " vip" : ""}${frameCls(me)}`, style: "width:72px;height:72px;margin:0 auto;font-size:28px;border-radius:20px" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
           me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         me.vip ? h("div", { style: "margin-top:12px" }, h("span", { class: "badge vip-badge" }, icon("crown"), t("vip"))) : null,
-        h("h2", { style: "margin-top:14px;overflow-wrap:anywhere" }, me.fp_address),
+        h("h2", { class: nameCls(me).trim() || null, style: "margin-top:14px;overflow-wrap:anywhere" }, me.fp_address),
+        me.title && cosmeticName(me.title) ? h("div", { style: "margin-top:6px" }, h("span", { class: "title-tag" }, cosmeticName(me.title))) : null,
+        h("div", { style: "margin-top:10px" }, h("a", { class: "btn small ghost", href: "#shop", style: "width:auto" }, icon("shop"), t("shop"))),
         h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`),
         h("div", { class: "xp", style: "width:100%;height:10px" }, h("i", { style: `width:${lv.pct}%` }))),
       h("div", { class: "grid2" },
@@ -1277,7 +1460,7 @@
     const route = routeNow();
     header = h("header", { class: "topline" });
     updateHeader();
-    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView, vip: vipView };
+    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView, vip: vipView, shop: shopView };
     const dots = {
       games: !me.wheel_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0,
       quests: !me.daily_done || me.challenges.some((c) => !c.done && me.claims_today >= c.target),
@@ -1307,7 +1490,7 @@
 
   async function boot() {
     status = await publicStatus();
-    if (session) await refreshMe();
+    if (session) await Promise.all([refreshMe(), loadCatalog()]);
     const q = new URLSearchParams(location.search);
     const sl = q.get("sl");
     if (sl && session && me) {

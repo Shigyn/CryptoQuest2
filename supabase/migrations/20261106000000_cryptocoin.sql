@@ -1,7 +1,7 @@
 -- CryptoCoin : schema complet. Rejouable : efface d'abord l'ancienne version, sans donnees reelles a ce stade.
 -- Toute regle d'argent est ici. Tables fermees (RLS sans politique), fonctions reservees a service_role.
 
-drop table if exists game_plays, vip_orders, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
+drop table if exists tournament_awards, user_cosmetics, cosmetics, game_plays, vip_orders, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
   shortlink_providers, earnings, withdrawals, claims, ledger, sessions, users, bans, coins, settings cascade;
 do $$
 declare f record;
@@ -48,6 +48,10 @@ create table settings (
   vip_days int not null default 30 check (vip_days between 1 and 365),
   vip_task_bonus numeric not null default 10 check (vip_task_bonus between 0 and 100),
   vip_referral_percent numeric not null default 15 check (vip_referral_percent between 0 and 50),
+  boost_price_tokens int not null default 1000 check (boost_price_tokens >= 1),
+  boost_percent numeric not null default 20 check (boost_percent between 0 and 100),
+  boost_hours int not null default 24 check (boost_hours between 1 and 168),
+  tournament_prizes int[] not null default '{5000,3000,2000,1000,1000,500,500,500,500,500}' check (cardinality(tournament_prizes) between 1 and 50),
   -- Tirage gratuit du faucet : nombre de 0 a 99 999. Sous le premier palier, la recompense de base.
   roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 1000}, {"from": 99999, "tokens": 100000}]',
   referral_percent numeric not null default 10 check (referral_percent >= 0 and referral_percent <= 50),
@@ -96,6 +100,11 @@ create table users (
   failed_logins int not null default 0,
   locked_until timestamptz,
   vip_until timestamptz,
+  -- Boutique : boost achete en Coins, objets cosmetiques portes (codes de la table cosmetics).
+  boost_until timestamptz,
+  frame text,
+  name_color text,
+  title text,
   payout_coin text not null default 'USDT' references coins (code),
   -- available : retirable tout de suite. pending : a valider. validated : part au prochain lot horaire.
   available bigint not null default 0,
@@ -271,7 +280,9 @@ create table ad_orders (
   status text not null default 'pending' check (status in ('pending', 'paid')),
   campaign_id bigint,
   tx_id text unique,
-  paid_at timestamptz
+  paid_at timestamptz,
+  -- Campagne payee en Coins : montant retire du solde, rendu si la campagne est refusee.
+  tokens_paid bigint
 );
 create index ad_orders_user_idx on ad_orders (user_id, created_at desc);
 
@@ -311,6 +322,47 @@ create table challenge_done (
   primary key (challenge_id, user_id, day)
 );
 
+-- Boutique : objets cosmetiques (cadre d'avatar, couleur du pseudo, titre). Aucun effet sur les gains.
+create table cosmetics (
+  code text primary key,
+  kind text not null check (kind in ('frame', 'color', 'title')),
+  name text not null,
+  name_en text not null,
+  price_tokens int not null check (price_tokens >= 0),
+  sort int not null default 100,
+  enabled boolean not null default true
+);
+insert into cosmetics (code, kind, name, name_en, price_tokens, sort) values
+  ('frame_gold', 'frame', 'Cadre doré', 'Gold frame', 2000, 1),
+  ('frame_neon', 'frame', 'Cadre néon', 'Neon frame', 3000, 2),
+  ('frame_fire', 'frame', 'Cadre de feu', 'Fire frame', 5000, 3),
+  ('frame_rainbow', 'frame', 'Cadre arc-en-ciel', 'Rainbow frame', 10000, 4),
+  ('color_mint', 'color', 'Pseudo menthe', 'Mint name', 1000, 1),
+  ('color_pink', 'color', 'Pseudo rose', 'Pink name', 1000, 2),
+  ('color_gold', 'color', 'Pseudo doré', 'Gold name', 2500, 3),
+  ('color_rainbow', 'color', 'Pseudo arc-en-ciel', 'Rainbow name', 8000, 4),
+  ('title_hunter', 'title', 'Chasseur de Coins', 'Coin Hunter', 1000, 1),
+  ('title_lucky', 'title', 'Main chanceuse', 'Lucky Hand', 2500, 2),
+  ('title_king', 'title', 'Roi du faucet', 'Faucet King', 6000, 3),
+  ('title_legend', 'title', 'Légende', 'Legend', 20000, 4);
+create table user_cosmetics (
+  user_id uuid not null references users (id),
+  code text not null references cosmetics (code),
+  bought_at timestamptz not null default now(),
+  primary key (user_id, code)
+);
+
+-- Tournoi de la semaine : gagnants payes, une ligne par place.
+create table tournament_awards (
+  week date not null,
+  rank int not null,
+  user_id uuid not null references users (id),
+  score bigint not null,
+  tokens int not null,
+  created_at timestamptz not null default now(),
+  primary key (week, rank)
+);
+
 alter table settings enable row level security;
 alter table coins enable row level security;
 alter table users enable row level security;
@@ -330,6 +382,9 @@ alter table challenge_done enable row level security;
 alter table game_plays enable row level security;
 alter table ad_orders enable row level security;
 alter table vip_orders enable row level security;
+alter table cosmetics enable row level security;
+alter table user_cosmetics enable row level security;
+alter table tournament_awards enable row level security;
 
 -- Mouvements -------------------------------------------------------------
 
@@ -552,8 +607,9 @@ begin
   select count(*) into n from claims where user_id = p_user and (at at time zone 'utc')::date = today;
   if n < s.daily_bonus_min_claims then return jsonb_build_object('ok', false, 'code', 'not_reached'); end if;
   update users set last_daily_day = today where id = p_user;
-  perform move_tokens(p_user, 'available', s.daily_bonus_tokens, 'daily', today::text);
-  return jsonb_build_object('ok', true, 'tokens', s.daily_bonus_tokens);
+  n := s.daily_bonus_tokens + floor(s.daily_bonus_tokens * boost_percent(u) / 100);
+  perform move_tokens(p_user, 'available', n, 'daily', today::text);
+  return jsonb_build_object('ok', true, 'tokens', n);
 end $$;
 
 create function spin_wheel(p_user uuid, p_ip_hash text)
@@ -624,8 +680,9 @@ begin
   n := challenge_progress(p_user, c.goal);
   if n < c.target_claims then return jsonb_build_object('ok', false, 'code', 'not_reached'); end if;
   insert into challenge_done (challenge_id, user_id, day) values (p_id, p_user, today);
-  perform move_tokens(p_user, 'available', c.reward_tokens, 'challenge', p_id::text);
-  return jsonb_build_object('ok', true, 'tokens', c.reward_tokens);
+  n := c.reward_tokens + floor(c.reward_tokens * boost_percent(u) / 100);
+  perform move_tokens(p_user, 'available', n, 'challenge', p_id::text);
+  return jsonb_build_object('ok', true, 'tokens', n);
 end $$;
 
 -- Gains a valider : PTC, liens, offres ------------------------------------
@@ -642,10 +699,8 @@ declare
 begin
   select * into u from users where id = p_user for update;
   if not found then return jsonb_build_object('ok', false, 'code', 'unknown_user'); end if;
-  if u.vip_until > now() then
-    select vip_task_bonus into bonus from settings where id = 1;
-    tokens := p_tokens + floor(p_tokens * bonus / 100);
-  end if;
+  select (case when u.vip_until > now() then vip_task_bonus else 0 end) + boost_percent(u) into bonus from settings where id = 1;
+  if bonus > 0 then tokens := p_tokens + floor(p_tokens * bonus / 100); end if;
   select count(*) into n from users where last_ip_hash = u.last_ip_hash and id <> p_user;
   if n > 0 then risk_txt := 'IP partagée avec ' || n || ' autre(s) compte(s)'; end if;
   if u.banned then risk_txt := 'Compte banni'; end if;
@@ -1119,7 +1174,7 @@ $fn$;
 create function my_ad_orders(p_user uuid)
 returns jsonb language sql stable set search_path = public as $fn$
   select coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'at', o.created_at, 'title', o.title, 'url', o.url,
-    'views', o.views, 'duration', o.duration_seconds, 'amount_usdt', o.amount_usdt, 'status', o.status,
+    'views', o.views, 'duration', o.duration_seconds, 'amount_usdt', o.amount_usdt, 'tokens_paid', o.tokens_paid, 'status', o.status,
     'shown', coalesce(c.views, 0), 'enabled', coalesce(c.enabled, false), 'review', coalesce(c.needs_review, false))
     order by o.created_at desc), '[]'::jsonb)
   from ad_orders o left join ptc_campaigns c on c.id = o.campaign_id
@@ -1187,6 +1242,8 @@ returns jsonb language sql stable set search_path = public as $$
     'ad_price_eur_per_view', s.ad_price_eur_per_view,
     'vip_price_eur', s.vip_price_eur, 'vip_days', s.vip_days,
     'vip_task_bonus', s.vip_task_bonus, 'vip_referral_percent', s.vip_referral_percent,
+    'boost_price_tokens', s.boost_price_tokens, 'boost_percent', s.boost_percent, 'boost_hours', s.boost_hours,
+    'tournament_prizes', to_jsonb(s.tournament_prizes),
     'usdt_per_eur', (select per_eur from coins where code = 'USDT'),
     'cooldown_seconds', s.cooldown_seconds,
     'referral_percent', s.referral_percent,
@@ -1222,6 +1279,8 @@ returns jsonb language sql stable set search_path = public as $$
     'wheel_min_claims', s.wheel_min_claims,
     'daily_bonus_tokens', s.daily_bonus_tokens,
     'claims_max', s.max_claims_account_day,
+    'boost', coalesce(u.boost_until > now(), false), 'boost_until', u.boost_until,
+    'frame', u.frame, 'name_color', u.name_color, 'title', u.title,
     'games', jsonb_build_object(
       'mines_left', greatest(s.mines_daily_plays - (select count(*) from game_plays where user_id = u.id and game = 'mines' and day = (now() at time zone 'utc')::date), 0),
       'dice_left', greatest(s.dice_daily_plays - (select count(*) from game_plays where user_id = u.id and game = 'dice' and day = (now() at time zone 'utc')::date), 0),
@@ -1237,7 +1296,7 @@ returns jsonb language sql stable set search_path = public as $$
                       order by at desc limit s.claims_window_count) w), 0), 0),
     -- Gamification : total gagne (niveau) et serie de jours consecutifs avec au moins une reclamation.
     'earned_total', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and delta > 0
-                      and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer')),
+                      and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer', 'mines', 'dice', 'tournament')),
     'streak', (with d as (select distinct (at at time zone 'utc')::date as day from claims
                           where user_id = u.id and at > now() - interval '400 days'),
                     g as (select day, day - (row_number() over (order by day))::int as grp from d)
@@ -1282,6 +1341,8 @@ returns jsonb language sql stable set search_path = public as $$
       'earnings_to_review', (select count(*) from earnings where status = 'pending'),
       'ads_to_review', (select count(*) from ptc_campaigns where needs_review),
       'vip_active', (select count(*) from users where vip_until > now()),
+      'shop_tokens_30d', (select coalesce(-sum(delta), 0) from ledger where source = 'shop' and at > now() - interval '30 days'),
+      'tournament_tokens_30d', (select coalesce(sum(delta), 0) from ledger where source = 'tournament' and at > now() - interval '30 days'),
       'vip_paid_eur_30d', (select coalesce(sum(price_eur), 0) from vip_orders where status = 'paid' and paid_at > now() - interval '30 days'),
       'attention', (select count(*) from withdrawals where status = 'unknown' or (status = 'reserved' and created_at < now() - interval '2 minutes'))
     ),
@@ -1418,6 +1479,12 @@ begin
     vip_days = coalesce((p->>'vip_days')::int, vip_days),
     vip_task_bonus = coalesce((p->>'vip_task_bonus')::numeric, vip_task_bonus),
     vip_referral_percent = coalesce((p->>'vip_referral_percent')::numeric, vip_referral_percent),
+    boost_price_tokens = coalesce((p->>'boost_price_tokens')::int, boost_price_tokens),
+    boost_percent = coalesce((p->>'boost_percent')::numeric, boost_percent),
+    boost_hours = coalesce((p->>'boost_hours')::int, boost_hours),
+    tournament_prizes = case when jsonb_typeof(p->'tournament_prizes') = 'array'
+                             then (select array_agg(x::int) from jsonb_array_elements_text(p->'tournament_prizes') x)
+                             else tournament_prizes end,
     mines_rewards = case when jsonb_typeof(p->'mines_rewards') = 'array'
                          then (select array_agg(x::int) from jsonb_array_elements_text(p->'mines_rewards') x)
                          else mines_rewards end,
@@ -1452,6 +1519,11 @@ begin
     insert into ptc_campaigns (title, url, reward_tokens, duration_seconds, max_views, price_eur_per_view)
     values (p->>'title', p->>'url', (p->>'reward_tokens')::int, (p->>'duration_seconds')::int, (p->>'max_views')::int, coalesce((p->>'price_eur_per_view')::numeric, 0));
   else
+    if (p->>'enabled')::boolean is false then
+      perform move_tokens(o.user_id, 'available', o.tokens_paid, 'ad_refund', o.id::text)
+      from ad_orders o join ptc_campaigns c on c.id = o.campaign_id
+      where c.id = (p->>'id')::bigint and c.needs_review and o.tokens_paid > 0;
+    end if;
     update ptc_campaigns set enabled = coalesce((p->>'enabled')::boolean, enabled), needs_review = false where id = (p->>'id')::bigint;
   end if;
 end $$;
@@ -1492,6 +1564,197 @@ begin
   else
     update challenges set enabled = coalesce((p->>'enabled')::boolean, enabled) where id = (p->>'id')::bigint;
   end if;
+end $$;
+
+-- Boutique : depenser ses Coins -------------------------------------------
+-- Rien ici ne fait intervenir le hasard : chaque achat donne un effet connu a l'avance.
+
+-- Retire le prix du solde disponible. La ligne du membre doit deja etre verrouillee.
+create function spend_tokens(u users, p_price bigint, p_ref text)
+returns text language plpgsql set search_path = public as $$
+begin
+  if p_price < 0 then return 'bad_request'; end if;
+  if p_price > u.available then return 'not_enough'; end if;
+  perform move_tokens(u.id, 'available', -p_price, 'shop', p_ref);
+  return null;
+end $$;
+
+-- Boost en cours : pourcentage ajoute aux taches, au bonus quotidien et aux quetes (jamais aux tirages ni aux jeux).
+create function boost_percent(u users)
+returns numeric language sql stable set search_path = public as $$
+  select case when u.boost_until > now() then s.boost_percent else 0 end from settings s where s.id = 1;
+$$;
+
+create function shop_catalog(p_user uuid)
+returns jsonb language sql stable set search_path = public as $$
+  select jsonb_build_object(
+    'boost', jsonb_build_object('price', s.boost_price_tokens, 'percent', s.boost_percent, 'hours', s.boost_hours),
+    'vip', jsonb_build_object('price', ceil(s.vip_price_eur * s.tokens_per_eur)::bigint, 'days', s.vip_days),
+    'cosmetics', coalesce((select jsonb_agg(jsonb_build_object('code', c.code, 'kind', c.kind, 'name', c.name, 'name_en', c.name_en,
+        'price', c.price_tokens, 'owned', exists (select 1 from user_cosmetics o where o.user_id = p_user and o.code = c.code))
+        order by array_position(array['frame', 'color', 'title'], c.kind), c.sort, c.price_tokens)
+      from cosmetics c where c.enabled), '[]'::jsonb))
+  from settings s where s.id = 1;
+$$;
+
+create function shop_buy(p_user uuid, p_item text, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  c cosmetics;
+  blk text;
+  err text;
+  price bigint;
+  until_at timestamptz;
+begin
+  select * into s from settings where id = 1;
+  select * into u from users where id = p_user for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'unauthorized'); end if;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+
+  if p_item = 'boost' then
+    price := s.boost_price_tokens;
+    err := spend_tokens(u, price, 'boost');
+    if err is not null then return jsonb_build_object('ok', false, 'code', err); end if;
+    update users set boost_until = greatest(coalesce(boost_until, now()), now()) + make_interval(hours => s.boost_hours)
+    where id = p_user returning boost_until into until_at;
+    return jsonb_build_object('ok', true, 'item', 'boost', 'price', price, 'until', until_at);
+  end if;
+
+  if p_item = 'vip' then
+    price := ceil(s.vip_price_eur * s.tokens_per_eur);
+    err := spend_tokens(u, price, 'vip');
+    if err is not null then return jsonb_build_object('ok', false, 'code', err); end if;
+    update users set vip_until = greatest(coalesce(vip_until, now()), now()) + make_interval(days => s.vip_days)
+    where id = p_user returning vip_until into until_at;
+    return jsonb_build_object('ok', true, 'item', 'vip', 'price', price, 'until', until_at);
+  end if;
+
+  select * into c from cosmetics where code = p_item and enabled;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if exists (select 1 from user_cosmetics where user_id = p_user and code = p_item) then
+    return jsonb_build_object('ok', false, 'code', 'already_done');
+  end if;
+  err := spend_tokens(u, c.price_tokens, c.code);
+  if err is not null then return jsonb_build_object('ok', false, 'code', err); end if;
+  insert into user_cosmetics (user_id, code) values (p_user, c.code);
+  -- Equipe tout de suite : c'est ce qu'on attend apres un achat.
+  update users set frame = case when c.kind = 'frame' then c.code else frame end,
+                   name_color = case when c.kind = 'color' then c.code else name_color end,
+                   title = case when c.kind = 'title' then c.code else title end
+  where id = p_user;
+  return jsonb_build_object('ok', true, 'item', c.code, 'price', c.price_tokens);
+end $$;
+
+-- p_code vide : retire l'objet porte pour ce type.
+create function shop_equip(p_user uuid, p_kind text, p_code text)
+returns jsonb language plpgsql set search_path = public as $$
+begin
+  if p_kind not in ('frame', 'color', 'title') then return jsonb_build_object('ok', false, 'code', 'bad_request'); end if;
+  if coalesce(p_code, '') <> '' and not exists (
+    select 1 from user_cosmetics o join cosmetics c on c.code = o.code
+    where o.user_id = p_user and o.code = p_code and c.kind = p_kind) then
+    return jsonb_build_object('ok', false, 'code', 'not_found');
+  end if;
+  update users set frame = case when p_kind = 'frame' then nullif(p_code, '') else frame end,
+                   name_color = case when p_kind = 'color' then nullif(p_code, '') else name_color end,
+                   title = case when p_kind = 'title' then nullif(p_code, '') else title end
+  where id = p_user;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Campagne PTC payee avec ses Coins. Meme prix et memes regles que le paiement FaucetPay.
+create function ad_buy_with_tokens(p_user uuid, p_title text, p_url text, p_duration int, p_views int, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  blk text;
+  err text;
+  price numeric;
+  tokens bigint;
+  order_id uuid;
+  cid bigint;
+begin
+  select * into s from settings where id = 1;
+  if length(trim(coalesce(p_title, ''))) not between 3 and 60 then return jsonb_build_object('ok', false, 'code', 'bad_title'); end if;
+  if p_url !~ '^https://[^ ]{4,}$' or length(p_url) > 300 then return jsonb_build_object('ok', false, 'code', 'bad_url'); end if;
+  if p_duration not in (10, 15, 20, 30) then return jsonb_build_object('ok', false, 'code', 'bad_request'); end if;
+  if p_views < 100 or p_views > 100000 then return jsonb_build_object('ok', false, 'code', 'bad_views'); end if;
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  price := round(p_views * s.ad_price_eur_per_view * p_duration / 10.0, 4);
+  tokens := ceil(price * s.tokens_per_eur);
+  err := spend_tokens(u, tokens, 'ad');
+  if err is not null then return jsonb_build_object('ok', false, 'code', err); end if;
+  insert into ad_orders (user_id, title, url, duration_seconds, views, price_eur, amount_usdt, status, tx_id, paid_at, tokens_paid)
+  values (p_user, trim(p_title), p_url, p_duration, p_views, price, 0, 'paid', 'coins:' || gen_random_uuid(), now(), tokens)
+  returning id into order_id;
+  insert into ptc_campaigns (title, url, reward_tokens, duration_seconds, max_views, price_eur_per_view, enabled, needs_review, advertiser_id)
+  values (trim(p_title), p_url, greatest(1, floor(price / p_views * s.ad_reward_share / 100 * s.tokens_per_eur))::int,
+    p_duration, p_views, price / p_views, false, true, p_user)
+  returning id into cid;
+  update ad_orders set campaign_id = cid where id = order_id;
+  return jsonb_build_object('ok', true, 'tokens', tokens, 'campaign_id', cid);
+end $$;
+
+-- Tournoi de la semaine (lundi 0 h UTC) : gratuit, classe sur les Coins gagnes, prix payes par le site.
+
+create function week_start(p timestamptz)
+returns timestamptz language sql immutable as $$
+  select date_trunc('week', p at time zone 'utc') at time zone 'utc';
+$$;
+
+create function week_scores(p_from timestamptz, p_to timestamptz)
+returns table (user_id uuid, score bigint) language sql stable set search_path = public as $$
+  select l.user_id, sum(l.delta)::bigint
+  from ledger l join users u on u.id = l.user_id
+  where l.delta > 0 and l.bucket in ('available', 'pending') and l.at >= p_from and l.at < p_to and not u.banned
+    and l.source in ('faucet', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer')
+  group by l.user_id;
+$$;
+
+create function tournament_board(p_user uuid)
+returns jsonb language sql stable set search_path = public as $$
+  with w as (select week_start(now()) as f),
+  r as (select sc.user_id, sc.score, row_number() over (order by sc.score desc, sc.user_id) as rk
+        from w, week_scores(w.f, w.f + interval '7 days') sc)
+  select jsonb_build_object(
+    'ends_at', (select f + interval '7 days' from w),
+    'prizes', to_jsonb(s.tournament_prizes),
+    'top', coalesce((select jsonb_agg(jsonb_build_object('rank', r.rk, 'score', r.score,
+        'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end,
+        'frame', u.frame, 'name_color', u.name_color, 'title', u.title, 'vip', coalesce(u.vip_until > now(), false), 'me', r.user_id = p_user)
+        order by r.rk) from r join users u on u.id = r.user_id where r.rk <= 10), '[]'::jsonb),
+    'me', (select jsonb_build_object('rank', r.rk, 'score', r.score) from r where r.user_id = p_user),
+    'players', (select count(*) from r))
+  from settings s where s.id = 1;
+$$;
+
+-- Appelee a chaque lot horaire : paie une seule fois les gagnants de la semaine passee.
+create function close_tournament()
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  f timestamptz := week_start(now()) - interval '7 days';
+  wk date;
+  r record;
+  n int := 0;
+begin
+  select * into s from settings where id = 1;
+  wk := (f at time zone 'utc')::date;
+  if exists (select 1 from tournament_awards where week = wk) then return jsonb_build_object('ok', true, 'already', true); end if;
+  for r in select sc.user_id, sc.score, row_number() over (order by sc.score desc, sc.user_id) as rk
+           from week_scores(f, f + interval '7 days') sc order by sc.score desc, sc.user_id
+           limit cardinality(s.tournament_prizes) loop
+    insert into tournament_awards (week, rank, user_id, score, tokens) values (wk, r.rk, r.user_id, r.score, s.tournament_prizes[r.rk]);
+    if s.tournament_prizes[r.rk] > 0 then perform move_tokens(r.user_id, 'available', s.tournament_prizes[r.rk], 'tournament', wk::text); end if;
+    n := n + 1;
+  end loop;
+  return jsonb_build_object('ok', true, 'week', wk, 'winners', n);
 end $$;
 
 -- Seul le serveur (service_role) peut appeler ces fonctions.

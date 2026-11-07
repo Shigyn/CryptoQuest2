@@ -901,3 +901,86 @@ test("sondages a part des offres, quetes par objectif (sondages, offres, Coins g
   assert.equal(quest(await me(h, u), "offers", 1).progress, 1);
   assert.equal((await claim(quest(m, "offers", 1))).body.tokens, 20);
 });
+
+const give = (h, u, n, source = "faucet") =>
+  h.pg.query("select move_tokens(id, 'available', $2, $3, 'test') from users where fp_address = $1", [u.fp, n, source]);
+
+test("boutique : boost, VIP et cosmetiques payes en Coins, sans hasard", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const buy = (item) => api(h, "shop_buy", { session: u.session, item }, u.ip);
+  assert.equal((await buy("boost")).body.code, "not_enough");
+  await give(h, u, 50000);
+
+  const r = await buy("boost");
+  assert.equal(r.body.ok, true);
+  let m = await me(h, u);
+  assert.equal(m.available, 49000);
+  assert.equal(m.boost, true);
+  // +20 % sur les taches, le bonus quotidien et les quetes ; rien sur les tirages.
+  await h.pg.query("select add_earning(id, 'ptc', 'r1', 'x', 100, 0) from users where fp_address = $1", [u.fp]);
+  assert.equal((await me(h, u)).pending, 120);
+  await api(h, "claim", { session: u.session }, u.ip);
+  assert.equal((await api(h, "daily", { session: u.session }, u.ip)).body.tokens, 6);
+
+  const before = (await me(h, u)).available;
+  assert.equal((await buy("vip")).body.price, 29900);
+  m = await me(h, u);
+  assert.equal(m.vip, true);
+  assert.equal(m.available, before - 29900);
+
+  const shop = (await api(h, "shop", { session: u.session }, u.ip)).body;
+  assert.equal(shop.vip.price, 29900);
+  assert.equal(shop.cosmetics.length, 12);
+  assert.equal((await buy("frame_gold")).body.price, 2000);
+  assert.equal((await buy("frame_gold")).body.code, "already_done");
+  assert.equal((await buy("inconnu")).body.code, "not_found");
+  m = await me(h, u);
+  assert.equal(m.frame, "frame_gold");
+  assert.equal((await api(h, "shop", { session: u.session }, u.ip)).body.cosmetics.find((c) => c.code === "frame_gold").owned, true);
+  const equip = (kind, code) => api(h, "shop_equip", { session: u.session, kind, code }, u.ip);
+  assert.equal((await equip("frame", "")).body.ok, true);
+  assert.equal((await me(h, u)).frame, null);
+  assert.equal((await equip("frame", "frame_neon")).body.code, "not_found", "pas achete");
+  assert.equal((await equip("color", "frame_gold")).body.code, "not_found", "mauvais type");
+  assert.equal((await buy("title_legend")).body.code, "not_enough");
+});
+
+test("pub payee en Coins : campagne a approuver, Coins rendus si elle est refusee", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  await give(h, u, 30000);
+  const ad = { title: "Mon site", url: "https://exemple.com", duration: 10, views: 1000 };
+  const r = await api(h, "ad_buy_tokens", { session: u.session, ...ad }, u.ip);
+  assert.equal(r.body.tokens, 20000, "1 000 vues de 10 s a 0,002 euro = 2 euros = 20 000 Coins");
+  assert.equal((await me(h, u)).available, 10000);
+  assert.equal((await api(h, "ad_buy_tokens", { session: u.session, ...ad }, u.ip)).body.code, "not_enough");
+  const orders = (await api(h, "ad_orders", { session: u.session }, u.ip)).body.orders;
+  assert.equal(orders[0].tokens_paid, 20000);
+  assert.equal(orders[0].review, true);
+  await admin(h, { action: "save_ptc", item: { id: r.body.campaign_id, enabled: false } });
+  assert.equal((await me(h, u)).available, 30000, "refusee : rendue");
+  await admin(h, { action: "save_ptc", item: { id: r.body.campaign_id, enabled: false } });
+  assert.equal((await me(h, u)).available, 30000, "une seule fois");
+});
+
+test("tournoi de la semaine : classement sur les Coins gagnes, prix payes une fois", async () => {
+  const h = await createHarness();
+  const a = await newUser(h);
+  const b = await newUser(h);
+  await give(h, a, 300);
+  await give(h, b, 500);
+  await give(h, a, 100000, "challenge");
+  const board = (await api(h, "board", { session: a.session }, a.ip)).body;
+  assert.equal(board.top[0].score, 500, "les recompenses de quetes ne comptent pas");
+  assert.equal(board.me.rank, 2);
+  assert.equal(board.top[1].me, true);
+  assert.equal(board.prizes[0], 5000);
+
+  await h.pg.query("update ledger set at = at - interval '7 days'");
+  assert.equal((await h.pg.query("select close_tournament() r")).rows[0].r.winners, 2);
+  assert.equal((await h.pg.query("select close_tournament() r")).rows[0].r.already, true);
+  assert.equal((await me(h, b)).available, 500 + 5000);
+  assert.equal((await me(h, a)).available, 300 + 100000 + 3000);
+  assert.equal((await api(h, "board", { session: a.session }, a.ip)).body.top.length, 0, "nouvelle semaine");
+});
