@@ -239,6 +239,8 @@ create table offerwalls (
   iframe_url text not null,
   postback_secret text not null,
   reversed_status text not null default 'reversed',
+  -- offers : offres classiques ; surveys : sondages remuneres (carte a part dans Gagner).
+  kind text not null default 'offers' check (kind in ('offers', 'surveys')),
   enabled boolean not null default true
 );
 
@@ -289,12 +291,19 @@ create index vip_orders_user_idx on vip_orders (user_id, created_at desc);
 create table challenges (
   id bigint generated always as identity primary key,
   name text not null,
+  -- Objectif du jour : claims = tirages, earned = Coins gagnes, ptc = pubs vues, links = liens passes,
+  -- surveys = sondages termines, offers = offres terminees. target_claims porte la valeur a atteindre.
+  goal text not null default 'claims' check (goal in ('claims', 'earned', 'ptc', 'links', 'surveys', 'offers')),
   target_claims int not null check (target_claims >= 1),
   reward_tokens int not null check (reward_tokens > 0),
   enabled boolean not null default true
 );
-insert into challenges (name, target_claims, reward_tokens) values
-  ('5 réclamations aujourd''hui', 5, 2), ('15 réclamations aujourd''hui', 15, 5), ('30 réclamations aujourd''hui', 30, 10);
+insert into challenges (name, goal, target_claims, reward_tokens) values
+  ('5 tirages', 'claims', 5, 2), ('15 tirages', 'claims', 15, 5), ('30 tirages', 'claims', 30, 10),
+  ('100 Coins gagnés', 'earned', 100, 3), ('1 000 Coins gagnés', 'earned', 1000, 25), ('10 000 Coins gagnés', 'earned', 10000, 200),
+  ('5 pubs', 'ptc', 5, 5), ('3 liens', 'links', 3, 10),
+  ('1 sondage', 'surveys', 1, 20), ('3 sondages', 'surveys', 3, 80),
+  ('1 offre', 'offers', 1, 20), ('3 offres', 'offers', 3, 80);
 create table challenge_done (
   challenge_id bigint not null references challenges (id),
   user_id uuid not null references users (id),
@@ -576,6 +585,25 @@ begin
   return jsonb_build_object('ok', true, 'tokens', prize, 'index', idx - 1);
 end $$;
 
+-- Avancement du jour (UTC) d'un membre sur un type d'objectif.
+create function challenge_progress(p_user uuid, p_goal text)
+returns bigint language sql stable set search_path = public as $$
+  select case p_goal
+    when 'claims' then (select count(*) from claims where user_id = p_user and (at at time zone 'utc')::date = (now() at time zone 'utc')::date)
+    -- Coins gagnes : gains bruts du jour, hors recompenses de quetes, remboursements et validations.
+    when 'earned' then (select coalesce(sum(delta), 0) from ledger where user_id = p_user and delta > 0
+                          and bucket in ('available', 'pending') and (at at time zone 'utc')::date = (now() at time zone 'utc')::date
+                          and source in ('faucet', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer'))::bigint
+    when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc'
+                       and status not in ('rejected', 'reversed') and (created_at at time zone 'utc')::date = (now() at time zone 'utc')::date)
+    when 'links' then (select count(*) from earnings where user_id = p_user and source = 'shortlink'
+                         and status not in ('rejected', 'reversed') and (created_at at time zone 'utc')::date = (now() at time zone 'utc')::date)
+    else (select count(*) from earnings e join offerwalls o on o.code = e.label
+            where e.user_id = p_user and e.source = 'offer' and o.kind = p_goal
+              and e.status not in ('rejected', 'reversed') and (e.created_at at time zone 'utc')::date = (now() at time zone 'utc')::date)
+  end;
+$$;
+
 create function claim_challenge(p_user uuid, p_id bigint, p_ip_hash text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
@@ -583,7 +611,7 @@ declare
   u users;
   blk text;
   today date := (now() at time zone 'utc')::date;
-  n int;
+  n bigint;
 begin
   select * into u from users where id = p_user for update;
   blk := user_block(u, p_ip_hash);
@@ -593,7 +621,7 @@ begin
   if exists (select 1 from challenge_done where challenge_id = p_id and user_id = p_user and day = today) then
     return jsonb_build_object('ok', false, 'code', 'already_done');
   end if;
-  select count(*) into n from claims where user_id = p_user and (at at time zone 'utc')::date = today;
+  n := challenge_progress(p_user, c.goal);
   if n < c.target_claims then return jsonb_build_object('ok', false, 'code', 'not_reached'); end if;
   insert into challenge_done (challenge_id, user_id, day) values (p_id, p_user, today);
   perform move_tokens(p_user, 'available', c.reward_tokens, 'challenge', p_id::text);
@@ -737,7 +765,7 @@ end $$;
 
 create function offerwall_list()
 returns jsonb language sql stable set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'iframe_url', iframe_url)), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'iframe_url', iframe_url, 'kind', kind) order by code), '[]'::jsonb)
   from offerwalls where enabled;
 $$;
 
@@ -1220,8 +1248,10 @@ returns jsonb language sql stable set search_path = public as $$
     'referral_earned', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and source = 'referral'),
     'coins', (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'per_eur', per_eur, 'decimals', decimals) order by sort), '[]'::jsonb)
               from coins where enabled and per_eur is not null),
-    'challenges', (select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'target', c.target_claims, 'reward_tokens', c.reward_tokens,
-                     'done', exists (select 1 from challenge_done d where d.challenge_id = c.id and d.user_id = u.id and d.day = (now() at time zone 'utc')::date)) order by c.target_claims), '[]'::jsonb)
+    'challenges', (select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'goal', c.goal, 'target', c.target_claims, 'reward_tokens', c.reward_tokens,
+                     'progress', challenge_progress(u.id, c.goal),
+                     'done', exists (select 1 from challenge_done d where d.challenge_id = c.id and d.user_id = u.id and d.day = (now() at time zone 'utc')::date))
+                     order by array_position(array['claims', 'earned', 'ptc', 'links', 'surveys', 'offers'], c.goal), c.target_claims), '[]'::jsonb)
                    from challenges c where c.enabled),
     'history', (select coalesce(jsonb_agg(h), '[]'::jsonb) from (
                   select jsonb_build_object('at', at, 'source', source, 'bucket', bucket, 'delta', delta) h
@@ -1267,7 +1297,7 @@ returns jsonb language sql stable set search_path = public as $$
     'ptc', coalesce((select jsonb_agg(to_jsonb(p) order by p.id) from ptc_campaigns p), '[]'::jsonb),
     'shortlinks', coalesce((select jsonb_agg(to_jsonb(p) order by p.id) from shortlink_providers p), '[]'::jsonb),
     'offerwalls', coalesce((select jsonb_agg(to_jsonb(o) order by o.code) from offerwalls o), '[]'::jsonb),
-    'challenges', coalesce((select jsonb_agg(to_jsonb(c) order by c.target_claims) from challenges c), '[]'::jsonb)
+    'challenges', coalesce((select jsonb_agg(to_jsonb(c) order by array_position(array['claims', 'earned', 'ptc', 'links', 'surveys', 'offers'], c.goal), c.target_claims) from challenges c), '[]'::jsonb)
   );
 $$;
 
@@ -1441,12 +1471,14 @@ create function admin_save_offerwall(p jsonb)
 returns void language plpgsql set search_path = public as $$
 begin
   if p ? 'iframe_url' then
-    insert into offerwalls (code, name, iframe_url, postback_secret, reversed_status)
-    values (p->>'code', p->>'name', p->>'iframe_url', p->>'postback_secret', coalesce(nullif(p->>'reversed_status', ''), 'reversed'))
+    insert into offerwalls (code, name, iframe_url, postback_secret, reversed_status, kind)
+    values (p->>'code', p->>'name', p->>'iframe_url', p->>'postback_secret', coalesce(nullif(p->>'reversed_status', ''), 'reversed'),
+      coalesce(nullif(p->>'kind', ''), 'offers'))
     on conflict (code) do update set name = excluded.name, iframe_url = excluded.iframe_url,
-      postback_secret = excluded.postback_secret, reversed_status = excluded.reversed_status;
+      postback_secret = excluded.postback_secret, reversed_status = excluded.reversed_status, kind = excluded.kind;
   else
-    update offerwalls set enabled = coalesce((p->>'enabled')::boolean, enabled) where code = p->>'code';
+    update offerwalls set enabled = coalesce((p->>'enabled')::boolean, enabled),
+      kind = coalesce(nullif(p->>'kind', ''), kind) where code = p->>'code';
   end if;
 end $$;
 
@@ -1454,8 +1486,9 @@ create function admin_save_challenge(p jsonb)
 returns void language plpgsql set search_path = public as $$
 begin
   if p->>'id' is null then
-    insert into challenges (name, target_claims, reward_tokens)
-    values (p->>'name', (p->>'target_claims')::int, (p->>'reward_tokens')::int);
+    insert into challenges (name, goal, target_claims, reward_tokens)
+    values (coalesce(nullif(p->>'name', ''), coalesce(p->>'goal', 'claims') || ' ' || (p->>'target_claims')),
+      coalesce(nullif(p->>'goal', ''), 'claims'), (p->>'target_claims')::int, (p->>'reward_tokens')::int);
   else
     update challenges set enabled = coalesce((p->>'enabled')::boolean, enabled) where id = (p->>'id')::bigint;
   end if;

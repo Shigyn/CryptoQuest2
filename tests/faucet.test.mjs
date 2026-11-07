@@ -872,3 +872,32 @@ test("VIP : indisponible sans compte marchand configure", async () => {
   const u = await newUser(h);
   assert.equal((await api(h, "vip_order", { session: u.session }, u.ip)).body.code, "vip_unavailable");
 });
+
+test("sondages a part des offres, quetes par objectif (sondages, offres, Coins gagnes)", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "save_offerwall", item: { code: "cpx", name: "CPX", iframe_url: "https://x/{user}", postback_secret: "s", kind: "surveys" } });
+  await admin(h, { action: "save_offerwall", item: { code: "mur", name: "Mur", iframe_url: "https://x/{user}", postback_secret: "s" } });
+  const u = await newUser(h);
+  const kinds = Object.fromEntries((await api(h, "earn_list", { session: u.session }, u.ip)).body.offerwalls.map((w) => [w.code, w.kind]));
+  assert.deepEqual(kinds, { cpx: "surveys", mur: "offers" });
+
+  const user = (await me(h, u)).ref_code;
+  assert.equal((await postback(h, { wall: "cpx", secret: "s", user, tx: "S1", usd: "0.11" })).status, 200);
+  const quest = (m, goal, target) => m.challenges.find((c) => c.goal === goal && c.target === target);
+  let m = await me(h, u);
+  assert.equal(quest(m, "surveys", 1).progress, 1);
+  assert.equal(quest(m, "offers", 1).progress, 0);
+  assert.equal(quest(m, "earned", 100).progress, 500, "un sondage en attente compte dans les Coins gagnes");
+  const claim = (c) => api(h, "challenge", { session: u.session, id: c.id }, u.ip);
+  assert.equal((await claim(quest(m, "surveys", 1))).body.tokens, 20);
+  assert.equal((await claim(quest(m, "offers", 1))).body.code, "not_reached");
+  assert.equal((await claim(quest(m, "earned", 100))).body.tokens, 3);
+  assert.equal((await claim(quest(m, "earned", 1000))).body.code, "not_reached");
+  m = await me(h, u);
+  assert.equal(quest(m, "earned", 1000).progress, 500, "les recompenses de quetes ne comptent pas");
+
+  // Le mur passe cote offres : le sondage deja fait compte alors comme une offre.
+  await admin(h, { action: "save_offerwall", item: { code: "cpx", kind: "offers" } });
+  assert.equal(quest(await me(h, u), "offers", 1).progress, 1);
+  assert.equal((await claim(quest(m, "offers", 1))).body.tokens, 20);
+});

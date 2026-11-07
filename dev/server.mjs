@@ -19,6 +19,7 @@ const handlers = { api: handleApi, admin: handleAdmin, postback: handlePostback,
 await h.rpc("admin_save_ptc", { p: { title: "Pub d'essai", url: `http://localhost:${PORT}/legal.html`, reward_tokens: 10, duration_seconds: 5, max_views: 100, price_eur_per_view: 0.002 } });
 await h.rpc("admin_save_shortlink", { p: { name: "Lien d'essai", api_url: "https://exemple.invalid/api?url={url}", reward_tokens: 15, daily_limit: 2, revenue_eur_per_view: 0.003 } });
 await h.rpc("admin_save_offerwall", { p: { code: "essai", name: "Mur d'essai", iframe_url: `http://localhost:${PORT}/mur-essai?user={user}`, postback_secret: "secret-essai" } });
+await h.rpc("admin_save_offerwall", { p: { code: "sondage", name: "Sondages d'essai", iframe_url: `http://localhost:${PORT}/mur-essai?user={user}`, postback_secret: "secret-essai", kind: "surveys" } });
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);

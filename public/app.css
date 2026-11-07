@@ -516,3 +516,21 @@ input, select { font-weight: 600; border-radius: 16px; }
 
 /* Le tirage passe avant la table des gains, sur ordinateur aussi */
 .roll-grid > :first-child { order: 2; }
+
+/* Gagner en 4 cartes, quetes par objectif */
+.game-menu.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.game-menu.four .game-tile { min-height: 0; }
+.quest .row-ico { background: rgba(47, 107, 255, .18); }
+.quest.is-ready { border-color: rgba(255, 204, 61, .5); background: rgba(255, 204, 61, .07); }
+.quest.is-ready .row-ico { background: rgba(255, 204, 61, .18); color: var(--gold); }
+.quest.is-done { opacity: .6; }
+.quest.is-done .row-ico { background: rgba(49, 214, 138, .15); color: var(--green); }
+.quest .btn.small { min-width: 92px; }
+.quest .btn.small svg { width: 18px; height: 18px; }
+.quest-sub { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; }
+.quest-sub .row-sub { margin: 0; }
+.quest-sub .reward { font-size: 13px; }
+@media (max-width: 720px) {
+  .game-menu.four { grid-template-columns: minmax(0, 1fr); }
+  .quest .btn.small { min-width: 0; }
+}

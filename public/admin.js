@@ -283,7 +283,10 @@ function settingsTab() {
 
 // Contenus -----------------------------------------------------------------
 function addForm(fields, label, onSave) {
-  const inputs = fields.map(([key, name, type, value]) => [key, h("input", { type: type || "text", required: true, value: value ?? "", step: "any", min: type === "number" ? "0" : undefined })]);
+  // type : "text", "number", "url", ou une liste [valeur, libelle] pour un menu deroulant.
+  const inputs = fields.map(([key, name, type, value]) => [key, Array.isArray(type)
+    ? h("select", {}, type.map(([v, l]) => h("option", { value: v, selected: v === value }, l)))
+    : h("input", { type: type || "text", required: true, value: value ?? "", step: "any", min: type === "number" ? "0" : undefined })]);
   return h("form", {
     style: "margin-top:14px",
     onsubmit: (e) => {
@@ -298,6 +301,9 @@ function addForm(fields, label, onSave) {
 
 const toggle = (item, action, idKey = "id") => saveButton(item.enabled ? "Désactiver" : "Activer", () => api(action, { item: { [idKey]: item[idKey], enabled: !item.enabled } }));
 const statePill = (on) => h("span", { class: `pill ${on ? "good" : ""}` }, on ? "Actif" : "Inactif");
+
+const WALL_KINDS = [["offers", "Offres"], ["surveys", "Sondages"]];
+const GOALS = [["claims", "Tirages"], ["earned", `${TK} gagnés`], ["ptc", "Pubs vues"], ["links", "Liens passés"], ["surveys", "Sondages terminés"], ["offers", "Offres terminées"]];
 
 function contentTab() {
   const postbackUrl = `${cfg.API_BASE || "https://VOTRE-PROJET.supabase.co/functions/v1"}/postback`;
@@ -325,21 +331,23 @@ function contentTab() {
         ["daily_limit", "Passages par jour", "number", 1], ["revenue_eur_per_view", "Ce que te paie le réseau par vue (€)", "number", 0.003],
       ], "Ajouter le réseau", (item) => api("save_shortlink", { item }))),
     card("Offerwalls",
-      table(["Code", "Nom", "Statut d'annulation", "Adresse de retour à donner au réseau", "État", ""], data.offerwalls.map((o) => [
-        o.code, o.name, h("td", { class: "mono" }, o.reversed_status),
+      table(["Code", "Nom", "Carte", "Statut d'annulation", "Adresse de retour à donner au réseau", "État", ""], data.offerwalls.map((o) => [
+        o.code, o.name,
+        saveButton(o.kind === "surveys" ? "Sondages ⇄" : "Offres ⇄", () => api("save_offerwall", { item: { code: o.code, kind: o.kind === "surveys" ? "offers" : "surveys" } }), "btn small ghost"),
+        h("td", { class: "mono" }, o.reversed_status),
         h("td", { class: "mono wrap" }, `${postbackUrl}?wall=${o.code}&secret=${o.postback_secret}&user={USER}&tx={TX}&usd={MONTANT}&status={STATUT}`),
         statePill(o.enabled), toggle(o, "save_offerwall", "code"),
       ]), "Aucun offerwall pour le moment."),
       h("div", { class: "notice info", style: "margin-top:12px" }, "Dans l'adresse de retour, remplace {USER}, {TX}, {MONTANT} et {STATUT} par les variables du réseau : identifiant du membre, identifiant de la transaction, gain en dollars, statut. Une annulation est reconnue par le statut indiqué, ou par un montant négatif."),
       addForm([
-        ["code", "Code (sans espace)"], ["name", "Nom"], ["iframe_url", "Adresse du mur, avec {user} à la place du membre"], ["postback_secret", "Secret choisi par toi"],
+        ["code", "Code (sans espace)"], ["name", "Nom"], ["kind", "Carte dans Gagner", WALL_KINDS, "offers"], ["iframe_url", "Adresse du mur, avec {user} à la place du membre"], ["postback_secret", "Secret choisi par toi"],
         ["reversed_status", "Valeur du statut quand le réseau annule une offre", "text", "reversed"],
       ], "Ajouter l'offerwall", (item) => api("save_offerwall", { item }))),
-    card("Défis du jour",
-      table(["Défi", "Objectif", "Récompense", "État", ""], data.challenges.map((c) => [
-        c.name, `${fmt(c.target_claims)} réclamations`, `${fmt(c.reward_tokens)} ${TK}`, statePill(c.enabled), toggle(c, "save_challenge"),
-      ]), "Aucun défi."),
-      addForm([["name", "Nom"], ["target_claims", "Réclamations à faire", "number", 10], ["reward_tokens", `Récompense (${TK})`, "number", 5]],
+    card("Quêtes du jour",
+      table(["Type", "Objectif", "Récompense", "État", ""], data.challenges.map((c) => [
+        (GOALS.find(([g]) => g === c.goal) || GOALS[0])[1], fmt(c.target_claims), `${fmt(c.reward_tokens)} ${TK}`, statePill(c.enabled), toggle(c, "save_challenge"),
+      ]), "Aucune quête."),
+      addForm([["goal", "Type", GOALS, "claims"], ["target_claims", "Objectif à atteindre", "number", 10], ["reward_tokens", `Récompense (${TK})`, "number", 5]],
         "Ajouter le défi", (item) => api("save_challenge", { item }))));
 }
 

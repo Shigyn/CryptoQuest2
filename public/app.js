@@ -28,7 +28,7 @@
     pendingNote: ["Ces gains sont vérifiés, puis partent seuls sur FaucetPay au paiement de chaque heure.", "These earnings are reviewed, then sent to FaucetPay automatically every hour."],
     pickTask: ["Choisis une tâche", "Pick a task"], ptcShort: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
     linksShort: ["Passe un lien raccourci jusqu’au bout.", "Go through a short link."],
-    offersShort: ["Jeux, sondages, inscriptions : les plus gros gains.", "Games, surveys, sign-ups: the biggest rewards."],
+    offersShort: ["Jeux, applis, inscriptions : les plus gros gains.", "Games, apps, sign-ups: the biggest rewards."],
     availableN: ["dispo", "available"], noneNow: ["Rien pour l’instant", "Nothing right now"], walls: ["réseaux", "networks"], wall1: ["réseau", "network"],
     nextPayout: ["Prochain paiement", "Next payout"],
     ptcHow: ["Ouvre la pub, laisse-la ouverte jusqu’à la fin du compteur, puis valide.", "Open the ad, keep it open until the timer ends, then confirm."],
@@ -36,6 +36,16 @@
     offersHow: ["Choisis un réseau. Une offre terminée est créditée dès que le réseau la confirme.", "Pick a network. A completed offer is credited as soon as the network confirms it."],
     wallHint: ["Les gains arrivent dans « À valider ».", "Earnings show under “Under review”."],
     oneAtATime: ["Une pub à la fois.", "One ad at a time."], comeBack: ["Reviens demain", "Come back tomorrow"], doneToday: ["Fait", "Done"],
+    surveys: ["Sondages", "Surveys"], surveysShort: ["Donne ton avis : chaque sondage rapporte gros.", "Share your opinion: every survey pays well."],
+    surveysHow: ["Choisis un réseau de sondages. Un sondage terminé est crédité dès que le réseau le confirme.", "Pick a survey network. A finished survey is credited as soon as the network confirms it."],
+    noSurveys: ["Aucun sondage pour le moment. Reviens plus tard.", "No surveys right now. Come back later."],
+    go: ["Y aller", "Go"], claimQuest: ["Récupérer", "Claim"],
+    q_claims: [["Fais {n} tirage", "Fais {n} tirages"], ["Make {n} roll", "Make {n} rolls"]],
+    q_earned: [["Gagne {n}", "Gagne {n}"], ["Earn {n}", "Earn {n}"]],
+    q_ptc: [["Regarde {n} pub", "Regarde {n} pubs"], ["Watch {n} ad", "Watch {n} ads"]],
+    q_links: [["Passe {n} lien", "Passe {n} liens"], ["Complete {n} link", "Complete {n} links"]],
+    q_surveys: [["Termine {n} sondage", "Termine {n} sondages"], ["Complete {n} survey", "Complete {n} surveys"]],
+    q_offers: [["Termine {n} offre", "Termine {n} offres"], ["Complete {n} offer", "Complete {n} offers"]],
     noPtc: ["Aucune pub pour le moment. Reviens plus tard.", "No ads right now. Come back later."],
     noLinks: ["Aucun lien pour le moment. Reviens plus tard.", "No links right now. Come back later."],
     noOffers: ["Aucune offre pour le moment. Reviens plus tard.", "No offers right now. Come back later."],
@@ -614,13 +624,14 @@
     return r;
   }
 
+  const walls = (kind) => (earn?.offerwalls || []).filter((w) => (w.kind || "offers") === kind);
   const sumRewards = (list) => list.reduce((n, x) => n + (Number(x.reward_tokens) || 0) * (x.remaining ?? 1), 0);
   const nextPayout = () => {
     const d = new Date();
     const left = 3600 - (d.getUTCMinutes() * 60 + d.getUTCSeconds());
     return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
   };
-  let wallSel = null;
+  const wallSel = {};
 
   function earnView() {
     const wrap = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
@@ -643,12 +654,13 @@
       const cats = [
         { key: "ptc", tone: "--c1:#4fd2ff;--c2:#2f6bff", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
         { key: "links", tone: "--c1:#b48cff;--c2:#6b3dff", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
-        { key: "offers", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "gift", name: t("offers"), text: t("offersShort"), n: earn.offerwalls.length, sum: null },
+        { key: "surveys", tone: "--c1:#45e3a6;--c2:#11a771", ico: "quests", name: t("surveys"), text: t("surveysShort"), n: walls("surveys").length, sum: null },
+        { key: "offers", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "gift", name: t("offers"), text: t("offersShort"), n: walls("offers").length, sum: null },
       ];
       return h("div", { class: "stack" },
         summary(),
         h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickTask")),
-        h("div", { class: "game-menu" }, cats.map((c) =>
+        h("div", { class: "game-menu four" }, cats.map((c) =>
           h("button", { type: "button", class: `game-tile${c.n > 0 ? " ready" : ""}`, onclick: () => { earnTab = c.key; render(); } },
             h("span", { class: "game-ico", style: c.tone }, icon(c.ico)),
             h("span", { class: "game-name" }, c.name),
@@ -756,30 +768,31 @@
     };
 
     // Offerwalls : une tuile par reseau, le mur choisi s'ouvre en dessous.
-    const offersPanel = () => {
-      const list = earn.offerwalls;
-      const head = h("div", { class: "panel-title" }, h("span", {}, t("offers")),
+    const offersPanel = (kind) => {
+      const list = walls(kind);
+      const sv = kind === "surveys";
+      const head = h("div", { class: "panel-title" }, h("span", {}, t(sv ? "surveys" : "offers")),
         list.length ? h("span", { class: "badge" }, `${list.length} ${t(list.length > 1 ? "walls" : "wall1")}`) : null);
-      if (!list.length) return h("section", { class: "panel" }, head, emptyBox("gift", t("noOffers")));
+      if (!list.length) return h("section", { class: "panel" }, head, emptyBox(sv ? "quests" : "gift", t(sv ? "noSurveys" : "noOffers")));
       const area = h("div", {});
       const tiles = list.map((w) => h("button", { type: "button", class: "wall-tile", "data-code": w.code, onclick: () => pick(w) },
         h("span", { class: "wall-logo" }, w.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase()),
         h("span", { class: "wall-name" }, w.name)));
       function pick(w) {
-        wallSel = w.code;
+        wallSel[kind] = w.code;
         tiles.forEach((x) => x.setAttribute("aria-selected", String(x.dataset.code === w.code)));
         area.replaceChildren(
           h("div", { class: "wall-bar" }, h("b", {}, w.name), h("span", { class: "row-sub" }, t("wallHint"))),
           h("iframe", { class: "wall", src: w.iframe_url.replaceAll("{user}", encodeURIComponent(me.ref_code)), title: w.name }));
       }
-      pick(list.find((w) => w.code === wallSel) || list[0]);
-      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t("offersHow")), h("div", { class: "wall-grid" }, tiles), area);
+      pick(list.find((w) => w.code === wallSel[kind]) || list[0]);
+      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t(sv ? "surveysHow" : "offersHow")), h("div", { class: "wall-grid" }, tiles), area);
     };
 
     const draw = () => {
       if (!earn) return;
       if (!earnTab) { wrap.replaceChildren(menu()); return; }
-      const panel = earnTab === "ptc" ? ptcPanel() : earnTab === "links" ? linksPanel() : offersPanel();
+      const panel = earnTab === "ptc" ? ptcPanel() : earnTab === "links" ? linksPanel() : offersPanel(earnTab === "surveys" ? "surveys" : "offers");
       wrap.replaceChildren(...[back(), panel, adSlot("bottom")].filter(Boolean));
     };
     if (earn) draw();
@@ -853,29 +866,55 @@
       btn);
   }
 
+  const QUEST = {
+    claims: { ico: "bolt", go: () => { location.hash = ""; } },
+    earned: { ico: "wallet", go: () => { earnTab = null; location.hash = "earn"; } },
+    ptc: { ico: "eye", go: () => { earnTab = "ptc"; location.hash = "earn"; } },
+    links: { ico: "link", go: () => { earnTab = "links"; location.hash = "earn"; } },
+    surveys: { ico: "quests", go: () => { earnTab = "surveys"; location.hash = "earn"; } },
+    offers: { ico: "gift", go: () => { earnTab = "offers"; location.hash = "earn"; } },
+  };
+  const questName = (c) => {
+    const w = W[`q_${c.goal}`] || W.q_claims;
+    const n = c.goal === "earned" ? tk(c.target) : fmtInt(c.target);
+    return w[FR ? 0 : 1][c.target > 1 ? 1 : 0].replace("{n}", n);
+  };
+
   function questsCard() {
+    const list = me.challenges || [];
+    const done = list.filter((c) => c.done).length;
     return h("section", { class: "panel" },
-      h("div", { class: "panel-title" }, t("questsTitle"), h("span", { class: "badge" }, `${me.claims_today} ${t("rolls")}`)),
-      me.challenges.map((c) => {
-        const pct = Math.min(100, (me.claims_today / c.target) * 100);
-        const ready = me.claims_today >= c.target && !c.done;
-        return h("div", { class: "row" },
-          h("div", { class: "row-ico", style: c.done ? "background:rgba(49,214,138,.15);color:var(--green)" : "" }, icon(c.done ? "check" : "flag")),
+      h("div", { class: "panel-title" }, t("questsTitle"), h("span", { class: `badge${done === list.length && list.length ? " good" : ""}` }, `${done}/${list.length}`)),
+      list.map((c) => {
+        const q = QUEST[c.goal] || QUEST.claims;
+        const progress = Math.min(Number(c.progress) || 0, c.target);
+        const ready = progress >= c.target && !c.done;
+        const fmtP = (n) => (c.goal === "earned" ? fmtInt(n) : String(n));
+        const btn = c.done
+          ? h("button", { class: "btn small", type: "button", disabled: true }, icon("check"))
+          : ready
+            ? h("button", {
+                class: "btn small gold", type: "button",
+                onclick: async (e) => {
+                  const target = e.currentTarget;
+                  target.disabled = true;
+                  const r = await api("challenge", { id: c.id });
+                  if (r.ok) burst(target, `+${tk(r.tokens)}`);
+                  toast(r.ok ? `${tk(r.tokens)} ${t("won")}` : message(r), r.ok ? "good" : "bad");
+                  await refreshMe();
+                  render();
+                },
+              }, `${t("claimQuest")}`)
+            : h("button", { class: "btn small ghost", type: "button", onclick: q.go }, t("go"));
+        return h("div", { class: `row quest${c.done ? " is-done" : ready ? " is-ready" : ""}` },
+          h("div", { class: "row-ico" }, icon(c.done ? "check" : q.ico)),
           h("div", { class: "row-main" },
-            h("h3", {}, FR ? c.name.replace("réclamations", "tirages") : `${c.target} ${t("rolls")} ${t("today")}`),
-            h("div", { class: "progress" }, h("i", { style: `width:${pct}%` })),
-            h("div", { class: "row-sub" }, `${fmtInt(Math.min(me.claims_today, c.target))} / ${fmtInt(c.target)}`)),
-          h("button", {
-            class: `btn small ${ready ? "gold" : ""}`, disabled: !ready,
-            onclick: async (e) => {
-              const target = e.currentTarget;
-              const r = await api("challenge", { id: c.id });
-              if (r.ok) burst(target, `+${tk(r.tokens)}`);
-              toast(r.ok ? `${tk(r.tokens)} ${t("won")}` : message(r), r.ok ? "good" : "bad");
-              await refreshMe();
-              render();
-            },
-          }, c.done ? t("done") : h("span", { class: "reward", style: "color:inherit" }, coin(), fmtInt(c.reward_tokens))));
+            h("h3", {}, questName(c)),
+            h("div", { class: "progress" }, h("i", { style: `width:${(progress / c.target) * 100}%` })),
+            h("div", { class: "quest-sub" },
+              h("span", { class: "row-sub" }, `${fmtP(progress)} / ${fmtP(c.target)}`),
+              h("span", { class: "reward" }, "+", coin(), fmtInt(c.reward_tokens)))),
+          btn);
       }));
   }
 
