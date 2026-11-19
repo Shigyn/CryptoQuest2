@@ -76,7 +76,7 @@
     redeem: ["Valider le code", "Redeem code"], promoText: ["Les codes sont publiés sur notre Telegram et lors des événements. Un code ne sert qu'une fois par compte.", "Codes are posted on our Telegram and during events. Each code works once per account."],
     active: ["actif", "active"], inactive: ["inactif", "inactive"], noRef: ["Aucun filleul pour le moment. Partage ton lien !", "No referrals yet. Share your link!"],
     shareText1: ["Je gagne des cryptos gratuitement sur ce faucet, retrait instantané sur FaucetPay :", "I earn free crypto on this faucet, instant withdrawal to FaucetPay:"],
-    shareText2: ["Tirage gratuit, sondages payés, jeux et jackpot de 10 € :", "Free rolls, paid surveys, games and a €10 jackpot:"],
+    shareText2: ["Tirages gratuits, sondages payés, jeux et jackpot de {jp} :", "Free rolls, paid surveys, games and a {jp} jackpot:"],
     shareReady: ["Messages prêts à partager", "Ready-to-share messages"], myRefs: ["Mes filleuls", "My referrals"],
     refRules: ["Un filleul est « actif » s'il a fait un tirage dans les 7 derniers jours. Les faux comptes sont bannis avec leur parrain.", "A referral is “active” if they rolled in the last 7 days. Fake accounts are banned along with their referrer."],
     ticketSubject: ["Sujet", "Subject"], ticketBody: ["Ton message", "Your message"], ticketReply: ["Répondre…", "Reply…"],
@@ -99,7 +99,7 @@
     simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["Pubs par jour", "Ads per day"],
     simLinks: ["Liens par jour", "Links per day"], simSurveys: ["Sondages par jour", "Surveys per day"], simDay: ["Par jour", "Per day"], simMonth: ["Par mois", "Per month"],
     simNote: ["Estimation basée sur les récompenses actuelles du site. Les sondages varient selon le pays et la durée.", "Estimate based on the site's current rewards. Surveys vary by country and length."],
-    w_faucet: ["Un tirage gratuit toutes les 30 s, jackpot de 10 €.", "A free roll every 30 s, €10 jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
+    w_faucet: ["Des tirages gratuits toute la journée, jackpot de {jp}.", "Free rolls all day long, {jp} jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
     w_links: ["Passe des liens raccourcis.", "Go through short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
     w_offers: ["Jeux, applis, inscriptions.", "Games, apps, sign-ups."], w_games: ["Roue, Mines et Dice, gratuits.", "Wheel, Mines and Dice, free."],
     w_quests: ["Quêtes, succès, tournoi chaque semaine.", "Quests, achievements, weekly tournament."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
@@ -180,7 +180,8 @@
     needCaptcha: ["Valide le captcha, puis appuie de nouveau.", "Complete the captcha, then press again."],
     paused: ["Le site est en pause. Tes CryptoCoin restent sur ton compte.", "The site is paused. Your CryptoCoin stay on your account."],
   };
-  const t = (k) => (W[k] ? W[k][FR ? 0 : 1] : k);
+  // {jp} : le jackpot actuel en euros, lu dans la table des gains.
+  const t = (k) => (W[k] ? W[k][FR ? 0 : 1] : k).replace("{jp}", () => eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens))));
 
   const ERR = {
     captcha: ["Le captcha a échoué. Valide-le de nouveau.", "The captcha failed. Complete it again."],
@@ -2051,11 +2052,14 @@
   }
 
   // Simulateur de gains (accueil public) : base sur les vraies recompenses du site.
+  // Gain moyen d'un tirage, d'apres la vraie table des gains.
+  const rollAverage = () => rows().reduce((sum, r) => sum + ((r.to - r.from + 1) / 100000) * r.tokens, 0);
+
   function simulator() {
     const s = status || {};
     const tpe = s.tokens_per_eur || 10000;
     const lines = [
-      ["simFaucet", "bolt", 0, 48, 24, s.faucet_reward_tokens || 2],
+      ["simFaucet", "bolt", 0, 72, 15, rollAverage()],
       ["simPtc", "eye", 0, 50, 10, s.ptc_reward || 10],
       ["simLinks", "link", 0, 20, 5, s.link_reward || 15],
       ["simSurveys", "quests", 0, 10, 2, Math.round(0.5 * tpe * 0.5)],
@@ -2069,7 +2073,7 @@
       return h("div", { class: "sim-row" }, h("span", { class: "sim-ico" }, icon(ico)), h("span", { class: "sim-label" }, t(key)), v, input);
     });
     const show = () => {
-      const day = lines.reduce((sum, l, i) => sum + vals[i] * l[5], 0);
+      const day = Math.round(lines.reduce((sum, l, i) => sum + vals[i] * l[5], 0));
       out.replaceChildren(h("div", {}, h("span", {}, t("simDay")), h("b", {}, tk(day))), h("div", {}, h("span", {}, t("simMonth")), h("b", {}, tk(day * 30))),
         h("div", {}, h("span", {}, "≈"), h("b", {}, eur(day * 30))));
     };
