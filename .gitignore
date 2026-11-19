@@ -4,3 +4,4 @@ node_modules/
 supabase/.temp/
 *.local.sql
 PLAN-PREMIUM.md
+PLAN-REFONTE.md
