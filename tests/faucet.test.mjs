@@ -32,7 +32,10 @@ async function newUser(h, { address, ip = freshIp(), ref } = {}) {
 }
 
 const me = async (h, u) => (await api(h, "me", { session: u.session }, u.ip)).body;
-const age = (h, seconds) => h.pg.query(`update claims set at = at - make_interval(secs => $1)`, [seconds]);
+const age = async (h, seconds) => {
+  await h.pg.query(`update claims set at = at - make_interval(secs => $1)`, [seconds]);
+  await h.pg.query(`update users set energy = null`);
+};
 const cron = async (h, secret = h.deps.cronSecret) => {
   const res = await handleCron(new Request("http://x/cron", { headers: { authorization: `Bearer ${secret}` } }), h.deps);
   return { status: res.status, body: res.status === 200 ? await res.json() : null };
@@ -789,26 +792,43 @@ test("annonceur : indisponible sans compte marchand configure", async () => {
   assert.equal((await api(h, "ad_order", { session: u.session, title: "Ma pub", url: "https://a.com", duration: 10, views: 100 }, u.ip)).body.code, "ads_unavailable");
 });
 
-test("rythme : 30 s minimum entre deux tirages, 5 tirages au plus sur 10 minutes", async () => {
+test("energie : 1 point toutes les 20 min, reserve de 3 (5 en VIP), 30 s minimum entre deux tirages", async () => {
   const h = await createHarness();
   const u = await newUser(h);
-  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true);
-  const soon = (await api(h, "claim", { session: u.session }, u.ip)).body;
+  const claim = () => api(h, "claim", { session: u.session }, u.ip);
+  const later = async (secs) => {
+    await h.pg.query("update claims set at = at - make_interval(secs => $1)", [secs]);
+    await h.pg.query("update users set energy_at = energy_at - make_interval(secs => $1)", [secs]);
+  };
+  let m = await me(h, u);
+  assert.deepEqual([m.energy, m.energy_max, m.energy_next], [3, 3, 0], "reserve pleine au depart");
+  assert.equal((await claim()).body.energy, 2);
+  const soon = (await claim()).body;
   assert.equal(soon.code, "cooldown");
   assert.ok(soon.retry_after <= 30);
-  for (let i = 0; i < 4; i++) {
-    await h.pg.query("update claims set at = at - interval '31 seconds'");
-    assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true, `tirage ${i + 2}`);
-  }
-  await h.pg.query("update claims set at = at - interval '31 seconds'");
-  const full = (await api(h, "claim", { session: u.session }, u.ip)).body;
-  assert.equal(full.code, "cooldown", "6e tirage dans les 10 minutes");
-  assert.ok(full.retry_after > 400 && full.retry_after <= 600, String(full.retry_after));
-  assert.equal((await me(h, u)).window_used, 5);
-  assert.ok((await me(h, u)).retry_after > 400);
-  // Le plus ancien sort de la fenetre : on peut retirer.
-  await h.pg.query("update claims set at = at - interval '500 seconds'");
-  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.ok, true);
+  await later(31);
+  assert.equal((await claim()).body.ok, true);
+  await later(31);
+  assert.equal((await claim()).body.energy, 0);
+  await later(31);
+  const empty = (await claim()).body;
+  assert.equal(empty.code, "no_energy");
+  // Il reste un peu de recharge deja faite (93 s sur 1 200).
+  assert.ok(empty.retry_after > 1000 && empty.retry_after <= 1200, String(empty.retry_after));
+  m = await me(h, u);
+  assert.equal(m.energy, 0);
+  assert.ok(m.retry_after > 1000);
+  // 20 minutes plus tard : un point.
+  await later(1200);
+  assert.equal((await claim()).body.ok, true);
+  // Longue absence : la reserve plafonne a 3.
+  await later(100000);
+  assert.equal((await me(h, u)).energy, 3);
+  // VIP : reserve de 5.
+  await h.pg.query("update users set vip_until = now() + interval '30 days'");
+  await later(100000);
+  m = await me(h, u);
+  assert.deepEqual([m.energy, m.energy_max], [5, 5]);
 });
 
 test("roue : un tour toutes les 4 heures", async () => {
@@ -1215,4 +1235,84 @@ test("tournoi : notification aux gagnants", async () => {
   await h.pg.query("select close_tournament()");
   const list = (await api(h, "notifications", { session: u.session }, u.ip)).body.list;
   assert.ok(list.some((n) => n.kind === "tournament"));
+});
+
+test("chat : moderation souple (gros mots masques, liens et contenus graves bloques), rythme, mise en sourdine", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const send = (body) => api(h, "chat_send", { session: u.session, body }, u.ip);
+  const wait = () => h.pg.query("update chat_messages set at = at - interval '10 seconds'");
+  assert.equal((await send("Salut tout le monde")).body.code, "chat_need_roll", "un tirage d'abord");
+  await api(h, "claim", { session: u.session }, u.ip);
+  assert.equal((await send("Salut tout le monde")).body.ok, true);
+  assert.equal((await send("Encore moi")).body.code, "chat_slow", "5 s entre deux messages");
+  await wait();
+  assert.equal((await send("Ce site est une MERDE ou pas ?")).body.ok, true);
+  await wait();
+  assert.equal((await send("JE CRIE TRES FORT ICI POUR RIEN")).body.ok, true);
+  await wait();
+  assert.equal((await send("Essex est une région, rien de grave")).body.ok, true);
+  const list = (await api(h, "chat", { session: u.session }, u.ip)).body.list;
+  assert.deepEqual(list.map((m) => m.body), ["Salut tout le monde", "Ce site est une M**** ou pas ?", "Je crie tres fort ici pour rien", "Essex est une région, rien de grave"]);
+  assert.equal(list[0].me, true);
+  assert.ok(!list[0].who.includes("@"));
+  // Suite : seulement les nouveaux messages
+  assert.equal((await api(h, "chat", { session: u.session, after: list[2].id }, u.ip)).body.list.length, 1);
+
+  // Liens et contenus graves : bloques, et 3 en 10 minutes = sourdine de 30 minutes.
+  await wait();
+  assert.equal((await send("viens sur monsite.com bonus")).body.code, "chat_link");
+  await wait();
+  assert.equal((await send("regarde https://x.y/ref")).body.code, "chat_link");
+  await wait();
+  assert.equal((await send("onlyfans gratuit")).body.code, "chat_blocked");
+  await wait();
+  assert.equal((await send("je peux encore parler ?")).body.code, "chat_muted");
+  assert.equal((await api(h, "chat", { session: u.session }, u.ip)).body.list.length, 4, "messages bloques invisibles");
+
+  // Admin : voit tout, masque un message, rend la parole.
+  const all = (await admin(h, { action: "chat" })).body.list;
+  assert.equal(all.length, 7);
+  await admin(h, { action: "chat_hide", id: list[1].id });
+  assert.equal((await api(h, "chat", { session: u.session }, u.ip)).body.list.length, 3);
+  await admin(h, { action: "chat_mute", user_id: all[0].user_id, minutes: 0 });
+  await wait();
+  assert.equal((await send("Merci !")).body.ok, true);
+});
+
+test("Watch Ads : 30 s de video, captcha, 1 minute entre deux, 30 par jour, recompense = revenu x part", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const st = (await api(h, "watch_status", { session: u.session }, u.ip)).body;
+  assert.deepEqual([st.left, st.limit, st.seconds, st.reward, st.next_in], [30, 30, 30, 10, 0], "0,002 EUR x 10 000 x 50 %");
+  const start = await api(h, "watch_start", { session: u.session }, u.ip);
+  assert.equal(start.body.ok, true);
+  const token = start.body.token;
+  assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.code, "too_soon");
+  await h.pg.query("update watch_views set started_at = started_at - interval '31 seconds'");
+  assert.equal((await api(h, "watch_complete", { session: u.session, token, captcha: "mauvais" }, u.ip)).body.code, "captcha");
+  assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.tokens, 10);
+  assert.equal((await me(h, u)).pending, 10, "gain a valider, comme les PTC");
+  assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.code, "already_done");
+  const again = (await api(h, "watch_start", { session: u.session }, u.ip)).body;
+  assert.equal(again.code, "cooldown");
+  assert.ok(again.retry_after > 50 && again.retry_after <= 60);
+  // Limite du jour
+  await h.pg.query("update settings set watch_daily_limit = 1");
+  await h.pg.query("update watch_views set completed_at = completed_at - interval '2 minutes'");
+  assert.equal((await api(h, "watch_start", { session: u.session }, u.ip)).body.code, "daily_limit");
+});
+
+test("retrait minimum : refuse sous le seuil, et le lot horaire attend le seuil", async () => {
+  const h = await createHarness();
+  await h.pg.query("update settings set min_withdraw_tokens = 100");
+  const u = await newUser(h);
+  await give(h, u, 60);
+  const r = (await api(h, "withdraw", { session: u.session }, u.ip)).body;
+  assert.deepEqual([r.code, r.min], ["below_minimum", 100]);
+  await give(h, u, 40);
+  assert.equal((await api(h, "withdraw", { session: u.session }, u.ip)).body.ok, true);
+  await h.pg.query("update users set validated = 50 where fp_address = $1", [u.fp]);
+  assert.deepEqual((await h.pg.query("select hourly_batch_users(10) r")).rows[0].r, []);
+  assert.equal((await api(h, "status", {})).body.min_withdraw_tokens, 100);
 });

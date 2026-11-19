@@ -209,8 +209,15 @@ function usersTab() {
 const FIELDS = [
   ["faucet_reward_tokens", `Récompense du faucet (${TK})`],
   ["cooldown_seconds", "Délai minimum entre deux tirages (secondes)"],
-  ["claims_window_count", "Tirages au plus par période"],
-  ["claims_window_seconds", "Durée de cette période (secondes, 600 = 10 min)"],
+  ["energy_regen_seconds", "Énergie : secondes pour recharger 1 point (1 200 = 20 min)"],
+  ["energy_max", "Énergie : réserve maximum"],
+  ["energy_max_vip", "Énergie : réserve maximum des VIP"],
+  ["min_withdraw_tokens", `Retrait minimum (${TK})`],
+  ["watch_daily_limit", "Watch Ads : vidéos par jour et par membre"],
+  ["watch_gap_seconds", "Watch Ads : secondes minimum entre deux vidéos"],
+  ["watch_seconds", "Watch Ads : durée de visionnage exigée (secondes)"],
+  ["watch_revenue_eur", "Watch Ads : ce que te rapporte une vue (€, estimation)"],
+  ["watch_share_percent", "Watch Ads : part reversée au membre (%)"],
   ["max_claims_account_day", "Réclamations par compte, sur 24 h"],
   ["max_claims_ip_day", "Réclamations par IP, sur 24 h"],
   ["max_claims_site_hour", "Coupe-circuit : réclamations du site par heure"],
@@ -482,6 +489,7 @@ const AD_SLOTS = [
   ["game", "Sous les jeux", "300×250", "Roue, Mines, Dice"],
   ["footer", "Pied de page", "728×90 / 320×100", "toutes les pages"],
   ["sticky_mobile", "Bandeau mobile collant", "320×50", "mobile, fermable"],
+  ["watch", "Watch Ads (vidéo)", "lecteur vidéo", "page Watch Ads : le code du réseau vidéo"],
 ];
 
 function adsTab() {
@@ -554,6 +562,26 @@ function supportTab() {
   return h("div", { class: "stack" }, card(`Support · ${fmt(data.tickets_open || 0)} en attente`, h("div", { style: "margin-bottom:12px" }, filter), box));
 }
 
+function chatTab() {
+  const box = h("div", {}, h("p", { class: "muted" }, "Chargement…"));
+  api("chat").then((r) => {
+    box.replaceChildren(...(r.list.length ? [h("div", { class: "table-wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, ["Heure", "Membre", "Message", "État", ""].map((x) => h("th", {}, x)))),
+      h("tbody", {}, r.list.map((m) => h("tr", { style: m.hidden ? "opacity:.55" : "" },
+        h("td", {}, new Date(m.at).toLocaleString("fr-FR")),
+        h("td", { class: "wrap" }, m.member, m.muted_until && new Date(m.muted_until) > new Date() ? h("div", { class: "hint" }, `sourdine jusqu'à ${new Date(m.muted_until).toLocaleTimeString("fr-FR")}`) : null),
+        h("td", { class: "wrap" }, m.body),
+        h("td", {}, m.flagged ? h("span", { class: "pill bad" }, m.flagged === "link" ? "lien bloqué" : "bloqué") : m.hidden ? h("span", { class: "pill" }, "masqué") : h("span", { class: "pill good" }, "visible")),
+        h("td", {}, h("div", { class: "row" },
+          m.flagged ? null : saveButton(m.hidden ? "Réafficher" : "Masquer", () => api("chat_hide", { id: m.id, hidden: !m.hidden }), "btn small ghost"),
+          saveButton("Sourdine 24 h", () => api("chat_mute", { user_id: m.user_id, minutes: 1440 }), "btn small danger"),
+          m.muted_until && new Date(m.muted_until) > new Date() ? saveButton("Rendre la parole", () => api("chat_mute", { user_id: m.user_id, minutes: 0 }), "btn small") : null)))))))]
+      : [h("p", { class: "muted" }, "Aucun message.")]));
+  });
+  return h("div", { class: "stack" }, card("Chat · modération",
+    h("p", { class: "muted", style: "margin-bottom:12px" }, "Modération automatique : gros mots masqués, liens et contenus graves bloqués, 3 blocages en 10 minutes = 30 minutes de sourdine. Ici, tu vois tout, y compris les messages bloqués."), box));
+}
+
 // Structure ----------------------------------------------------------------
 const TABS = [
   ["overview", "Vue d'ensemble", overviewTab],
@@ -565,6 +593,7 @@ const TABS = [
   ["ads", "Emplacements pub", adsTab],
   ["animation", "Codes promo et annonces", animationTab],
   ["support", "Support", supportTab],
+  ["chat", "Chat", chatTab],
   ["simulator", "Simulateur", simulatorTab],
 ];
 

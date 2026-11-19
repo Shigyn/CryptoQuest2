@@ -1,7 +1,7 @@
 -- CryptoCoin : schema complet. Rejouable : efface d'abord l'ancienne version, sans donnees reelles a ce stade.
 -- Toute regle d'argent est ici. Tables fermees (RLS sans politique), fonctions reservees a service_role.
 
-drop table if exists ad_impressions, ticket_messages, tickets, notifications, promo_redemptions, promo_codes,
+drop table if exists watch_views, chat_messages, ad_impressions, ticket_messages, tickets, notifications, promo_redemptions, promo_codes,
   user_achievements, achievements, tournament_awards, user_cosmetics, cosmetics, game_plays, vip_orders, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
   shortlink_providers, earnings, withdrawals, claims, ledger, sessions, users, bans, coins, settings cascade;
 do $$
@@ -21,8 +21,19 @@ create table settings (
   tokens_per_eur int not null default 10000 check (tokens_per_eur > 0),
   faucet_reward_tokens int not null default 2 check (faucet_reward_tokens >= 0),
   cooldown_seconds int not null default 30 check (cooldown_seconds >= 10),
-  claims_window_count int not null default 5 check (claims_window_count >= 1),
-  claims_window_seconds int not null default 600 check (claims_window_seconds >= 60),
+  -- Energie : 1 point toutes les energy_regen_seconds, reserve de energy_max (energy_max_vip pour les VIP).
+  -- Chaque tirage coute 1 point ; cooldown_seconds reste le minimum entre deux tirages.
+  -- Montant minimum d'un retrait (instantane ou lot horaire), en Coins.
+  min_withdraw_tokens int not null default 1 check (min_withdraw_tokens >= 1),
+  -- Watch Ads (videos recompensees) : la recompense = watch_revenue_eur x tokens_per_eur x watch_share_percent / 100.
+  watch_daily_limit int not null default 30 check (watch_daily_limit >= 0),
+  watch_gap_seconds int not null default 60 check (watch_gap_seconds >= 0),
+  watch_seconds int not null default 30 check (watch_seconds >= 5),
+  watch_revenue_eur numeric not null default 0.002 check (watch_revenue_eur >= 0),
+  watch_share_percent numeric not null default 50 check (watch_share_percent between 0 and 100),
+  energy_regen_seconds int not null default 1200 check (energy_regen_seconds >= 60),
+  energy_max int not null default 3 check (energy_max between 1 and 50),
+  energy_max_vip int not null default 5 check (energy_max_vip between 1 and 50),
   max_claims_account_day int not null default 48 check (max_claims_account_day >= 1),
   max_claims_ip_day int not null default 48 check (max_claims_ip_day >= 1),
   max_claims_site_hour int not null default 200 check (max_claims_site_hour >= 1),
@@ -103,6 +114,10 @@ create table users (
   referral_carry numeric not null default 0,
   -- XP (un point par tirage) et fractions de Coins en attente du multiplicateur de niveau.
   xp bigint not null default 0,
+  -- Energie gardee au dernier tirage (vide = reserve pleine) et date de ce tirage.
+  energy numeric,
+  energy_at timestamptz,
+  chat_muted_until timestamptz,
   faucet_carry numeric not null default 0,
   fp_address text not null,
   fp_norm text not null unique,
@@ -190,7 +205,7 @@ create table earnings (
   id bigint generated always as identity primary key,
   created_at timestamptz not null default now(),
   user_id uuid not null references users (id),
-  source text not null check (source in ('ptc', 'shortlink', 'offer')),
+  source text not null check (source in ('ptc', 'shortlink', 'offer', 'video')),
   ref text not null,
   label text,
   tokens bigint not null check (tokens >= 0),
@@ -480,6 +495,27 @@ create table ticket_messages (
 );
 create index ticket_messages_idx on ticket_messages (ticket_id, at);
 
+-- Chat global. hidden : masque (moderation automatique ou admin) ; flagged : raison du blocage.
+create table chat_messages (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references users (id),
+  at timestamptz not null default now(),
+  body text not null,
+  hidden boolean not null default false,
+  flagged text
+);
+create index chat_messages_user_idx on chat_messages (user_id, at desc);
+
+-- Watch Ads : une ligne par video lancee ; completed_at quand la vue est validee.
+create table watch_views (
+  token text primary key,
+  user_id uuid not null references users (id),
+  day date not null default (now() at time zone 'utc')::date,
+  started_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+create index watch_views_user_idx on watch_views (user_id, started_at desc);
+
 create table ad_impressions (
   day date not null default (now() at time zone 'utc')::date,
   slot text not null,
@@ -517,6 +553,8 @@ alter table notifications enable row level security;
 alter table tickets enable row level security;
 alter table ticket_messages enable row level security;
 alter table ad_impressions enable row level security;
+alter table chat_messages enable row level security;
+alter table watch_views enable row level security;
 
 -- Mouvements -------------------------------------------------------------
 
@@ -674,6 +712,7 @@ declare
   blk text;
   last_at timestamptz;
   exact numeric;
+  en numeric;
   n int;
 begin
   select * into u from users where id = p_user for update;
@@ -691,13 +730,10 @@ begin
     return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after',
       ceil(extract(epoch from last_at + make_interval(secs => s.cooldown_seconds) - now()))::int);
   end if;
-  -- Fenetre : au plus N tirages sur la periode ; on rouvre quand le plus ancien en sort.
-  select count(*), min(at) into n, last_at from (
-    select at from claims where at > now() - make_interval(secs => s.claims_window_seconds)
-      and (user_id = p_user or ip_hash = p_ip_hash) order by at desc limit s.claims_window_count) w;
-  if n >= s.claims_window_count then
-    return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after',
-      ceil(extract(epoch from last_at + make_interval(secs => s.claims_window_seconds) - now()))::int);
+  -- Energie : il faut au moins un point ; sinon on indique quand le prochain arrive.
+  en := energy_now(u);
+  if en < 1 then
+    return jsonb_build_object('ok', false, 'code', 'no_energy', 'retry_after', ceil((1 - en) * s.energy_regen_seconds)::int);
   end if;
 
   select count(*) into n from claims where user_id = p_user and at > now() - interval '24 hours';
@@ -723,14 +759,15 @@ begin
     reward := floor(exact)::int;
     update users set faucet_carry = exact - reward where id = p_user;
   end if;
-  update users set xp = xp + 1 where id = p_user;
+  update users set xp = xp + 1, energy = en - 1, energy_at = now() where id = p_user;
   insert into claims (user_id, ip_hash, tokens) values (p_user, p_ip_hash, reward);
   perform move_tokens(p_user, 'available', reward, 'faucet', roll::text);
   perform credit_referral(p_user, reward);
   return jsonb_build_object('ok', true, 'tokens', reward, 'roll', roll,
     'available', u.available + reward, 'cooldown_seconds', s.cooldown_seconds,
     'level', (level_info(u.xp + 1)->>'level')::int,
-    'level_up', (level_info(u.xp + 1)->>'level')::int > (level_info(u.xp)->>'level')::int);
+    'level_up', (level_info(u.xp + 1)->>'level')::int > (level_info(u.xp)->>'level')::int,
+    'energy', floor(en - 1)::int);
 end $$;
 
 create function claim_daily(p_user uuid, p_ip_hash text)
@@ -789,6 +826,15 @@ end $$;
 -- Avancement du jour (UTC) d'un membre sur un type d'objectif.
 -- Refonte : fonctions des nouvelles pages ------------------------------------
 
+-- Energie actuelle d'un membre : ce qu'il restait au dernier tirage + la recharge depuis, plafonnee a sa reserve.
+create function energy_now(u users)
+returns numeric language sql stable set search_path = public as $$
+  select least(case when u.vip_until > now() then s.energy_max_vip else s.energy_max end,
+               coalesce(u.energy + extract(epoch from now() - u.energy_at) / s.energy_regen_seconds,
+                        case when u.vip_until > now() then s.energy_max_vip else s.energy_max end))
+  from settings s where s.id = 1;
+$$;
+
 -- Niveau a partir de l'XP : niveau, XP deja faite dans le niveau, XP du niveau, multiplicateur du tirage.
 create function level_info(p_xp bigint)
 returns jsonb language plpgsql stable set search_path = public as $$
@@ -815,7 +861,7 @@ end $$;
 create function user_earned(p_user uuid)
 returns bigint language sql stable set search_path = public as $$
   select coalesce(sum(delta), 0)::bigint from ledger where user_id = p_user and delta > 0
-    and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer', 'mines', 'dice', 'tournament', 'achievement', 'promo');
+    and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer', 'video', 'mines', 'dice', 'tournament', 'achievement', 'promo');
 $$;
 
 create function user_streak(p_user uuid)
@@ -835,7 +881,7 @@ returns bigint language sql stable set search_path = public as $$
     when 'claims' then (select count(*) from claims where user_id = p_user and at >= p_since)
     when 'earned' then (select coalesce(sum(delta), 0) from ledger where user_id = p_user and delta > 0
                           and bucket in ('available', 'pending') and at >= p_since
-                          and source in ('faucet', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer'))::bigint
+                          and source in ('faucet', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer', 'video'))::bigint
     when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc'
                        and status not in ('rejected', 'reversed') and created_at >= p_since)
     when 'links' then (select count(*) from earnings where user_id = p_user and source = 'shortlink'
@@ -1338,6 +1384,9 @@ begin
 
   tokens := case when p_kind = 'instant' then u.available else u.validated end;
   if tokens <= 0 then return jsonb_build_object('ok', false, 'code', 'nothing_to_withdraw'); end if;
+  if tokens < s.min_withdraw_tokens then
+    return jsonb_build_object('ok', false, 'code', 'below_minimum', 'min', s.min_withdraw_tokens);
+  end if;
 
   units := floor(tokens::numeric / s.tokens_per_eur * c.per_eur * power(10::numeric, c.decimals));
   if units <= 0 then return jsonb_build_object('ok', false, 'code', 'amount_too_small'); end if;
@@ -1396,7 +1445,8 @@ end $$;
 create function hourly_batch_users(p_limit int)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(id), '[]'::jsonb) from (
-    select id from users where validated > 0 and fp_address is not null and not banned
+    select id from users where validated >= greatest((select min_withdraw_tokens from settings where id = 1), 1)
+      and fp_address is not null and not banned
     order by validated desc limit p_limit) x;
 $$;
 
@@ -1686,6 +1736,10 @@ returns jsonb language sql stable set search_path = public as $$
     'ad_slots', s.ad_slots,
     'daily_streak_rewards', to_jsonb(s.daily_streak_rewards),
     'level_max', s.level_max, 'level_mult_percent', s.level_mult_percent,
+    'energy_regen', s.energy_regen_seconds, 'energy_max', s.energy_max, 'energy_max_vip', s.energy_max_vip,
+    'min_withdraw_tokens', s.min_withdraw_tokens,
+    'watch_reward', floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::int,
+    'watch_daily_limit', s.watch_daily_limit,
     'feed', coalesce((select jsonb_agg(f order by f->>'at' desc) from (
         select jsonb_build_object('at', e.created_at, 'kind', coalesce(o.name, e.label), 'tokens', e.tokens,
           'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end) as f
@@ -1719,9 +1773,13 @@ returns jsonb language sql stable set search_path = public as $$
     'wheel_done', coalesce(u.last_wheel_at > now() - make_interval(hours => s.wheel_hours), false),
     'wheel_retry_after', greatest(coalesce(ceil(extract(epoch from u.last_wheel_at + make_interval(hours => s.wheel_hours) - now()))::int, 0), 0),
     'wheel_hours', s.wheel_hours,
-    'window_count', s.claims_window_count,
-    'window_minutes', s.claims_window_seconds / 60,
-    'window_used', (select count(*) from claims where user_id = u.id and at > now() - make_interval(secs => s.claims_window_seconds)),
+    'energy', floor(energy_now(u))::int,
+    'energy_max', case when u.vip_until > now() then s.energy_max_vip else s.energy_max end,
+    'energy_max_vip', s.energy_max_vip,
+    'energy_regen', s.energy_regen_seconds,
+    -- Secondes avant le prochain point d'energie (0 si la reserve est pleine).
+    'energy_next', case when energy_now(u) >= case when u.vip_until > now() then s.energy_max_vip else s.energy_max end then 0
+                        else ceil((1 - (energy_now(u) - floor(energy_now(u)))) * s.energy_regen_seconds)::int end,
     'wheel_prizes', s.wheel_prizes,
     'wheel_min_claims', s.wheel_min_claims,
     'daily_bonus_tokens', s.daily_bonus_tokens,
@@ -1743,10 +1801,7 @@ returns jsonb language sql stable set search_path = public as $$
     'claims_today', (select count(*) from claims where user_id = u.id and (at at time zone 'utc')::date = (now() at time zone 'utc')::date),
     'retry_after', greatest(
       coalesce((select ceil(extract(epoch from max(at) + make_interval(secs => s.cooldown_seconds) - now()))::int from claims where user_id = u.id), 0),
-      coalesce((select case when count(*) >= s.claims_window_count
-                       then ceil(extract(epoch from min(at) + make_interval(secs => s.claims_window_seconds) - now()))::int end
-                from (select at from claims where user_id = u.id and at > now() - make_interval(secs => s.claims_window_seconds)
-                      order by at desc limit s.claims_window_count) w), 0), 0),
+      case when energy_now(u) < 1 then ceil((1 - energy_now(u)) * s.energy_regen_seconds)::int else 0 end, 0),
     -- Gamification : total gagne (niveau) et serie de jours consecutifs avec au moins une reclamation.
     'earned_total', user_earned(u.id),
     'xp', u.xp,
@@ -1928,8 +1983,15 @@ begin
     daily_bonus_min_claims = coalesce((p->>'daily_bonus_min_claims')::int, daily_bonus_min_claims),
     wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
     wheel_hours = coalesce((p->>'wheel_hours')::int, wheel_hours),
-    claims_window_count = coalesce((p->>'claims_window_count')::int, claims_window_count),
-    claims_window_seconds = coalesce((p->>'claims_window_seconds')::int, claims_window_seconds),
+    min_withdraw_tokens = coalesce((p->>'min_withdraw_tokens')::int, min_withdraw_tokens),
+    watch_daily_limit = coalesce((p->>'watch_daily_limit')::int, watch_daily_limit),
+    watch_gap_seconds = coalesce((p->>'watch_gap_seconds')::int, watch_gap_seconds),
+    watch_seconds = coalesce((p->>'watch_seconds')::int, watch_seconds),
+    watch_revenue_eur = coalesce((p->>'watch_revenue_eur')::numeric, watch_revenue_eur),
+    watch_share_percent = coalesce((p->>'watch_share_percent')::numeric, watch_share_percent),
+    energy_regen_seconds = coalesce((p->>'energy_regen_seconds')::int, energy_regen_seconds),
+    energy_max = coalesce((p->>'energy_max')::int, energy_max),
+    energy_max_vip = coalesce((p->>'energy_max_vip')::int, energy_max_vip),
     auto_rates = coalesce((p->>'auto_rates')::boolean, auto_rates),
     mines_daily_plays = coalesce((p->>'mines_daily_plays')::int, mines_daily_plays),
     dice_daily_plays = coalesce((p->>'dice_daily_plays')::int, dice_daily_plays),
@@ -2259,6 +2321,136 @@ begin
   end if;
   update ptc_campaigns set enabled = false, needs_review = false where advertiser_id = p_user;
   return jsonb_build_object('ok', true, 'seized', seized);
+end $$;
+
+-- Chat global ------------------------------------------------------------------
+create function chat_list(p_user uuid, p_after bigint)
+returns jsonb language sql stable set search_path = public as $$
+  select coalesce(jsonb_agg(m order by (m->>'id')::bigint), '[]'::jsonb) from (
+    select jsonb_build_object('id', c.id, 'at', c.at, 'body', c.body, 'me', c.user_id = p_user,
+      'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end,
+      'level', (level_info(u.xp)->>'level')::int, 'vip', coalesce(u.vip_until > now(), false),
+      'frame', u.frame, 'name_color', u.name_color, 'title', u.title) as m
+    from chat_messages c join users u on u.id = c.user_id
+    where not c.hidden and not u.banned and c.id > coalesce(p_after, 0)
+    order by c.id desc limit 50) x;
+$$;
+
+-- p_flag : raison donnee par la moderation automatique du serveur (lien, contenu interdit), sinon vide.
+create function chat_send(p_user uuid, p_body text, p_flag text, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  u users;
+  blk text;
+  last_body text;
+  last_at timestamptz;
+  strikes int;
+  new_id bigint;
+begin
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  if u.chat_muted_until > now() then
+    return jsonb_build_object('ok', false, 'code', 'chat_muted', 'until', u.chat_muted_until);
+  end if;
+  if not exists (select 1 from claims where user_id = p_user) then
+    return jsonb_build_object('ok', false, 'code', 'chat_need_roll');
+  end if;
+  if length(coalesce(p_body, '')) not between 1 and 300 then return jsonb_build_object('ok', false, 'code', 'bad_request'); end if;
+  select body, at into last_body, last_at from chat_messages where user_id = p_user order by at desc limit 1;
+  if last_at > now() - interval '5 seconds'
+     or (select count(*) from chat_messages where user_id = p_user and at > now() - interval '1 minute') >= 8 then
+    return jsonb_build_object('ok', false, 'code', 'chat_slow');
+  end if;
+  if p_flag is not null then
+    insert into chat_messages (user_id, body, hidden, flagged) values (p_user, p_body, true, p_flag);
+    select count(*) into strikes from chat_messages where user_id = p_user and flagged is not null and at > now() - interval '10 minutes';
+    if strikes >= 3 then update users set chat_muted_until = now() + interval '30 minutes' where id = p_user; end if;
+    return jsonb_build_object('ok', false, 'code', case when p_flag = 'link' then 'chat_link' else 'chat_blocked' end);
+  end if;
+  if lower(last_body) = lower(p_body) and last_at > now() - interval '2 minutes' then
+    return jsonb_build_object('ok', false, 'code', 'chat_duplicate');
+  end if;
+  insert into chat_messages (user_id, body) values (p_user, p_body) returning id into new_id;
+  return jsonb_build_object('ok', true, 'id', new_id);
+end $$;
+
+create function admin_chat(p_limit int)
+returns jsonb language sql stable set search_path = public as $$
+  select coalesce(jsonb_agg(m order by (m->>'id')::bigint desc), '[]'::jsonb) from (
+    select jsonb_build_object('id', c.id, 'at', c.at, 'body', c.body, 'hidden', c.hidden, 'flagged', c.flagged,
+      'user_id', u.id, 'member', u.fp_address, 'muted_until', u.chat_muted_until) as m
+    from chat_messages c join users u on u.id = c.user_id order by c.id desc limit greatest(least(p_limit, 500), 1)) x;
+$$;
+
+create function admin_chat_hide(p_id bigint, p_hidden boolean)
+returns void language sql set search_path = public as $$
+  update chat_messages set hidden = p_hidden where id = p_id;
+$$;
+
+-- p_minutes = 0 : rend la parole.
+create function admin_chat_mute(p_user uuid, p_minutes int)
+returns void language sql set search_path = public as $$
+  update users set chat_muted_until = case when p_minutes > 0 then now() + make_interval(mins => p_minutes) end where id = p_user;
+$$;
+
+-- Watch Ads --------------------------------------------------------------------
+create function watch_status(p_user uuid)
+returns jsonb language sql stable set search_path = public as $$
+  select jsonb_build_object(
+    'left', greatest(s.watch_daily_limit - (select count(*) from watch_views v where v.user_id = p_user
+                       and v.day = (now() at time zone 'utc')::date and v.completed_at is not null), 0),
+    'limit', s.watch_daily_limit,
+    'seconds', s.watch_seconds,
+    'reward', floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::int,
+    'next_in', greatest(coalesce((select ceil(extract(epoch from max(v.completed_at) + make_interval(secs => s.watch_gap_seconds) - now()))::int
+                                  from watch_views v where v.user_id = p_user and v.completed_at is not null), 0), 0))
+  from settings s where s.id = 1;
+$$;
+
+create function watch_start(p_user uuid, p_token text, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  u users;
+  blk text;
+  st jsonb;
+begin
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  if u.fp_address is null then return jsonb_build_object('ok', false, 'code', 'link_faucetpay'); end if;
+  st := watch_status(p_user);
+  if (st->>'left')::int < 1 then return jsonb_build_object('ok', false, 'code', 'daily_limit'); end if;
+  if (st->>'next_in')::int > 0 then return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after', (st->>'next_in')::int); end if;
+  insert into watch_views (token, user_id) values (p_token, p_user);
+  return jsonb_build_object('ok', true, 'token', p_token, 'seconds', (st->>'seconds')::int);
+end $$;
+
+create function watch_complete(p_user uuid, p_token text, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  v watch_views;
+  blk text;
+  left_s numeric;
+begin
+  select * into s from settings where id = 1;
+  select * into u from users where id = p_user;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  select * into v from watch_views where token = p_token and user_id = p_user for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if v.completed_at is not null then return jsonb_build_object('ok', false, 'code', 'already_done'); end if;
+  -- Le minuteur est celui du serveur, jamais celui du navigateur.
+  left_s := extract(epoch from v.started_at + make_interval(secs => s.watch_seconds) - now());
+  if left_s > 0 then return jsonb_build_object('ok', false, 'code', 'too_soon', 'retry_after', ceil(left_s)::int); end if;
+  if (select count(*) from watch_views where user_id = p_user and day = v.day and completed_at is not null) >= s.watch_daily_limit then
+    return jsonb_build_object('ok', false, 'code', 'daily_limit');
+  end if;
+  update watch_views set completed_at = now() where token = p_token;
+  return add_earning(p_user, 'video', p_token, 'Watch Ads',
+    floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::bigint, s.watch_revenue_eur);
 end $$;
 
 -- Seul le serveur (service_role) peut appeler ces fonctions.

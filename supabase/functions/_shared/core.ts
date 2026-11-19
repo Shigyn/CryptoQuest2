@@ -414,6 +414,25 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "ad_toggle":
       return result(d, await d.rpc("ad_toggle", { p_user: userId, p_id: Number(b.id), p_enabled: b.enabled === true }));
 
+    case "chat":
+      return json(d, 200, { ok: true, list: await d.rpc("chat_list", { p_user: userId, p_after: Number(b.after) || 0 }) });
+
+    case "chat_send": {
+      const m = moderateChat(String(b.body ?? ""));
+      if (m.flag === "empty") return refuse(d, 400, "bad_request");
+      return result(d, await d.rpc("chat_send", { p_user: userId, p_body: m.text, p_flag: m.flag, p_ip_hash: ipHash }));
+    }
+
+    case "watch_status":
+      return json(d, 200, { ok: true, ...(await d.rpc("watch_status", { p_user: userId })) });
+
+    case "watch_start":
+      return result(d, await d.rpc("watch_start", { p_user: userId, p_token: crypto.randomUUID().replaceAll("-", ""), p_ip_hash: ipHash }));
+
+    case "watch_complete":
+      if (!(await captchaOk())) return refuse(d, 400, "captcha");
+      return result(d, await d.rpc("watch_complete", { p_user: userId, p_token: String(b.token ?? ""), p_ip_hash: ipHash }));
+
     case "board":
       return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: userId })) });
 
@@ -571,6 +590,26 @@ async function screenAd(d: Deps, userId: string, title: string, url: string): Pr
   return null;
 }
 
+// Moderation du chat ------------------------------------------------------------
+const CHAT_BLOCK = words("porn\\p{L}*|xxx|sexcam|nudes?|onlyfans|camgirls?|hentai|escorts?|nazi\\p{L}*|hitler|kys|p[eé]do\\p{L}*|n[i1]gg\\p{L}*");
+const CHAT_MASK = words("fuck\\p{L}*|shit|bitch\\p{L}*|asshole|cunt|dick|merde|putes?|putain|connard\\p{L}*|connasse|salope|encul\\p{L}*|b[aâ]tard|fdp|ntm|nique|abruti\\p{L}*|d[eé]bile|idiot\\p{L}*");
+const CHAT_LINK = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|io|net|org|xyz|club|me|ly|gg|ru|cc|fr|info|biz|top|site|online|app|link|to)\b|t\.me\/|discord\.gg)/i;
+
+export function moderateChat(raw: string): { text: string; flag: string | null } {
+  let text = String(raw ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
+  if (!text) return { text, flag: "empty" };
+  if (CHAT_LINK.test(text)) return { text, flag: "link" };
+  if ((text.match(CHAT_BLOCK) ?? []).length) return { text, flag: "blocked" };
+  text = text.replace(CHAT_MASK, (m) => m[0] + "*".repeat(m.length - 1));
+  // Lettres repetees et messages tout en majuscules adoucis.
+  text = text.replace(/(.)\1{5,}/gu, "$1$1$1$1$1");
+  const letters = text.replace(/[^\p{L}]/gu, "");
+  if (letters.length >= 12 && letters.replace(/[^\p{Lu}]/gu, "").length / letters.length > 0.7) {
+    text = text.charAt(0) + text.slice(1).toLowerCase();
+  }
+  return { text, flag: null };
+}
+
 // Met a jour les taux. Un ecart de plus de 50 % est ignore : prix douteux, on garde l'ancien.
 export async function refreshRates(d: Deps, force = false): Promise<{ updated: string[]; skipped: string[]; error?: string }> {
   const t = await d.rpc("rate_targets");
@@ -700,6 +739,14 @@ export async function handleAdmin(req: Request, d: Deps): Promise<Response> {
         return ok();
       case "save_challenge":
         await d.rpc("admin_save_challenge", { p: b.item ?? {} });
+        return ok();
+      case "chat":
+        return json(d, 200, { ok: true, list: await d.rpc("admin_chat", { p_limit: 200 }) });
+      case "chat_hide":
+        await d.rpc("admin_chat_hide", { p_id: Number(b.id), p_hidden: b.hidden !== false });
+        return ok();
+      case "chat_mute":
+        await d.rpc("admin_chat_mute", { p_user: String(b.user_id ?? ""), p_minutes: Number(b.minutes) || 0 });
         return ok();
       case "save_ads":
         await d.rpc("admin_save_ads", { p: b.slots ?? {} });

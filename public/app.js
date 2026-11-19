@@ -23,7 +23,7 @@
     rolling: ["Tirage en cours…", "Rolling…"], closed: ["Faucet fermé", "Faucet closed"],
     won: ["gagnés !", "won!"], free: ["Gratuit, sans mise. Fais 99 999 et tu décroches le jackpot !", "Free, no stake. Hit 99,999 to win the jackpot!"],
     rollHead: ["Tente ta chance !", "Try your luck!"], lastWins: ["Derniers gains", "Latest wins"],
-    streakLbl: ["jours de suite", "day streak"], energyLbl: ["tirages prêts", "rolls ready"], prizes: ["Les gains", "Prizes"],
+    streakLbl: ["jours de suite", "day streak"], energyLbl: ["énergie", "energy"], prizes: ["Les gains", "Prizes"],
     ptc: ["PTC", "PTC"], links: ["Shortlinks", "Shortlinks"], offers: ["Offres", "Offers"],
     pendingNote: ["Ces gains sont vérifiés, puis partent seuls sur FaucetPay au paiement de chaque heure.", "These earnings are reviewed, then sent to FaucetPay automatically every hour."],
     pickTask: ["Choisis une tâche", "Pick a task"], ptcShort: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
@@ -60,6 +60,21 @@
     tourneyEmpty: ["Personne n’a encore marqué de points cette semaine. Fais un tirage pour prendre la tête !", "Nobody has scored yet this week. Make a roll to take the lead!"],
     tourneyText: ["Gratuit : chaque Coin gagné cette semaine compte (tirages, jeux, tâches, parrainage ; pas les quêtes). Les", "Free: every Coin earned this week counts (rolls, games, tasks, referrals; not quests). The top"],
     tourneyText2: ["premiers sont payés lundi matin.", "players are paid on Monday morning."],
+    // Energie, chat, Watch Ads, retrait minimum
+    energyIn: ["dans", "in"], energyFull: ["Réserve pleine", "Full"], noEnergy: ["Plus d'énergie", "Out of energy"],
+    energyHelp: ["1 énergie toutes les 20 minutes. Chaque tirage en consomme une.", "1 energy every 20 minutes. Each roll uses one."],
+    wdMin: ["Retrait minimum :", "Minimum withdrawal:"],
+    chat: ["Chat", "Chat"], menuCommunity: ["Communauté", "Community"], chatPlaceholder: ["Écris un message…", "Write a message…"],
+    chatEmpty: ["Personne n'a encore écrit. Lance la discussion !", "Nobody has written yet. Start the chat!"],
+    chatRulesShort: ["Respect, pas de liens", "Be nice, no links"],
+    chatRules: ["Sois respectueux. Les liens, la pub et les contenus choquants sont bloqués automatiquement ; 3 messages bloqués = 30 minutes sans chat.", "Be respectful. Links, ads and shocking content are blocked automatically; 3 blocked messages = 30 minutes without chat."],
+    watchAds: ["Watch Ads", "Watch Ads"], watchShort: ["Regarde une courte vidéo, valide la vue.", "Watch a short video, confirm the view."],
+    watchText: ["Une vidéo, un captcha, et tu es crédité.", "One video, one captcha, and you're credited."],
+    watchLeft: ["vidéos restantes aujourd'hui", "videos left today"], perView: ["par vue", "per view"], perViewShort: ["vue", "view"], perDay: ["par jour", "per day"],
+    watchNone: ["Aucune vidéo pour le moment. Reviens plus tard.", "No videos right now. Come back later."],
+    watchGo: ["Regarder une vidéo", "Watch a video"], watchNext: ["Prochaine vidéo dans", "Next video in"],
+    watchHow: ["Laisse la vidéo jusqu'au bout, page visible : le compteur s'arrête si tu changes d'onglet. Les gains sont vérifiés puis payés avec les autres tâches.", "Let the video play to the end with the page visible: the timer stops if you switch tabs. Earnings are reviewed and paid with the other tasks."],
+    watchStay: ["Reste sur la page", "Stay on the page"], watchValidate: ["Valider la vue", "Confirm view"],
     // Refonte
     dashboard: ["Tableau de bord", "Dashboard"], faucet: ["Faucet", "Faucet"], menuEarn: ["Gagner", "Earn"], menuGames: ["Jeux", "Games"],
     menuRewards: ["Récompenses", "Rewards"], menuShop: ["Boutique et VIP", "Shop and VIP"], menuWallet: ["Argent", "Money"], menuAccount: ["Compte", "Account"],
@@ -91,7 +106,7 @@
     faq_multi_q: ["Puis-je avoir plusieurs comptes ?", "Can I have several accounts?"], faq_multi_a: ["Non. Un compte par personne et par foyer. Les comptes en double sont bannis et perdent leur solde.", "No. One account per person and household. Duplicate accounts are banned and lose their balance."],
     faq_vpn_q: ["VPN, proxy, robots ?", "VPN, proxy, bots?"], faq_vpn_a: ["Interdits. Les tâches faites derrière un VPN ou par un script sont refusées.", "Not allowed. Tasks done behind a VPN or by a script are refused."],
     faq_ref_q: ["Comment marche le parrainage ?", "How do referrals work?"], faq_ref_a: ["Tu touches un pourcentage de tout ce que gagnent tes filleuls, à vie, sans que ça leur soit retiré.", "You earn a percentage of everything your referrals earn, for life, without taking anything from them."],
-    faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Zéro pub, un bonus fixe sur les tâches et une part de parrainage plus élevée. Jamais de tirage ni de chance de gain en plus.", "No ads, a fixed bonus on tasks and a higher referral share. Never extra rolls or winning chances."],
+    faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Zéro pub, un bonus fixe sur les tâches, une part de parrainage plus élevée et une réserve d'énergie de 5 au lieu de 3. Les chances de chaque tirage sont les mêmes pour tous.", "No ads, a fixed bonus on tasks, a higher referral share and an energy reserve of 5 instead of 3. The odds of each roll are the same for everyone."],
     faq_ads_q: ["Je peux faire de la pub ici ?", "Can I advertise here?"], faq_ads_a: ["Oui : crée une campagne depuis l'espace annonceur, en crypto ou avec tes Coins. Chaque vue est une vraie visite.", "Yes: create a campaign from the advertiser area, in crypto or with your Coins. Every view is a real visit."],
     faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Le tirage est gratuit, sans mise : tu ne peux jamais perdre tes Coins.", "No. The roll is free, with no stake: you can never lose your Coins."],
     noProofs: ["Les premiers paiements apparaîtront ici.", "The first payouts will show here."],
@@ -153,9 +168,9 @@
     vipBadge: ["Badge VIP doré", "Golden VIP badge"], vipBadgeSub: ["Couronne sur ton profil.", "Crown on your profile."],
     vipFor: ["jours", "days"], vipPay: ["Payer avec FaucetPay", "Pay with FaucetPay"], vipExtend: ["Prolonger", "Extend"],
     vipUntil: ["Actif jusqu’au", "Active until"], vipDelay: ["Après le paiement, l’activation prend une à deux minutes.", "After payment, activation takes one to two minutes."],
-    vipFair: ["Le VIP ne donne aucun tirage, aucun tour de roue ni aucune chance de gain en plus : uniquement des avantages fixes. Pas de renouvellement automatique.", "VIP gives no extra rolls, spins or winning chances: fixed perks only. No automatic renewal."],
+    vipFair: ["Le VIP agrandit ta réserve d'énergie (5 au lieu de 3) : tu peux t'absenter plus longtemps sans en perdre. La recharge et les chances de chaque tirage restent les mêmes pour tous. Pas de renouvellement automatique.", "VIP enlarges your energy reserve (5 instead of 3): you can be away longer without wasting any. Recharge and the odds of each roll stay the same for everyone. No automatic renewal."],
     vipRefresh: ["Actualiser", "Refresh"], vipLink: ["Zéro pub, plus de gains sur tes tâches.", "No ads, more from your tasks."],
-    advertise: ["Faire de la pub", "Advertise"], adText: ["Montre ton site à nos membres : chaque vue est une vraie visite de plusieurs secondes.", "Show your site to our members: every view is a real visit lasting several seconds."],
+    advertise: ["Advertise", "Advertise"], adText: ["Montre ton site à nos membres : chaque vue est une vraie visite de plusieurs secondes.", "Show your site to our members: every view is a real visit lasting several seconds."],
     adTitle: ["Titre de l'annonce", "Ad title"], adUrl: ["Adresse de ton site (https://…)", "Your site address (https://…)"], adDuration: ["Durée de chaque vue", "Length of each view"],
     adViews: ["Nombre de vues", "Number of views"], adPay: ["Payer avec FaucetPay", "Pay with FaucetPay"], adTotal: ["Total", "Total"],
     adRules: ["Chaque campagne est vérifiée avant diffusion. Contenus interdits : arnaques, adulte, logiciels malveillants, jeux d'argent.", "Every campaign is reviewed before it runs. Not allowed: scams, adult content, malware, gambling."],
@@ -210,6 +225,14 @@
     promo_used_up: ["Ce code a déjà été utilisé le nombre maximal de fois.", "This code has reached its maximum uses."],
     too_many_tickets: ["Tu as déjà 3 demandes ouvertes : attends notre réponse.", "You already have 3 open tickets: please wait for our reply."],
     bad_video: ["Pour une vidéo, mets l'adresse YouTube (youtube.com/watch?v=… ou youtu.be/…).", "For a video, use the YouTube address (youtube.com/watch?v=… or youtu.be/…)."],
+    no_energy: ["Plus d'énergie : 1 énergie revient toutes les 20 minutes.", "Out of energy: 1 energy comes back every 20 minutes."],
+    below_minimum: ["Pas encore assez pour un retrait : le minimum est de 100 Coins.", "Not enough to withdraw yet: the minimum is 100 Coins."],
+    chat_need_roll: ["Fais d'abord un tirage pour pouvoir écrire dans le chat.", "Make a roll first to write in the chat."],
+    chat_slow: ["Doucement : attends quelques secondes entre deux messages.", "Slow down: wait a few seconds between messages."],
+    chat_duplicate: ["Tu viens d'envoyer ce message.", "You just sent this message."],
+    chat_link: ["Les liens ne sont pas autorisés dans le chat.", "Links are not allowed in the chat."],
+    chat_blocked: ["Message bloqué par la modération.", "Message blocked by moderation."],
+    chat_muted: ["Tu ne peux plus écrire pour le moment", "You can't write for now"],
     not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
@@ -264,6 +287,9 @@
     bomb: "M11 7a7 7 0 1 0 6 3.4M15 4l2 2M18 3v2M20 5h-2M15.5 7.5 17 6",
     crown: "M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z",
     menu: "M4 6h16M4 12h16M4 18h16",
+    chat: "M4 5h16v11H9l-5 4z",
+    send: "M4 12l16-8-6 16-2-7z",
+    play: "M7 4.5v15l12-7.5z",
     bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
     shop: "M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2",
     trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4z",
@@ -628,9 +654,13 @@
   const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
   const clearTimers = () => { timers.forEach(clearInterval); timers = []; };
 
+  let meAt = Date.now();
+  // Secondes restantes, recalculees a partir du profil recu.
+  const since = () => Math.floor((Date.now() - meAt) / 1000);
+  const energyNow = () => Math.min(me.energy_max ?? 3, (me.energy ?? 0) + ((me.energy ?? 0) < (me.energy_max ?? 3) && (me.energy_next ?? 0) - since() <= 0 ? 1 : 0));
   async function refreshMe() {
     const r = await api("me");
-    if (r.ok) { me = r; updateHeader(); }
+    if (r.ok) { me = r; meAt = Date.now(); updateHeader(); }
     return r;
   }
 
@@ -679,8 +709,20 @@
 
   function statsRow() {
     const lv = levelOf(me.earned_total || 0);
-    const cnt = me.window_count ?? 5;
-    const ready = Math.max(0, cnt - (me.window_used ?? 0));
+    const cnt = me.energy_max ?? 3;
+    const ready = Math.max(0, Math.min(cnt, me.energy ?? 0));
+    const timer = h("span", { class: "energy-timer" });
+    const tickTimer = () => {
+      const cool = Math.max(0, (me.retry_after || 0) - since());
+      const nextE = Math.max(0, (me.energy_next || 0) - since());
+      if (ready < 1 && nextE > 0) timer.textContent = `+1 ${t("energyIn")} ${clock(nextE)}`;
+      else if (cool > 0) timer.textContent = `${t("next")} ${clock(cool)}`;
+      else if (ready < cnt && nextE > 0) timer.textContent = `+1 ${t("energyIn")} ${clock(nextE)}`;
+      else timer.textContent = ready >= cnt ? t("energyFull") : t("readyNow");
+      if ((me.energy_next || 0) > 0 && nextE === 0 && ready < cnt) refreshMe().then(() => statsHost?.replaceChildren(statsRow()));
+    };
+    tickTimer();
+    every(tickTimer, 1000);
     return h("section", { class: "panel player" },
       h("div", { class: "player-top" },
         h("div", { class: "lvl-badge", title: t("level") }, icon("star"), h("b", {}, String(lv.lvl))),
@@ -691,9 +733,9 @@
       h("div", { class: "player-chips" },
         h("div", { class: "pchip fire" }, h("span", { class: "pchip-ico" }, icon("fire")),
           h("b", {}, fmtInt(me.streak)), h("span", {}, t("streakLbl"))),
-        h("div", { class: "pchip energy", title: `${t("perWindow")} ${me.window_minutes ?? 10} ${t("minutes")}` },
+        h("div", { class: "pchip energy", title: t("energyHelp") },
           h("span", { class: "pips" }, [...Array(cnt).keys()].map((i) => h("i", { class: i < ready ? "on" : "" }))),
-          h("b", {}, `${ready}/${cnt}`), h("span", {}, t("energyLbl"))),
+          h("b", {}, `${ready}/${cnt}`), h("span", {}, t("energyLbl")), timer),
         h("div", { class: "pchip money" }, coin(),
           h("b", {}, num(me.available)), h("span", {}, unitInfo().kind === "eur" ? unitLabel() : `${t("worth")} ${eur(me.available)}`))));
   }
@@ -744,7 +786,7 @@
       fill.style.width = `${left > 0 ? (1 - left / cooldown) * 100 : 100}%`;
       if (busy) return;
       if (status?.paused) { btn.disabled = true; btn.textContent = t("closed"); }
-      else if (left > 0) { btn.disabled = true; btn.textContent = `${t("next")} ${clock(left)}`; }
+      else if (left > 0) { btn.disabled = true; btn.textContent = (me.energy ?? 1) < 1 ? t("noEnergy") : t("rollBtn"); }
       else { btn.disabled = false; btn.textContent = t("rollBtn"); btn.classList.add("ready"); }
     };
     tick();
@@ -843,6 +885,7 @@
       const linksLeft = earn.shortlinks.reduce((a, p) => a + p.remaining, 0);
       const cats = [
         { key: "ptc", tone: "--c1:#4fd2ff;--c2:#2f6bff", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
+        { key: "watch", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "play", name: t("watchAds"), text: t("watchShort"), n: adCodes("watch").length ? (status?.watch_daily_limit ?? 30) : 0, sum: null, unit: "videos" },
         { key: "links", tone: "--c1:#b48cff;--c2:#6b3dff", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
         { key: "surveys", tone: "--c1:#45e3a6;--c2:#11a771", ico: "quests", name: t("surveys"), text: t("surveysShort"), n: walls("surveys").length, sum: null },
         { key: "offers", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "gift", name: t("offers"), text: t("offersShort"), n: walls("offers").length, sum: null },
@@ -856,7 +899,7 @@
             h("span", { class: "game-name" }, c.name),
             h("span", { class: "game-text" }, c.text),
             h("span", { class: `badge ${c.n > 0 ? "good" : ""}` },
-              c.n < 1 ? t("noneNow") : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
+              c.n < 1 ? t("noneNow") : c.unit === "videos" ? `${c.n} ${t("perDay")} · ${num(status?.watch_reward ?? 0)} / ${t("perViewShort")}` : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
             h("span", { class: "btn small", style: "margin-top:auto" }, t("open"))))),
         h("p", { class: "note", style: "text-align:center" }, t("pendingNote")),
         adSlot("in_content"));
@@ -1543,7 +1586,7 @@
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
     const est = c && me.available > 0 ? (me.available / (status?.tokens_per_eur || 10000)) * c.per_eur : 0;
     const btn = h("button", {
-      class: "btn big", disabled: me.available <= 0 || !c || status?.paused,
+      class: "btn big", disabled: me.available <= 0 || me.available < (status?.min_withdraw_tokens || 1) || !c || status?.paused,
       onclick: async () => {
         btn.disabled = true;
         const r = await api("withdraw");
@@ -1582,6 +1625,7 @@
             },
           }, me.coins.map((x) => h("option", { value: x.code, selected: x.code === me.payout_coin }, `${x.code} · ${x.name}`)))) : null,
         btn,
+        (status?.min_withdraw_tokens || 1) > 1 ? h("p", { class: "note", style: "margin:10px 0 0;text-align:center" }, `${t("wdMin")} ${tk(status.min_withdraw_tokens)}`) : null,
         h("p", { class: "note", style: "margin:10px 0 0;font-style:italic;text-align:center" }, t("wdDelay")),
         h("p", { class: "note", style: "margin:12px 0 0;overflow-wrap:anywhere" }, `${t("sentTo")} `, h("b", { style: "color:var(--ink)" }, me.fp_address)),
         (me.pending > 0 || me.validated > 0) ? h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" },
@@ -1662,8 +1706,9 @@
   // [route, cle de texte, icone] par groupe du menu
   const MENU = [
     [null, [["", "dashboard", "home"]]],
-    ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
+    ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["watch", "watchAds", "play"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
     ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"]]],
+    ["menuCommunity", [["chat", "chat", "chat"]]],
     ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
@@ -1677,8 +1722,7 @@
 
   // Pastilles : ce qui attend le membre
   function pending() {
-    const cnt = me.window_count ?? 5;
-    const rollReady = !status?.paused && (me.retry_after || 0) <= 0 && (me.window_used ?? 0) < cnt;
+    const rollReady = !status?.paused && (me.retry_after || 0) - since() <= 0 && energyNow() >= 1;
     const questsReady = (me.challenges || []).filter((c) => !c.done && (Number(c.progress) || 0) >= c.target).length;
     const dailyReady = !me.daily_done && me.claims_today >= 1;
     const wheelReady = !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1);
@@ -1789,7 +1833,7 @@
     if (route === "games") { gameSel = null; return gamesView(); }
     const views = {
       "": dashboardView, faucet: faucetView, rewards: rewardsView, quests: questsView, tournament: () => h("div", { class: "stack" }, tournamentCard()),
-      achievements: achievementsView, promo: promoView, shop: shopView, vip: vipView, referral: referralView,
+      achievements: achievementsView, chat: chatView, watch: watchView, promo: promoView, shop: shopView, vip: vipView, referral: referralView,
       wallet: walletView, advertise: advertiseView, profile: profileView, support: supportView, faq: faqView, proofs: proofsView,
       notifications: notificationsView,
     };
@@ -1806,7 +1850,7 @@
     const actions = h("section", { class: "panel" },
       h("div", { class: "panel-title" }, t("nextActions")),
       h("div", { class: "next-list" },
-        act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? t("readyNow") : `${t("next")} ${clock(Math.max(0, me.retry_after || 0))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
+        act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? `${t("readyNow")} · ${me.energy ?? 0} ${t("energyLbl")}` : `${t("next")} ${clock(Math.max(0, (me.retry_after || 0) - since()))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
         act(p.questsReady > 0 || p.dailyReady, "flag", t("questsTitle"),
           p.questsReady || p.dailyReady ? `${p.questsReady + (p.dailyReady ? 1 : 0)} ${t("toCollect")}` : `${(me.challenges || []).filter((c) => c.done).length}/${(me.challenges || []).length}`, "#quests", "--c1:#ffd34d;--c2:#ff8f1c"),
         act(true, "eye", t("earn"), t("pickTask"), "#earn", "--c1:#45e3a6;--c2:#11a771")));
@@ -1848,6 +1892,136 @@
   }
 
   // Pages de la refonte -----------------------------------------------------------
+
+  // Chat global -------------------------------------------------------------------
+  let chatLast = 0;
+  let chatCache = [];
+  function chatView() {
+    const list = h("div", { class: "chat-list", role: "log", "aria-live": "polite" });
+    const input = h("input", { maxLength: 300, placeholder: t("chatPlaceholder"), ariaLabel: t("chatPlaceholder"), autocomplete: "off" });
+    const send = h("button", { class: "btn", type: "submit" }, icon("send"));
+    const line = (m) => h("div", { class: `chat-msg${m.me ? " me" : ""}` },
+      h("div", { class: `avatar mini${frameCls(m)}${m.vip ? " vip" : ""}` }, (m.who || "?").slice(0, 1).toUpperCase()),
+      h("div", { class: "chat-bubble" },
+        h("div", { class: "chat-head" },
+          h("b", { class: `chat-name${nameCls(m)}` }, m.me ? t("you") : m.who),
+          h("span", { class: "chat-lvl" }, `${t("lvlShort")} ${m.level}`),
+          m.vip ? h("span", { class: "chat-vip" }, icon("crown")) : null,
+          m.title && cosmeticName(m.title) ? h("span", { class: "title-tag small" }, cosmeticName(m.title)) : null,
+          h("span", { class: "row-sub" }, new Date(m.at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }))),
+        h("p", {}, m.body)));
+    const draw = (stick) => {
+      const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+      list.replaceChildren(...(chatCache.length ? chatCache.map(line) : [h("p", { class: "empty" }, t("chatEmpty"))]));
+      if (stick || atBottom) list.scrollTop = list.scrollHeight;
+    };
+    const poll = async (stick = false) => {
+      if (document.hidden || !list.isConnected) return;
+      const r = await api("chat", { after: chatLast });
+      if (!r.ok || !r.list.length) { if (stick) draw(true); return; }
+      chatCache = chatCache.concat(r.list).slice(-80);
+      chatLast = chatCache[chatCache.length - 1].id;
+      draw(stick);
+    };
+    every(() => poll(), 5000);
+    setTimeout(() => poll(true), 0);
+    const form = h("form", {
+      class: "chat-form",
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const body = input.value.trim();
+        if (!body) return;
+        send.disabled = true;
+        const r = await api("chat_send", { body });
+        send.disabled = false;
+        if (!r.ok) {
+          toast(r.code === "chat_muted" && r.until ? `${message(r)} (${new Date(r.until).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })})` : message(r), "bad");
+          return;
+        }
+        input.value = "";
+        await poll(true);
+        input.focus();
+      },
+    }, input, send);
+    return h("div", { class: "stack" },
+      h("section", { class: "panel chat" },
+        h("div", { class: "panel-title" }, h("span", { class: "live-dot" }, t("chat")), h("span", { class: "badge" }, t("chatRulesShort"))),
+        list, form,
+        h("p", { class: "note", style: "margin:10px 0 0" }, t("chatRules"))));
+  }
+
+  // Watch Ads : video recompensee, captcha a la fin, bouton « Valider la vue ».
+  function watchView() {
+    const box = h("section", { class: "panel watch" }, h("p", { class: "empty" }, "…"));
+    const codes = adCodes("watch");
+    const load = async () => {
+      const st = await api("watch_status");
+      if (!st.ok || !box.isConnected) return;
+      const head = h("div", { class: "watch-head" },
+        h("div", { class: "shop-hero-ico", style: "background:linear-gradient(145deg,#ff8cc6,#e2367f);color:#fff" }, icon("play")),
+        h("div", {}, h("h2", {}, t("watchAds")), h("p", { class: "row-sub" }, t("watchText"))),
+        h("div", { class: "watch-stats" },
+          h("div", {}, h("b", {}, `${st.left}/${st.limit}`), h("span", {}, t("watchLeft"))),
+          h("div", {}, h("b", {}, coin(), num(st.reward)), h("span", {}, t("perView")))));
+      if (!codes.length) { box.replaceChildren(head, h("div", { class: "empty" }, h("div", { class: "empty-ico" }, icon("play")), h("p", {}, t("watchNone")))); return; }
+      const wait = h("span", { class: "row-sub" });
+      const btn = h("button", { class: "btn big gold", type: "button", disabled: st.left < 1 }, st.left < 1 ? t("comeBack") : t("watchGo"));
+      let next = st.next_in;
+      if (st.left > 0 && next > 0) {
+        btn.disabled = true;
+        wait.textContent = `${t("watchNext")} ${clock(next)}`;
+        every(() => {
+          next -= 1;
+          if (next > 0) { wait.textContent = `${t("watchNext")} ${clock(next)}`; return; }
+          wait.textContent = ""; btn.disabled = false;
+        }, 1000);
+      }
+      btn.onclick = async () => {
+        btn.disabled = true;
+        const r = await api("watch_start");
+        if (!r.ok) { toast(message(r), "bad"); load(); return; }
+        playVideo(r.token, r.seconds, codes[Math.floor(Math.random() * codes.length)], st.reward);
+      };
+      box.replaceChildren(head, h("div", { class: "watch-go" }, btn, wait), h("p", { class: "note", style: "margin:12px 0 0" }, t("watchHow")));
+    };
+    // Lecteur : compteur en pause si l'onglet est cache, puis captcha et validation.
+    const playVideo = (token, secs, html, reward) => {
+      let left = secs;
+      const counter = h("b", { class: "watch-counter" }, String(left));
+      const frame = h("div", { class: "watch-frame" });
+      frame.append(document.createRange().createContextualFragment(html));
+      const foot = h("div", { class: "watch-foot" }, h("span", {}, t("watchStay")), counter);
+      const layer = h("div", { class: "frame-layer" },
+        h("div", { class: "frame-box watch-box" },
+          h("div", { class: "frame-head" }, h("b", {}, t("watchAds")), h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => { layer.remove(); load(); } }, "✕")),
+          frame, foot));
+      document.body.append(layer);
+      const id = setInterval(() => {
+        if (!layer.isConnected) { clearInterval(id); return; }
+        if (document.hidden) return;
+        left -= 1;
+        counter.textContent = String(Math.max(left, 0));
+        if (left > 0) return;
+        clearInterval(id);
+        const cap = captchaBox();
+        const ok = h("button", {
+          class: "btn gold", type: "button",
+          onclick: async () => {
+            if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+            ok.disabled = true;
+            const r = await api("watch_complete", { token, captcha: captchaToken(cap) || "dev" });
+            captchaReset(cap);
+            if (r.ok) { burst(ok, `+${tk(r.tokens)}`); toast(`${tk(r.tokens)} ${t("credited")}`, "good"); layer.remove(); await refreshMe(); load(); return; }
+            ok.disabled = false;
+            toast(message(r), "bad");
+          },
+        }, `${t("watchValidate")} +${num(reward)}`);
+        foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
+      }, 1000);
+    };
+    load();
+    return h("div", { class: "stack" }, box, adSlot("in_content"));
+  }
 
   // Bandeau d'annonce : derniere annonce du site, fermable.
   let notifCache = null;

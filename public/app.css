@@ -914,3 +914,39 @@ textarea:focus { outline: none; border-color: var(--sky); }
 .ad-header, .ad-footer, .ad-in_content, .ad-roll_top, .ad-roll_bottom, .ad-game, .ad-after_claim, .ad-side_right, .ad-side_left, .ad-list { min-height: 0; }
 .ad-header:empty, .ad-footer:empty, .ad-in_content:empty { min-height: 60px; }
 .ad-roll_top:empty, .ad-roll_bottom:empty, .ad-game:empty, .ad-after_claim:empty, .ad-side_right:empty { min-height: 100px; }
+
+/* Energie : compte a rebours sous la jauge */
+.energy-timer { display: block; margin-top: 2px; font: 600 11.5px var(--display); color: var(--sky); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Chat */
+.chat-list { height: min(60vh, 560px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 8px; }
+.chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+.chat-msg .avatar.mini { flex: none; }
+.chat-bubble { min-width: 0; max-width: 85%; padding: 8px 12px; border-radius: 4px 16px 16px 16px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+.chat-msg.me { flex-direction: row-reverse; }
+.chat-msg.me .chat-bubble { border-radius: 16px 4px 16px 16px; background: rgba(47, 107, 255, .2); border-color: rgba(79, 160, 255, .35); }
+.chat-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chat-name { font: 600 14px var(--display); color: var(--ink); }
+.chat-lvl { font: 700 11px var(--display); color: var(--gold); }
+.chat-vip svg { width: 14px; height: 14px; color: var(--gold); fill: currentColor; }
+.chat-bubble p { margin-top: 3px; overflow-wrap: anywhere; color: var(--ink); }
+.chat-form { display: flex; gap: 8px; margin-top: 10px; }
+.chat-form input { margin: 0; }
+.chat-form .btn { flex: none; padding: 0 16px; }
+.chat-form .btn svg { width: 20px; height: 20px; }
+
+/* Watch Ads */
+.watch-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.watch-head > div:nth-child(2) { flex: 1; min-width: 180px; }
+.watch-stats { display: flex; gap: 16px; }
+.watch-stats > div { text-align: center; }
+.watch-stats b { display: flex; align-items: center; justify-content: center; gap: 6px; font: 700 22px var(--display); color: var(--ink); }
+.watch-stats b .coin { width: 22px; height: 22px; }
+.watch-stats span { font-size: 12px; font-weight: 700; color: var(--muted); }
+.watch-go { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 16px; }
+.watch-go .btn { width: min(360px, 100%); }
+.watch-box { height: auto; max-height: 100%; }
+.watch-frame { flex: 1; min-height: 280px; display: grid; place-items: center; background: #000; overflow: auto; }
+.watch-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; font-weight: 700; }
+.watch-counter { font: 700 26px var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.watch-foot .task-confirm { width: 100%; }
