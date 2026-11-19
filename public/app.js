@@ -1837,7 +1837,7 @@
 
   function faucetView() {
     statsHost = h("div", {}, statsRow());
-    return h("div", { class: "stack" }, rollCard(), statsHost);
+    return h("div", { class: "stack" }, statsHost, rollCard());
   }
 
   function rewardsView() {
