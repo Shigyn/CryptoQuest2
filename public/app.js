@@ -8,7 +8,7 @@
 
   // Textes : [francais, anglais]
   const W = {
-    gateSub: ["Tirages gratuits, mini-jeux et retraits instantanés", "Free rolls, mini-games and instant withdrawals"],
+    gateSub: ["Tirages gratuits, tâches payées et retraits instantanés", "Free rolls, paid tasks and instant withdrawals"],
     fpField: ["Ton e-mail, pseudo ou adresse FaucetPay", "Your FaucetPay email, username or address"],
     enter: ["Entrer et jouer", "Enter and play"],
     passwordShort: ["Mot de passe", "Password"],
@@ -24,7 +24,7 @@
     won: ["gagnés !", "won!"], free: ["Gratuit, sans mise. Fais 99 999 et tu décroches le jackpot !", "Free, no stake. Hit 99,999 to win the jackpot!"],
     rollHead: ["Tente ta chance !", "Try your luck!"], lastWins: ["Derniers gains", "Latest wins"],
     streakLbl: ["jours de suite", "day streak"], energyLbl: ["tirages prêts", "rolls ready"], prizes: ["Les gains", "Prizes"],
-    ptc: ["Pubs", "Ads"], links: ["Liens", "Links"], offers: ["Offres", "Offers"],
+    ptc: ["PTC", "PTC"], links: ["Shortlinks", "Shortlinks"], offers: ["Offres", "Offers"],
     pendingNote: ["Ces gains sont vérifiés, puis partent seuls sur FaucetPay au paiement de chaque heure.", "These earnings are reviewed, then sent to FaucetPay automatically every hour."],
     pickTask: ["Choisis une tâche", "Pick a task"], ptcShort: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
     linksShort: ["Passe un lien raccourci jusqu’au bout.", "Go through a short link."],
@@ -71,12 +71,12 @@
     rwTourney: ["Classement gratuit, prix chaque lundi.", "Free leaderboard, prizes every Monday."], rwPromo: ["Des Coins offerts avec un code.", "Free Coins with a code."],
     notifications: ["Notifications", "Notifications"], noNotif: ["Rien de neuf pour l'instant.", "Nothing new yet."],
     achText: ["Débloque des badges en jouant, récupère la prime de chacun.", "Unlock badges as you play and collect each bonus."], unlocked: ["débloqués", "unlocked"],
-    ak_claims: ["Tirages", "Rolls"], ak_streak: ["Série", "Streak"], ak_level: ["Niveaux", "Levels"], ak_ptc: ["Pubs", "Ads"], ak_links: ["Liens", "Links"],
+    ak_claims: ["Tirages", "Rolls"], ak_streak: ["Série", "Streak"], ak_level: ["Niveaux", "Levels"], ak_ptc: ["PTC", "PTC"], ak_links: ["Shortlinks", "Shortlinks"],
     ak_surveys: ["Sondages", "Surveys"], ak_offers: ["Offres", "Offers"], ak_referrals: ["Parrainage", "Referrals"], ak_withdrawals: ["Retraits", "Withdrawals"], ak_quests: ["Quêtes", "Quests"],
     redeem: ["Valider le code", "Redeem code"], promoText: ["Les codes sont publiés sur notre Telegram et lors des événements. Un code ne sert qu'une fois par compte.", "Codes are posted on our Telegram and during events. Each code works once per account."],
     active: ["actif", "active"], inactive: ["inactif", "inactive"], noRef: ["Aucun filleul pour le moment. Partage ton lien !", "No referrals yet. Share your link!"],
     shareText1: ["Je gagne des cryptos gratuitement sur ce faucet, retrait instantané sur FaucetPay :", "I earn free crypto on this faucet, instant withdrawal to FaucetPay:"],
-    shareText2: ["Tirages gratuits, sondages payés, jeux et jackpot de {jp} :", "Free rolls, paid surveys, games and a {jp} jackpot:"],
+    shareText2: ["Tirages gratuits, sondages payés, PTC et jackpot de {jp} :", "Free rolls, paid surveys, PTC and a {jp} jackpot:"],
     shareReady: ["Messages prêts à partager", "Ready-to-share messages"], myRefs: ["Mes filleuls", "My referrals"],
     refRules: ["Un filleul est « actif » s'il a fait un tirage dans les 7 derniers jours. Les faux comptes sont bannis avec leur parrain.", "A referral is “active” if they rolled in the last 7 days. Fake accounts are banned along with their referrer."],
     ticketSubject: ["Sujet", "Subject"], ticketBody: ["Ton message", "Your message"], ticketReply: ["Répondre…", "Reply…"],
@@ -84,7 +84,7 @@
     noTickets: ["Aucune demande.", "No tickets."], newTicket: ["Nouvelle demande", "New ticket"], myTickets: ["Mes demandes", "My tickets"],
     ticketText: ["Une question, un problème de retrait ? On répond en général sous 24 h. Regarde d'abord la", "A question or a withdrawal issue? We usually answer within 24 h. Check the"],
     ticketSent: ["Demande envoyée.", "Ticket sent."],
-    faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet : tu gagnes des Coins gratuitement (tirages, pubs, liens, sondages, offres, jeux) et tu les retires en crypto sur ton compte FaucetPay.", "A faucet: you earn Coins for free (rolls, ads, links, surveys, offers, games) and withdraw them as crypto to your FaucetPay account."],
+    faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet : tu gagnes des Coins gratuitement (tirages, PTC, shortlinks, sondages, offres) et tu les retires en crypto sur ton compte FaucetPay.", "A faucet: you earn Coins for free (rolls, PTC, shortlinks, surveys, offers) and withdraw them as crypto to your FaucetPay account."],
     faq_pay_q: ["Comment je suis payé ?", "How do I get paid?"], faq_pay_a: ["Les Coins disponibles se retirent tout de suite vers FaucetPay. Les gains des tâches sont vérifiés puis partent seuls à chaque heure.", "Available Coins are withdrawn instantly to FaucetPay. Task earnings are reviewed and then sent automatically every hour."],
     faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Non, sauf le minimum propre à certaines cryptos sur FaucetPay. L'USDT accepte les plus petits montants.", "No, except the minimum some coins have on FaucetPay. USDT accepts the smallest amounts."],
     faq_pending_q: ["Pourquoi mes gains sont « à valider » ?", "Why are my earnings “under review”?"], faq_pending_a: ["Les pubs, liens, sondages et offres sont contrôlés contre la triche avant d'être payés. Ça prend en général quelques heures.", "Ads, links, surveys and offers are checked for cheating before payout. It usually takes a few hours."],
@@ -93,19 +93,19 @@
     faq_ref_q: ["Comment marche le parrainage ?", "How do referrals work?"], faq_ref_a: ["Tu touches un pourcentage de tout ce que gagnent tes filleuls, à vie, sans que ça leur soit retiré.", "You earn a percentage of everything your referrals earn, for life, without taking anything from them."],
     faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Zéro pub, un bonus fixe sur les tâches et une part de parrainage plus élevée. Jamais de tirage ni de chance de gain en plus.", "No ads, a fixed bonus on tasks and a higher referral share. Never extra rolls or winning chances."],
     faq_ads_q: ["Je peux faire de la pub ici ?", "Can I advertise here?"], faq_ads_a: ["Oui : crée une campagne depuis l'espace annonceur, en crypto ou avec tes Coins. Chaque vue est une vraie visite.", "Yes: create a campaign from the advertiser area, in crypto or with your Coins. Every view is a real visit."],
-    faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Tous les jeux sont gratuits, sans mise. Tu ne peux jamais perdre tes Coins en jouant.", "No. Every game is free, with no stake. You can never lose your Coins by playing."],
+    faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Le tirage est gratuit, sans mise : tu ne peux jamais perdre tes Coins.", "No. The roll is free, with no stake: you can never lose your Coins."],
     noProofs: ["Les premiers paiements apparaîtront ici.", "The first payouts will show here."],
     proofsText: ["Chaque retrait payé, en temps réel. Les adresses sont masquées.", "Every paid withdrawal, in real time. Addresses are masked."],
-    simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["Pubs par jour", "Ads per day"],
-    simLinks: ["Liens par jour", "Links per day"], simSurveys: ["Sondages par jour", "Surveys per day"], simDay: ["Par jour", "Per day"], simMonth: ["Par mois", "Per month"],
+    simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["PTC par jour", "PTC per day"],
+    simLinks: ["Shortlinks par jour", "Shortlinks per day"], simSurveys: ["Sondages par jour", "Surveys per day"], simDay: ["Par jour", "Per day"], simMonth: ["Par mois", "Per month"],
     simNote: ["Estimation basée sur les récompenses actuelles du site. Les sondages varient selon le pays et la durée.", "Estimate based on the site's current rewards. Surveys vary by country and length."],
     w_faucet: ["Des tirages gratuits toute la journée, jackpot de {jp}.", "Free rolls all day long, {jp} jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
-    w_links: ["Passe des liens raccourcis.", "Go through short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
+    w_links: ["Passe des liens raccourcis payés.", "Go through paid short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
     w_offers: ["Jeux, applis, inscriptions.", "Games, apps, sign-ups."], w_games: ["Roue, Mines et Dice, gratuits.", "Wheel, Mines and Dice, free."],
     w_quests: ["Quêtes, succès, tournoi chaque semaine.", "Quests, achievements, weekly tournament."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
     heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
     heroTitle: ["Gagne des cryptos gratuitement, en jouant.", "Earn free crypto, the fun way."],
-    heroLead: ["Tirages gratuits, sondages payés, mini-jeux, quêtes et tournoi. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, mini-games, quests and a tournament. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
+    heroLead: ["Tirages gratuits, sondages payés, PTC, shortlinks, quêtes et tournoi. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, PTC, shortlinks, quests and a tournament. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
     members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
     waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
@@ -1663,14 +1663,13 @@
   const MENU = [
     [null, [["", "dashboard", "home"]]],
     ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
-    ["menuGames", [["wheel", "wheel", "wheel"], ["mines", "mines", "grid"], ["dice", "dice", "dice"]]],
     ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"], ["tournament", "tourney", "star"], ["promo", "promo", "gift"]]],
     ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
   ];
-  const ROUTES = new Set(MENU.flatMap(([, items]) => items.map(([k]) => k)).concat(["earn", "games", "rewards", "proofs", "notifications"]));
-  const TABS = [["", "home", "home"], ["earn", "earn", "earn"], ["games", "games", "games"], ["rewards", "rewardsShort", "trophy"]];
+  const ROUTES = new Set(MENU.flatMap(([, items]) => items.map(([k]) => k)).concat(["earn", "rewards", "proofs", "notifications"]));
+  const TABS = [["", "home", "home"], ["faucet", "faucet", "bolt"], ["earn", "earn", "earn"], ["rewards", "rewardsShort", "trophy"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "").split("?")[0];
     return ROUTES.has(r) ? r : "";
@@ -1750,10 +1749,10 @@
     const tabs = h("nav", { class: "tabbar", ariaLabel: "Menu" },
       TABS.map(([k, label, ico]) => h("a", {
         class: "tab", href: `#${k}`,
-        "aria-current": (k === route || (k === "earn" && (EARN_SUB.includes(route) || route === "faucet")) || (k === "games" && GAME_SUB.includes(route))
+        "aria-current": (k === route || (k === "earn" && EARN_SUB.includes(route))
           || (k === "rewards" && ["quests", "achievements", "tournament", "promo"].includes(route))) ? "page" : undefined,
       }, icon(ico), h("span", { class: "tab-label" }, t(label)),
-        (k === "earn" && p.rollReady) || (k === "games" && (p.wheel || p.mines || p.dice)) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
+        (k === "faucet" && p.rollReady) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
       h("button", { type: "button", class: "tab", onclick: openDrawer }, icon("menu"), h("span", { class: "tab-label" }, t("more"))));
     return h("div", { class: "app" },
       ticker(),
@@ -1804,15 +1803,12 @@
       h("span", { class: "next-ico", style: tone }, icon(ico)),
       h("span", { class: "next-text" }, h("b", {}, title), h("span", {}, sub)),
       h("span", { class: "chev" }, "›"));
-    const wheelLeft = me.wheel_done ? Math.ceil((me.wheel_retry_after || 0) / 60) : 0;
     const actions = h("section", { class: "panel" },
       h("div", { class: "panel-title" }, t("nextActions")),
       h("div", { class: "next-list" },
         act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? t("readyNow") : `${t("next")} ${clock(Math.max(0, me.retry_after || 0))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
         act(p.questsReady > 0 || p.dailyReady, "flag", t("questsTitle"),
           p.questsReady || p.dailyReady ? `${p.questsReady + (p.dailyReady ? 1 : 0)} ${t("toCollect")}` : `${(me.challenges || []).filter((c) => c.done).length}/${(me.challenges || []).length}`, "#quests", "--c1:#ffd34d;--c2:#ff8f1c"),
-        act(p.wheelReady, "wheel", t("wheel"), p.wheelReady ? t("readyNow") : me.wheel_done ? `${t("wheelNext")} ${Math.floor(wheelLeft / 60)} h ${wheelLeft % 60} min` : t("needRoll"), "#wheel", "--c1:#ffd34d;--c2:#ff5f8f"),
-        act(Boolean(p.mines || p.dice), "games", t("games"), `${t("mines")} ${me.games?.mines_left ?? 0} · ${t("dice")} ${me.games?.dice_left ?? 0}`, "#games", "--c1:#b48cff;--c2:#6b3dff"),
         act(true, "eye", t("earn"), t("pickTask"), "#earn", "--c1:#45e3a6;--c2:#11a771")));
     const payoutLine = h("b", {}, nextPayout());
     every(() => { payoutLine.textContent = nextPayout(); }, 1000);
@@ -2085,7 +2081,7 @@
   function landing(route) {
     const s = status || {};
     const ways = [["bolt", "faucet", "w_faucet"], ["eye", "ptc", "w_ptc"], ["link", "links", "w_links"], ["quests", "surveys", "w_surveys"],
-      ["gift", "offers", "w_offers"], ["games", "games", "w_games"], ["flag", "quests", "w_quests"], ["profile", "referral", "w_ref"]];
+      ["gift", "offers", "w_offers"], ["flag", "quests", "w_quests"], ["profile", "referral", "w_ref"]];
     const pub = { proofs: proofsView, faq: faqView, classement: publicBoard };
     const body = pub[route]
       ? h("div", { class: "pub-page" }, h("a", { class: "btn ghost small", href: "#", style: "align-self:flex-start;width:auto" }, `← ${t("back")}`), pub[route]())
