@@ -102,10 +102,10 @@
     w_faucet: ["Des tirages gratuits toute la journée, jackpot de {jp}.", "Free rolls all day long, {jp} jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
     w_links: ["Passe des liens raccourcis payés.", "Go through paid short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
     w_offers: ["Jeux, applis, inscriptions.", "Games, apps, sign-ups."], w_games: ["Roue, Mines et Dice, gratuits.", "Wheel, Mines and Dice, free."],
-    w_quests: ["Quêtes, succès, tournoi chaque semaine.", "Quests, achievements, weekly tournament."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
+    w_quests: ["Quêtes du jour et de la semaine, succès.", "Daily and weekly quests, achievements."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
     heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
     heroTitle: ["Gagne des cryptos gratuitement, en jouant.", "Earn free crypto, the fun way."],
-    heroLead: ["Tirages gratuits, sondages payés, PTC, shortlinks, quêtes et tournoi. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, PTC, shortlinks, quests and a tournament. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
+    heroLead: ["Tirages gratuits, sondages payés, PTC, shortlinks et quêtes. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, PTC, shortlinks and quests. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
     members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
     waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
@@ -1663,7 +1663,7 @@
   const MENU = [
     [null, [["", "dashboard", "home"]]],
     ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
-    ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"], ["tournament", "tourney", "star"], ["promo", "promo", "gift"]]],
+    ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"], ["promo", "promo", "gift"]]],
     ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
@@ -1750,7 +1750,7 @@
       TABS.map(([k, label, ico]) => h("a", {
         class: "tab", href: `#${k}`,
         "aria-current": (k === route || (k === "earn" && EARN_SUB.includes(route))
-          || (k === "rewards" && ["quests", "achievements", "tournament", "promo"].includes(route))) ? "page" : undefined,
+          || (k === "rewards" && ["quests", "achievements", "promo"].includes(route))) ? "page" : undefined,
       }, icon(ico), h("span", { class: "tab-label" }, t(label)),
         (k === "faucet" && p.rollReady) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
       h("button", { type: "button", class: "tab", onclick: openDrawer }, icon("menu"), h("span", { class: "tab-label" }, t("more"))));
@@ -1763,7 +1763,7 @@
       h("div", { class: "layout" },
         h("aside", { class: "side" }, sideMenu(route), adSlot("side_left")),
         main,
-        h("aside", { class: "rail" }, adSlot("side_right"), liveFeed(), railBoard())),
+        h("aside", { class: "rail" }, adSlot("side_right"), liveFeed())),
       adSlot("sticky_mobile"),
       tabs);
   }
@@ -1840,7 +1840,6 @@
     const tiles = [
       ["quests", "flag", t("questsTitle"), t("rwQuests"), "--c1:#ffd34d;--c2:#ff8f1c"],
       ["achievements", "trophy", t("achievements"), t("rwAch"), "--c1:#b48cff;--c2:#6b3dff"],
-      ["tournament", "star", t("tourney"), t("rwTourney"), "--c1:#4fd2ff;--c2:#2f6bff"],
       ["promo", "gift", t("promo"), t("rwPromo"), "--c1:#ff8cc6;--c2:#e2367f"],
     ];
     return h("div", { class: "stack" }, h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("rewardsShort")),
@@ -2108,7 +2107,7 @@
       ticker(),
       h("header", { class: "topbar" },
         h("a", { class: "logo", href: "#" }, coinSvg(), h("span", {}, cfg.SITE_NAME)),
-        h("nav", { class: "pub-nav" }, h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#classement" }, t("tourney")), h("a", { href: "#faq" }, t("faq"))),
+        h("nav", { class: "pub-nav" }, h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq"))),
         h("a", { class: "btn small", href: "#", onclick: () => setTimeout(() => document.querySelector(".gate-card input")?.focus(), 50) }, t("enter"))),
       h("main", { class: "pub-main" }, body),
       h("footer", { class: "pub-foot" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq")),
