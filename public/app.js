@@ -1663,7 +1663,7 @@
   const MENU = [
     [null, [["", "dashboard", "home"]]],
     ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
-    ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"], ["promo", "promo", "gift"]]],
+    ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"]]],
     ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
@@ -1750,7 +1750,7 @@
       TABS.map(([k, label, ico]) => h("a", {
         class: "tab", href: `#${k}`,
         "aria-current": (k === route || (k === "earn" && EARN_SUB.includes(route))
-          || (k === "rewards" && ["quests", "achievements", "promo"].includes(route))) ? "page" : undefined,
+          || (k === "rewards" && ["quests", "achievements"].includes(route))) ? "page" : undefined,
       }, icon(ico), h("span", { class: "tab-label" }, t(label)),
         (k === "faucet" && p.rollReady) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
       h("button", { type: "button", class: "tab", onclick: openDrawer }, icon("menu"), h("span", { class: "tab-label" }, t("more"))));
@@ -1840,7 +1840,6 @@
     const tiles = [
       ["quests", "flag", t("questsTitle"), t("rwQuests"), "--c1:#ffd34d;--c2:#ff8f1c"],
       ["achievements", "trophy", t("achievements"), t("rwAch"), "--c1:#b48cff;--c2:#6b3dff"],
-      ["promo", "gift", t("promo"), t("rwPromo"), "--c1:#ff8cc6;--c2:#e2367f"],
     ];
     return h("div", { class: "stack" }, h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("rewardsShort")),
       h("div", { class: "game-menu four" }, tiles.map(([k, ico, name, text, tone]) => h("a", { class: "game-tile", href: `#${k}` },
