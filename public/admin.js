@@ -234,6 +234,8 @@ const FIELDS = [
   ["boost_price_tokens", `Boutique : prix du boost (${TK})`],
   ["boost_percent", "Boutique : bonus du boost sur tâches, bonus quotidien et quêtes (%)"],
   ["boost_hours", "Boutique : durée du boost (heures)"],
+  ["level_bonus_every", "Bonus de niveau : +1 Coin par tirage tous les N niveaux"],
+  ["level_bonus_max", "Bonus de niveau : maximum (Coins par tirage)"],
 ];
 
 function settingsTab() {
@@ -243,6 +245,8 @@ function settingsTab() {
   const prizeList = () => prizes.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const mines = h("input", { value: (s.mines_rewards || []).join(", "), required: true, pattern: "[0-9 ,]+" });
   const tourney = h("input", { value: (s.tournament_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const streak = h("input", { value: (s.daily_streak_rewards || []).join(", "), required: true, pattern: "[0-9 ,]+" });
+  const streakList = () => streak.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const tourneyList = () => tourney.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const minesList = () => mines.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   return h("div", { class: "stack" },
@@ -257,13 +261,14 @@ function settingsTab() {
           if (ml.length < 1 || ml.length > 20) { errorText = "Mines doit avoir entre 1 et 20 gains."; render(); return; }
           const tl = tourneyList();
           if (tl.length < 1 || tl.length > 50) { errorText = "Le tournoi doit avoir entre 1 et 50 prix."; render(); return; }
-          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list, mines_rewards: ml, tournament_prizes: tl } }));
+          act(() => api("update_settings", { settings: { ...Object.fromEntries(FIELDS.map(([k]) => [k, Number(inputs[k].value)])), wheel_prizes: list, mines_rewards: ml, tournament_prizes: tl, daily_streak_rewards: streakList() } }));
         },
       },
         h("div", { class: "grid" }, FIELDS.map(([k, label]) => h("label", { class: "field" }, label, inputs[k]))),
         h("label", { class: "field" }, `Cases de la roue du jour (${TK}, séparées par des virgules, chaque case a la même chance)`, prizes),
         h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Gain moyen actuel : ${(prizeList().reduce((a, b) => a + b, 0) / Math.max(prizeList().length, 1)).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${TK} par membre et par jour.`),
         h("label", { class: "field" }, `Mines : gain selon le nombre de cases ouvertes (${TK}, séparés par des virgules)`, mines),
+        h("label", { class: "field" }, `Bonus quotidien : récompense jour 1, jour 2… de la série (${TK}, séparés par des virgules ; le cycle recommence ensuite)`, streak),
         h("label", { class: "field" }, `Tournoi de la semaine : prix par place, de la 1re à la dernière payée (${TK}, séparés par des virgules)`, tourney),
         h("p", { class: "muted", style: "margin:-4px 0 12px" }, `Coût par semaine : ${fmt(tourneyList().reduce((a, b) => a + b, 0))} ${TK} = ${money(tourneyList().reduce((a, b) => a + b, 0) / s.tokens_per_eur)}.`),
         h("button", { class: "btn" }, "Enregistrer les réglages"))),
@@ -296,7 +301,7 @@ function addForm(fields, label, onSave) {
   // type : "text", "number", "url", ou une liste [valeur, libelle] pour un menu deroulant.
   const inputs = fields.map(([key, name, type, value]) => [key, Array.isArray(type)
     ? h("select", {}, type.map(([v, l]) => h("option", { value: v, selected: v === value }, l)))
-    : h("input", { type: type || "text", required: true, value: value ?? "", step: "any", min: type === "number" ? "0" : undefined })]);
+    : h("input", { type: type || "text", required: !String(name).includes("facultatif"), value: value ?? "", step: "any", min: type === "number" ? "0" : undefined })]);
   return h("form", {
     style: "margin-top:14px",
     onsubmit: (e) => {
@@ -331,6 +336,7 @@ function contentTab() {
       addForm([
         ["title", "Titre"], ["url", "Adresse de la pub (https://…)", "url"], ["reward_tokens", `Récompense (${TK})`, "number", 10],
         ["duration_seconds", "Durée (secondes)", "number", 10], ["max_views", "Nombre de vues payées", "number", 1000], ["price_eur_per_view", "Ce que paie l'annonceur par vue (€)", "number", 0.002],
+        ["kind", "Format", [["window", "Nouvel onglet"], ["iframe", "Dans la page"], ["video", "Vidéo YouTube"]], "window"],
       ], "Ajouter la campagne", (item) => api("save_ptc", { item }))),
     card("Liens raccourcis",
       table(["Réseau", "Récompense", "Par jour", "Revenu par vue", "État", ""], data.shortlinks.map((p) => [
@@ -346,18 +352,24 @@ function contentTab() {
         saveButton(o.kind === "surveys" ? "Sondages ⇄" : "Offres ⇄", () => api("save_offerwall", { item: { code: o.code, kind: o.kind === "surveys" ? "offers" : "surveys" } }), "btn small ghost"),
         h("td", { class: "mono" }, o.reversed_status),
         h("td", { class: "mono wrap" }, `${postbackUrl}?wall=${o.code}&secret=${o.postback_secret}&user={USER}&tx={TX}&usd={MONTANT}&status={STATUT}`),
-        statePill(o.enabled), toggle(o, "save_offerwall", "code"),
+        h("div", { class: "row" }, statePill(o.enabled), Number(o.bonus_percent) > 0 ? h("span", { class: "pill good" }, `+${Number(o.bonus_percent)} %`) : null),
+        h("div", { class: "row" }, toggle(o, "save_offerwall", "code"),
+          saveButton("Bonus %", () => {
+            const v = prompt(`Bonus d'événement sur ${o.name} (en %, 0 pour l'arrêter)`, String(Number(o.bonus_percent) || 0));
+            if (v === null) return Promise.resolve();
+            return api("save_offerwall", { item: { code: o.code, bonus_percent: Math.max(0, Math.min(200, Number(v) || 0)) } });
+          }, "btn small ghost")),
       ]), "Aucun offerwall pour le moment."),
       h("div", { class: "notice info", style: "margin-top:12px" }, "Dans l'adresse de retour, remplace {USER}, {TX}, {MONTANT} et {STATUT} par les variables du réseau : identifiant du membre, identifiant de la transaction, gain en dollars, statut. Une annulation est reconnue par le statut indiqué, ou par un montant négatif."),
       addForm([
         ["code", "Code (sans espace)"], ["name", "Nom"], ["kind", "Carte dans Gagner", WALL_KINDS, "offers"], ["iframe_url", "Adresse du mur, avec {user} à la place du membre"], ["postback_secret", "Secret choisi par toi"],
         ["reversed_status", "Valeur du statut quand le réseau annule une offre", "text", "reversed"],
       ], "Ajouter l'offerwall", (item) => api("save_offerwall", { item }))),
-    card("Quêtes du jour",
-      table(["Type", "Objectif", "Récompense", "État", ""], data.challenges.map((c) => [
-        (GOALS.find(([g]) => g === c.goal) || GOALS[0])[1], fmt(c.target_claims), `${fmt(c.reward_tokens)} ${TK}`, statePill(c.enabled), toggle(c, "save_challenge"),
+    card("Quêtes",
+      table(["Période", "Type", "Objectif", "Récompense", "État", ""], data.challenges.map((c) => [
+        c.period === "week" ? "Semaine" : "Jour", (GOALS.find(([g]) => g === c.goal) || GOALS[0])[1], fmt(c.target_claims), `${fmt(c.reward_tokens)} ${TK}`, statePill(c.enabled), toggle(c, "save_challenge"),
       ]), "Aucune quête."),
-      addForm([["goal", "Type", GOALS, "claims"], ["target_claims", "Objectif à atteindre", "number", 10], ["reward_tokens", `Récompense (${TK})`, "number", 5]],
+      addForm([["period", "Période", [["day", "Jour"], ["week", "Semaine"]], "day"], ["goal", "Type", GOALS, "claims"], ["target_claims", "Objectif à atteindre", "number", 10], ["reward_tokens", `Récompense (${TK})`, "number", 5]],
         "Ajouter le défi", (item) => api("save_challenge", { item }))));
 }
 
@@ -455,6 +467,91 @@ function simulatorTab() {
     out, form);
 }
 
+// Refonte : emplacements pub, animation (codes promo, annonces), support ------------
+const AD_SLOTS = [
+  ["header", "En-tête", "728×90 / 320×50", "toutes les pages"],
+  ["side_right", "Colonne droite", "160×600 ou 300×600", "grand écran"],
+  ["side_left", "Sous le menu", "160×600", "très grand écran"],
+  ["roll_top", "Au-dessus du tirage", "300×250", "Faucet"],
+  ["roll_bottom", "Sous le tirage", "300×250", "Faucet"],
+  ["after_claim", "Après un gain", "300×250", "Faucet"],
+  ["in_content", "Dans le contenu", "468×60 / 300×100", "tableau de bord, Gagner, Jeux, Quêtes"],
+  ["list", "Carte sponsorisée", "natif", "liste des pubs PTC (toutes les 6 cartes)"],
+  ["game", "Sous les jeux", "300×250", "Roue, Mines, Dice"],
+  ["footer", "Pied de page", "728×90 / 320×100", "toutes les pages"],
+  ["sticky_mobile", "Bandeau mobile collant", "320×50", "mobile, fermable"],
+];
+
+function adsTab() {
+  const slots = data.settings.ad_slots || {};
+  const seen = data.ad_impressions || {};
+  const areas = Object.fromEntries(AD_SLOTS.map(([k]) => [k, h("textarea", {
+    rows: 3, style: "font-family:var(--mono);font-size:12px", placeholder: "<iframe data-aa=… ou <script…",
+    value: (slots[k] || []).join("\n\n---\n\n"),
+  })]));
+  return h("div", { class: "stack" },
+    card("Emplacements pub",
+      h("p", { class: "muted", style: "margin-bottom:12px" }, "Colle le code fourni par le réseau (A-Ads, Coinzilla, Bitmedia…). Plusieurs codes pour un même emplacement : sépare-les par une ligne « --- », ils tournent au hasard. Vide = emplacement masqué (ou « Ta pub ici » pour les emplacements principaux). Les VIP ne voient aucune pub."),
+      h("form", {
+        onsubmit: (e) => {
+          e.preventDefault();
+          const out = {};
+          for (const [k] of AD_SLOTS) {
+            const codes = areas[k].value.split(/\n\s*---\s*\n/).map((x) => x.trim()).filter(Boolean);
+            if (codes.length) out[k] = codes;
+          }
+          act(() => api("save_ads", { slots: out }));
+        },
+      },
+        h("div", { class: "table-wrap" }, h("table", {},
+          h("thead", {}, h("tr", {}, ["Emplacement", "Format", "Où", "Affichages 7 j", "Code(s)"].map((x) => h("th", {}, x)))),
+          h("tbody", {}, AD_SLOTS.map(([k, name, size, where]) => h("tr", {},
+            h("td", {}, h("b", {}, name), h("div", { class: "hint mono" }, k)), h("td", {}, size), h("td", { class: "wrap" }, where),
+            h("td", { class: "num" }, fmt(seen[k] || 0)), h("td", { style: "min-width:280px" }, areas[k])))))),
+        h("button", { class: "btn", style: "margin-top:12px" }, "Enregistrer les emplacements"))));
+}
+
+function animationTab() {
+  const text = h("input", { required: true, maxLength: 200, placeholder: "Nouveau mur de sondages : +20 % ce week-end !" });
+  const textEn = h("input", { maxLength: 200, placeholder: "(anglais, facultatif)" });
+  const link = h("input", { maxLength: 100, placeholder: "#surveys" });
+  return h("div", { class: "stack" },
+    card("Annonce à tous les membres",
+      h("p", { class: "muted", style: "margin-bottom:10px" }, "Apparaît en bandeau sur le tableau de bord (7 jours) et dans la cloche de chaque membre."),
+      h("form", { onsubmit: (e) => { e.preventDefault(); act(() => api("announce", { item: { text: text.value, text_en: textEn.value, link: link.value } })); } },
+        h("div", { class: "grid" },
+          h("label", { class: "field" }, "Texte", text), h("label", { class: "field" }, "Texte anglais", textEn), h("label", { class: "field" }, "Lien (facultatif)", link)),
+        h("button", { class: "btn" }, "Publier l'annonce"))),
+    card("Codes promo",
+      table(["Code", "Récompense", "Utilisations", "Expire", "État", ""], (data.promos || []).map((p) => [
+        h("td", { class: "mono" }, p.code), `${fmt(p.tokens)} ${TK}`, `${fmt(p.uses)} / ${fmt(p.max_uses)}`,
+        p.expires_at ? new Date(p.expires_at).toLocaleString("fr-FR") : "—", statePill(p.enabled), toggle(p, "save_promo", "code"),
+      ]), "Aucun code."),
+      addForm([["code", "Code (lettres et chiffres)"], ["tokens", `Récompense (${TK})`, "number", 100], ["max_uses", "Utilisations max", "number", 100],
+        ["expires_at", "Expire le (facultatif)", "datetime-local", ""]], "Créer le code", (item) => api("save_promo", { item: { ...item, expires_at: item.expires_at ? new Date(item.expires_at).toISOString() : "" } }))));
+}
+
+function supportTab() {
+  const box = h("div", {}, h("p", { class: "muted" }, "Chargement…"));
+  const filter = h("select", { style: "width:auto", onchange: () => load() },
+    [["open", "En attente"], ["answered", "Répondus"], ["closed", "Fermés"], ["", "Tous"]].map(([v, l]) => h("option", { value: v }, l)));
+  const load = () => api("tickets", { status: filter.value }).then((r) => {
+    box.replaceChildren(...(r.list.length ? r.list.map((tk_) => {
+      const reply = h("textarea", { rows: 3, placeholder: "Ta réponse…" });
+      return h("div", { class: "soft", style: "margin-bottom:10px" },
+        h("div", { class: "row between" }, h("b", {}, `#${tk_.id} · ${tk_.subject}`), h("span", { class: "pill" }, tk_.status)),
+        h("div", { class: "muted" }, `${tk_.member} · ${new Date(tk_.updated_at).toLocaleString("fr-FR")}`),
+        (tk_.messages || []).map((m) => h("p", { style: `margin-top:8px;white-space:pre-wrap;padding:8px 10px;border-radius:8px;background:${m.admin ? "var(--primary-soft)" : "rgba(255,255,255,.04)"}` },
+          h("b", {}, m.admin ? "Toi : " : "Membre : "), m.body)),
+        tk_.status !== "closed" ? h("div", { style: "margin-top:8px" }, reply, h("div", { class: "row", style: "margin-top:8px" },
+          saveButton("Répondre", () => api("ticket_reply", { id: tk_.id, body: reply.value }).then(load)),
+          saveButton("Répondre et fermer", () => api("ticket_reply", { id: tk_.id, body: reply.value, close: true }).then(load), "btn small ghost"))) : null);
+    }) : [h("p", { class: "muted" }, "Aucune demande.")]));
+  });
+  load();
+  return h("div", { class: "stack" }, card(`Support · ${fmt(data.tickets_open || 0)} en attente`, h("div", { style: "margin-bottom:12px" }, filter), box));
+}
+
 // Structure ----------------------------------------------------------------
 const TABS = [
   ["overview", "Vue d'ensemble", overviewTab],
@@ -463,6 +560,9 @@ const TABS = [
   ["users", "Membres", usersTab],
   ["settings", "Réglages", settingsTab],
   ["content", "PTC, liens, offres", contentTab],
+  ["ads", "Emplacements pub", adsTab],
+  ["animation", "Codes promo et annonces", animationTab],
+  ["support", "Support", supportTab],
   ["simulator", "Simulateur", simulatorTab],
 ];
 

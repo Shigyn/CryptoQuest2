@@ -185,6 +185,13 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
 
   // Sans compte
   if (b.action === "status") return json(d, 200, await d.rpc("public_status"));
+  if (b.action === "proofs") return json(d, 200, { ok: true, proofs: await d.rpc("public_proofs") });
+  if (b.action === "board_public") return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: null })) });
+  if (b.action === "ad_seen") {
+    const slots = Array.isArray(b.slots) ? b.slots.map(String).slice(0, 20) : [];
+    if (slots.length) await d.rpc("ad_seen", { p_slots: slots });
+    return json(d, 200, { ok: true });
+  }
 
   // Une seule entree : l'adresse FaucetPay. Compte cree a la premiere visite.
   // Mot de passe demande seulement si le membre en a choisi un.
@@ -295,6 +302,7 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
         p_url: String(b.url ?? "").trim(),
         p_duration: Number(b.duration),
         p_views: Number(b.views),
+        p_kind: ["window", "iframe", "video"].includes(String(b.kind)) ? String(b.kind) : "window",
       });
       if (!r.ok) return result(d, r);
       // Formulaire de paiement heberge par FaucetPay : le navigateur l'envoie tel quel.
@@ -365,8 +373,46 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
         p_duration: Number(b.duration),
         p_views: Number(b.views),
         p_ip_hash: ipHash,
+        p_kind: ["window", "iframe", "video"].includes(String(b.kind)) ? String(b.kind) : "window",
       }));
     }
+
+    case "achievements":
+      return json(d, 200, { ok: true, list: await d.rpc("achievements_list", { p_user: userId }) });
+
+    case "claim_achievement":
+      return result(d, await d.rpc("claim_achievement", { p_user: userId, p_code: String(b.code ?? ""), p_ip_hash: ipHash }));
+
+    case "redeem_promo":
+      if (!(await captchaOk())) return refuse(d, 400, "captcha");
+      return result(d, await d.rpc("redeem_promo", { p_user: userId, p_code: String(b.code ?? "").slice(0, 40), p_ip_hash: ipHash }));
+
+    case "notifications":
+      return json(d, 200, { ok: true, list: await d.rpc("list_notifications", { p_user: userId }) });
+
+    case "read_notifications":
+      return json(d, 200, await d.rpc("read_notifications", { p_user: userId }));
+
+    case "tickets":
+      return json(d, 200, { ok: true, list: await d.rpc("ticket_list", { p_user: userId }) });
+
+    case "ticket_create":
+      return result(d, await d.rpc("ticket_create", { p_user: userId, p_subject: String(b.subject ?? ""), p_body: String(b.body ?? "") }));
+
+    case "ticket_reply":
+      return result(d, await d.rpc("ticket_reply", { p_user: userId, p_id: Number(b.id), p_body: String(b.body ?? "") }));
+
+    case "referrals":
+      return json(d, 200, { ok: true, list: await d.rpc("referral_list", { p_user: userId }) });
+
+    case "history":
+      return json(d, 200, { ok: true, list: await d.rpc("my_history", { p_user: userId }) });
+
+    case "my_offers":
+      return json(d, 200, { ok: true, list: await d.rpc("my_offers", { p_user: userId }) });
+
+    case "ad_toggle":
+      return result(d, await d.rpc("ad_toggle", { p_user: userId, p_id: Number(b.id), p_enabled: b.enabled === true }));
 
     case "board":
       return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: userId })) });
@@ -654,6 +700,20 @@ export async function handleAdmin(req: Request, d: Deps): Promise<Response> {
         return ok();
       case "save_challenge":
         await d.rpc("admin_save_challenge", { p: b.item ?? {} });
+        return ok();
+      case "save_ads":
+        await d.rpc("admin_save_ads", { p: b.slots ?? {} });
+        return ok();
+      case "save_promo":
+        await d.rpc("admin_save_promo", { p: b.item ?? {} });
+        return ok();
+      case "announce":
+        await d.rpc("admin_announce", { p: b.item ?? {} });
+        return ok();
+      case "tickets":
+        return json(d, 200, { ok: true, list: await d.rpc("admin_tickets", { p_status: String(b.status ?? "") }) });
+      case "ticket_reply":
+        await d.rpc("admin_ticket_reply", { p_id: Number(b.id), p_body: String(b.body ?? ""), p_close: b.close === true });
         return ok();
       case "refresh_rates":
         return ok(await refreshRates(d, true));

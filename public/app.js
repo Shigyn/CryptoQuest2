@@ -60,6 +60,66 @@
     tourneyEmpty: ["Personne n’a encore marqué de points cette semaine. Fais un tirage pour prendre la tête !", "Nobody has scored yet this week. Make a roll to take the lead!"],
     tourneyText: ["Gratuit : chaque Coin gagné cette semaine compte (tirages, jeux, tâches, parrainage ; pas les quêtes). Les", "Free: every Coin earned this week counts (rolls, games, tasks, referrals; not quests). The top"],
     tourneyText2: ["premiers sont payés lundi matin.", "players are paid on Monday morning."],
+    // Refonte
+    dashboard: ["Tableau de bord", "Dashboard"], faucet: ["Faucet", "Faucet"], menuEarn: ["Gagner", "Earn"], menuGames: ["Jeux", "Games"],
+    menuRewards: ["Récompenses", "Rewards"], menuShop: ["Boutique et VIP", "Shop and VIP"], menuWallet: ["Argent", "Money"], menuAccount: ["Compte", "Account"],
+    achievements: ["Succès", "Achievements"], promo: ["Codes promo", "Promo codes"], support: ["Support", "Support"], faq: ["FAQ", "FAQ"], proofs: ["Preuves de paiement", "Payment proofs"],
+    close: ["Fermer", "Close"], liveFeed: ["En direct", "Live"], withdrawal1: ["Retrait", "Withdrawal"], noActivity: ["Les premiers gains arrivent bientôt.", "First earnings coming soon."],
+    rewardsShort: ["Récompenses", "Rewards"], more: ["Plus", "More"], menu: ["Menu", "Menu"],
+    nextActions: ["À faire maintenant", "Up next"], readyNow: ["Prêt !", "Ready!"], toCollect: ["à récupérer", "to collect"], seeAll: ["Tout voir", "See all"],
+    rwQuests: ["Objectifs du jour et de la semaine.", "Daily and weekly goals."], rwAch: ["Des badges permanents, chacun avec sa prime.", "Permanent badges, each with a bonus."],
+    rwTourney: ["Classement gratuit, prix chaque lundi.", "Free leaderboard, prizes every Monday."], rwPromo: ["Des Coins offerts avec un code.", "Free Coins with a code."],
+    notifications: ["Notifications", "Notifications"], noNotif: ["Rien de neuf pour l'instant.", "Nothing new yet."],
+    achText: ["Débloque des badges en jouant, récupère la prime de chacun.", "Unlock badges as you play and collect each bonus."], unlocked: ["débloqués", "unlocked"],
+    ak_claims: ["Tirages", "Rolls"], ak_streak: ["Série", "Streak"], ak_level: ["Niveaux", "Levels"], ak_ptc: ["Pubs", "Ads"], ak_links: ["Liens", "Links"],
+    ak_surveys: ["Sondages", "Surveys"], ak_offers: ["Offres", "Offers"], ak_referrals: ["Parrainage", "Referrals"], ak_withdrawals: ["Retraits", "Withdrawals"], ak_quests: ["Quêtes", "Quests"],
+    redeem: ["Valider le code", "Redeem code"], promoText: ["Les codes sont publiés sur notre Telegram et lors des événements. Un code ne sert qu'une fois par compte.", "Codes are posted on our Telegram and during events. Each code works once per account."],
+    active: ["actif", "active"], inactive: ["inactif", "inactive"], noRef: ["Aucun filleul pour le moment. Partage ton lien !", "No referrals yet. Share your link!"],
+    shareText1: ["Je gagne des cryptos gratuitement sur ce faucet, retrait instantané sur FaucetPay :", "I earn free crypto on this faucet, instant withdrawal to FaucetPay:"],
+    shareText2: ["Tirage gratuit, sondages payés, jeux et jackpot de 10 € :", "Free rolls, paid surveys, games and a €10 jackpot:"],
+    shareReady: ["Messages prêts à partager", "Ready-to-share messages"], myRefs: ["Mes filleuls", "My referrals"],
+    refRules: ["Un filleul est « actif » s'il a fait un tirage dans les 7 derniers jours. Les faux comptes sont bannis avec leur parrain.", "A referral is “active” if they rolled in the last 7 days. Fake accounts are banned along with their referrer."],
+    ticketSubject: ["Sujet", "Subject"], ticketBody: ["Ton message", "Your message"], ticketReply: ["Répondre…", "Reply…"],
+    tk_open: ["En attente", "Waiting"], tk_answered: ["Répondu", "Answered"], tk_closed: ["Fermé", "Closed"], supportTeam: ["Support", "Support"], send: ["Envoyer", "Send"],
+    noTickets: ["Aucune demande.", "No tickets."], newTicket: ["Nouvelle demande", "New ticket"], myTickets: ["Mes demandes", "My tickets"],
+    ticketText: ["Une question, un problème de retrait ? On répond en général sous 24 h. Regarde d'abord la", "A question or a withdrawal issue? We usually answer within 24 h. Check the"],
+    ticketSent: ["Demande envoyée.", "Ticket sent."],
+    faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet : tu gagnes des Coins gratuitement (tirages, pubs, liens, sondages, offres, jeux) et tu les retires en crypto sur ton compte FaucetPay.", "A faucet: you earn Coins for free (rolls, ads, links, surveys, offers, games) and withdraw them as crypto to your FaucetPay account."],
+    faq_pay_q: ["Comment je suis payé ?", "How do I get paid?"], faq_pay_a: ["Les Coins disponibles se retirent tout de suite vers FaucetPay. Les gains des tâches sont vérifiés puis partent seuls à chaque heure.", "Available Coins are withdrawn instantly to FaucetPay. Task earnings are reviewed and then sent automatically every hour."],
+    faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Non, sauf le minimum propre à certaines cryptos sur FaucetPay. L'USDT accepte les plus petits montants.", "No, except the minimum some coins have on FaucetPay. USDT accepts the smallest amounts."],
+    faq_pending_q: ["Pourquoi mes gains sont « à valider » ?", "Why are my earnings “under review”?"], faq_pending_a: ["Les pubs, liens, sondages et offres sont contrôlés contre la triche avant d'être payés. Ça prend en général quelques heures.", "Ads, links, surveys and offers are checked for cheating before payout. It usually takes a few hours."],
+    faq_multi_q: ["Puis-je avoir plusieurs comptes ?", "Can I have several accounts?"], faq_multi_a: ["Non. Un compte par personne et par foyer. Les comptes en double sont bannis et perdent leur solde.", "No. One account per person and household. Duplicate accounts are banned and lose their balance."],
+    faq_vpn_q: ["VPN, proxy, robots ?", "VPN, proxy, bots?"], faq_vpn_a: ["Interdits. Les tâches faites derrière un VPN ou par un script sont refusées.", "Not allowed. Tasks done behind a VPN or by a script are refused."],
+    faq_ref_q: ["Comment marche le parrainage ?", "How do referrals work?"], faq_ref_a: ["Tu touches un pourcentage de tout ce que gagnent tes filleuls, à vie, sans que ça leur soit retiré.", "You earn a percentage of everything your referrals earn, for life, without taking anything from them."],
+    faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Zéro pub, un bonus fixe sur les tâches et une part de parrainage plus élevée. Jamais de tirage ni de chance de gain en plus.", "No ads, a fixed bonus on tasks and a higher referral share. Never extra rolls or winning chances."],
+    faq_ads_q: ["Je peux faire de la pub ici ?", "Can I advertise here?"], faq_ads_a: ["Oui : crée une campagne depuis l'espace annonceur, en crypto ou avec tes Coins. Chaque vue est une vraie visite.", "Yes: create a campaign from the advertiser area, in crypto or with your Coins. Every view is a real visit."],
+    faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Tous les jeux sont gratuits, sans mise. Tu ne peux jamais perdre tes Coins en jouant.", "No. Every game is free, with no stake. You can never lose your Coins by playing."],
+    noProofs: ["Les premiers paiements apparaîtront ici.", "The first payouts will show here."],
+    proofsText: ["Chaque retrait payé, en temps réel. Les adresses sont masquées.", "Every paid withdrawal, in real time. Addresses are masked."],
+    simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["Pubs par jour", "Ads per day"],
+    simLinks: ["Liens par jour", "Links per day"], simSurveys: ["Sondages par jour", "Surveys per day"], simDay: ["Par jour", "Per day"], simMonth: ["Par mois", "Per month"],
+    simNote: ["Estimation basée sur les récompenses actuelles du site. Les sondages varient selon le pays et la durée.", "Estimate based on the site's current rewards. Surveys vary by country and length."],
+    w_faucet: ["Un tirage gratuit toutes les 30 s, jackpot de 10 €.", "A free roll every 30 s, €10 jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
+    w_links: ["Passe des liens raccourcis.", "Go through short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
+    w_offers: ["Jeux, applis, inscriptions.", "Games, apps, sign-ups."], w_games: ["Roue, Mines et Dice, gratuits.", "Wheel, Mines and Dice, free."],
+    w_quests: ["Quêtes, succès, tournoi chaque semaine.", "Quests, achievements, weekly tournament."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
+    heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
+    heroTitle: ["Gagne des cryptos gratuitement, en jouant.", "Earn free crypto, the fun way."],
+    heroLead: ["Tirages gratuits, sondages payés, mini-jeux, quêtes et tournoi. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, mini-games, quests and a tournament. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
+    members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
+    waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
+    step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
+    step2: ["Joue et fais des tâches", "Play and do tasks"], step2t: ["Tirages, pubs, sondages, jeux, quêtes.", "Rolls, ads, surveys, games, quests."],
+    step3: ["Retire en un clic", "Withdraw in one click"], step3t: ["Directement sur FaucetPay, dans la crypto de ton choix.", "Straight to FaucetPay, in the coin you like."],
+    lvBonus: ["par tirage grâce à ton niveau", "per roll thanks to your level"], myOffers: ["Mes dernières offres", "My latest offers"],
+    es_pending: ["À valider", "Under review"], es_validated: ["Validée", "Approved"], es_paying: ["En paiement", "Paying"], es_paid: ["Payée", "Paid"],
+    es_rejected: ["Refusée", "Refused"], es_reversed: ["Annulée", "Reversed"],
+    questsWeek: ["Quêtes de la semaine", "Weekly quests"], dayN: ["Jour", "Day"],
+    adKind: ["Format", "Format"], kindWindow: ["Nouvel onglet", "New tab"], kindIframe: ["Dans la page", "In page"], kindVideo: ["Vidéo YouTube", "YouTube video"],
+    kind_window: ["Onglet", "Tab"], kind_iframe: ["Dans la page", "In page"], kind_video: ["Vidéo", "Video"],
+    views14: ["Vues sur 14 jours", "Views over 14 days"], saved: ["Enregistré.", "Saved."], pause: ["Mettre en pause", "Pause"], resume: ["Relancer", "Resume"],
+    exportCsv: ["Exporter l'historique (CSV)", "Export history (CSV)"],
+    frameHint: ["Reste sur cette page jusqu'à la fin du compteur", "Stay on this page until the timer ends"],
     noPtc: ["Aucune pub pour le moment. Reviens plus tard.", "No ads right now. Come back later."],
     noLinks: ["Aucun lien pour le moment. Reviens plus tard.", "No links right now. Come back later."],
     noOffers: ["Aucune offre pour le moment. Reviens plus tard.", "No offers right now. Come back later."],
@@ -143,6 +203,10 @@
     too_soon: ["Reste encore quelques secondes sur la page.", "Stay on the page a few more seconds."],
     ad_banned: ["Pub interdite : contenu sexuel. Ton compte est fermé et ton solde perdu, comme prévu par les conditions.", "Forbidden ad: sexual content. Your account is closed and your balance forfeited, as stated in the terms."],
     ad_forbidden: ["Pub refusée : les jeux d'argent et les promesses de gains sont interdits.", "Ad refused: gambling and profit promises are not allowed."],
+    promo_invalid: ["Ce code n'existe pas ou a expiré.", "This code doesn't exist or has expired."],
+    promo_used_up: ["Ce code a déjà été utilisé le nombre maximal de fois.", "This code has reached its maximum uses."],
+    too_many_tickets: ["Tu as déjà 3 demandes ouvertes : attends notre réponse.", "You already have 3 open tickets: please wait for our reply."],
+    bad_video: ["Pour une vidéo, mets l'adresse YouTube (youtube.com/watch?v=… ou youtu.be/…).", "For a video, use the YouTube address (youtube.com/watch?v=… or youtu.be/…)."],
     not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
@@ -196,6 +260,8 @@
     check: "M5 12l5 5L20 7",
     bomb: "M11 7a7 7 0 1 0 6 3.4M15 4l2 2M18 3v2M20 5h-2M15.5 7.5 17 6",
     crown: "M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z",
+    menu: "M4 6h16M4 12h16M4 18h16",
+    bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
     shop: "M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2",
     trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4z",
     check: "M5 12.5l4.5 4.5L19 7",
@@ -385,21 +451,53 @@
     }
   }
 
-  // Emplacement pub. Vide et "reserve" : propose aux visiteurs d'y mettre leur pub.
-  const adSlot = (slot, reserved = false) => {
+  // Emplacements pub ----------------------------------------------------------------
+  // Codes : d'abord ceux du dashboard (settings.ad_slots), puis ceux de config.js. Plusieurs codes = rotation.
+  // Charges seulement a l'approche de l'ecran ; place reservee pour que la page ne saute pas ; jamais pour les VIP.
+  const HOUSE_SLOTS = new Set(["roll_top", "roll_bottom", "in_content", "side_right"]);
+  const adCodes = (slot) => [].concat(status?.ad_slots?.[slot] || [], cfg.ADS?.[slot] || [])
+    .filter((x) => typeof x === "string" && x.trim());
+  let adSeen = new Set();
+  let adTimer = null;
+  const flushAds = () => {
+    const slots = [...adSeen];
+    adSeen = new Set();
+    if (slots.length) api("ad_seen", { slots });
+  };
+  const adSlot = (slot) => {
     if (me?.vip) return null;
-    const html = cfg.ADS?.[slot];
-    if (!html) {
-      if (!reserved) return null;
+    if (slot === "sticky_mobile" && Number(store.get("cc.stickyOff") || 0) > Date.now()) return null;
+    const codes = adCodes(slot);
+    if (!codes.length) {
+      if (!HOUSE_SLOTS.has(slot) || !session) return null;
       return h("a", { class: "ad-ph", href: "#advertise" },
         h("span", { class: "ad-ph-tag" }, "AD"),
         h("span", {}, h("b", {}, t("adHere")), h("span", { class: "ad-ph-sub" }, t("adHereSub"))),
         icon("megaphone"));
     }
-    const box = h("div", { class: "ad" });
-    // createContextualFragment execute les scripts du reseau publicitaire.
-    box.append(document.createRange().createContextualFragment(html));
-    return box;
+    const box = h("div", { class: `ad ad-${slot}`, "data-slot": slot });
+    const html = codes[Math.floor(Math.random() * codes.length)];
+    let filled = false;
+    const fill = () => {
+      if (filled || !box.isConnected) return;
+      filled = true;
+      // createContextualFragment execute les scripts du reseau publicitaire.
+      box.append(document.createRange().createContextualFragment(html));
+      adSeen.add(slot);
+      clearTimeout(adTimer);
+      adTimer = setTimeout(flushAds, 3000);
+    };
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); fill(); }
+      }, { rootMargin: "250px" });
+      requestAnimationFrame(() => io.observe(box));
+    } else setTimeout(fill, 0);
+    if (slot !== "sticky_mobile") return box;
+    return h("div", { class: "sticky-ad" }, box, h("button", {
+      type: "button", class: "sticky-close", ariaLabel: t("close"),
+      onclick: (e) => { store.set("cc.stickyOff", String(Date.now() + 30 * 60000)); e.currentTarget.parentElement.remove(); },
+    }, "✕"));
   };
 
   // Fond : bulles de lumiere qui montent et etincelles qui scintillent, en pause quand l'onglet est cache.
@@ -472,7 +570,7 @@
   }
 
   // Ecran d'entree ---------------------------------------------------------
-  function gate() {
+  function gate(embedded = false) {
     const address = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, required: true, placeholder: "toi@exemple.com", value: store.get("cc.address") || "", ariaLabel: t("fpField") });
     const pass = h("input", { type: "password", autocomplete: "current-password", ariaLabel: t("passwordShort"), placeholder: t("passwordShort") });
     const passWrap = h("div", { class: "input", hidden: true, style: "margin-top:10px" }, icon("lock"), pass);
@@ -501,10 +599,7 @@
       },
     }, h("div", { class: "input" }, icon("mail"), address), passWrap, submit, msg);
 
-    return h("div", {},
-      ticker(),
-      h("main", { class: "gate" },
-        h("section", { class: "gate-card" },
+    const card = h("section", { class: "gate-card" },
           coinSvg("coin coin-big"),
           h("h1", {}, cfg.SITE_NAME),
           h("p", { class: "gate-sub" }, t("gateSub")),
@@ -515,15 +610,12 @@
           h("div", { class: "chips" },
             h("span", { class: "chip" }, icon("bolt"), t("chipInstant")),
             h("span", { class: "chip" }, icon("gift"), t("chipFree")),
-            h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)))));
+            h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)));
+    if (embedded) return card;
+    return h("div", {}, ticker(), h("main", { class: "gate" }, card));
   }
 
   // Application ------------------------------------------------------------
-  const TABS = [["", "home"], ["earn", "earn"], ["games", "games"], ["quests", "quests"], ["wallet", "wallet"], ["profile", "profile"]];
-  const routeNow = () => {
-    const r = location.hash.replace("#", "");
-    return TABS.some(([k]) => k === r) || r === "advertise" || r === "vip" || r === "shop" ? r : "";
-  };
   let earnTab = null;
   let walletTab = "withdrawals";
   let earn = null;
@@ -542,19 +634,34 @@
     if (!header || !me) return;
     const lv = levelOf(me.earned_total || 0);
     header.replaceChildren(
-      h("div", { class: "who" },
+      h("select", {
+        class: "unit-pick", "aria-label": t("unitPick"), title: t("unitPick"),
+        onchange: async (e) => { unit = e.target.value; store.set("cc.unit", unit); await loadRates(); render(); },
+      }, UNITS.filter(([c]) => c === "COINS" || c === "EUR" || perEurOf(c)).map(([c]) =>
+        h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c))),
+      h("a", { class: "icon-btn bell", href: "#notifications", "aria-label": t("notifications") }, icon("bell"),
+        me.notif_unread > 0 ? h("span", { class: "bell-n" }, String(Math.min(me.notif_unread, 99))) : null),
+      h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null),
+      h("a", { class: "who", href: "#profile" },
         h("div", { class: `avatar${me.vip ? " vip" : ""}${frameCls(me)}` }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
           me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         h("div", { class: "who-text" },
           h("div", { class: `who-name${nameCls(me)}` }, shortAddr(me.fp_address)),
-          h("div", { class: "who-lvl" }, me.title && cosmeticName(me.title) ? `${cosmeticName(me.title)} · ${t("lvlShort")} ${lv.lvl}` : `${t("level")} ${lv.lvl}`))),
-      h("div", { class: "top-right" },
-        h("select", {
-          class: "unit-pick", "aria-label": t("unitPick"), title: t("unitPick"),
-          onchange: async (e) => { unit = e.target.value; store.set("cc.unit", unit); await loadRates(); render(); },
-        }, UNITS.filter(([c]) => c === "COINS" || c === "EUR" || perEurOf(c)).map(([c]) =>
-          h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c))),
-        h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null)));
+          h("div", { class: "who-lvl" }, me.title && cosmeticName(me.title) ? `${cosmeticName(me.title)} · ${t("lvlShort")} ${lv.lvl}` : `${t("level")} ${lv.lvl}`))));
+  }
+
+  // Pub PTC dans la page (iframe) ou video YouTube integree.
+  function openFrame(url, kind, title, secs) {
+    const yt = String(url).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    const src = kind === "video" && yt ? `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1&rel=0` : url;
+    const layer = h("div", { class: "frame-layer" },
+      h("div", { class: "frame-box" },
+        h("div", { class: "frame-head" },
+          h("div", { style: "min-width:0" }, h("b", {}, title), h("div", { class: "row-sub" }, `${t("frameHint")} (${secs} s)`)),
+          h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => layer.remove() }, "✕")),
+        h("iframe", { src, allow: "autoplay; encrypted-media", referrerpolicy: "no-referrer", title })));
+    document.body.append(layer);
+    return layer;
   }
 
   function stat(ico, cls, label, value, sub) {
@@ -603,6 +710,11 @@
   }
 
   let statsHost = null;
+  // Bonus fixe du niveau sur le tirage de base (meme regle que le serveur).
+  const lvBonus = () => {
+    const every_ = status?.level_bonus_every || 10;
+    return Math.min(status?.level_bonus_max ?? 3, Math.floor((levelOf(me.earned_total || 0).lvl - 1) / every_));
+  };
   function rollCard() {
     const table = rows();
     const max = Math.max(...table.map((r) => r.tokens));
@@ -612,6 +724,7 @@
       h("b", {}, tk(r.tokens))));
     const reels = [...Array(5)].map(() => h("span", { class: "reel" }, "0"));
     const digits = h("div", { class: "reels", role: "img", "aria-label": "00000" }, reels);
+    const after = h("div", { class: "after-claim" });
     const setReels = (n) => {
       const str = String(n).padStart(5, "0");
       reels.forEach((el, i) => { el.textContent = str[i]; });
@@ -664,6 +777,7 @@
         const i = table.findIndex((row) => r.roll >= row.from && r.roll <= row.to);
         if (i >= 0) rowEls[i].classList.add("hit");
         cooldown = r.cooldown_seconds;
+        after.replaceChildren(...[adSlot("after_claim")].filter(Boolean));
         readyAt = Date.now() + r.cooldown_seconds * 1000;
         burst(btn, `+${tk(r.tokens)}`);
         toast(`${tk(r.tokens)} ${t("won")}`, "good");
@@ -682,13 +796,14 @@
       h("section", { class: "panel" },
         h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("rollHead")), digits),
         h("div", { class: "cooldown" }, fill),
-        cap, adSlot("roll_top", true), btn, adSlot("roll_bottom", true),
+        cap, adSlot("roll_top"), btn, adSlot("roll_bottom"), after,
+        lvBonus() ? h("p", { class: "lv-bonus" }, icon("star"), `+${lvBonus()} ${TK} ${t("lvBonus")}`) : null,
         h("p", { class: "note", style: "text-align:center;margin:12px 0 0" }, t("free"))));
   }
 
   function homeView() {
     statsHost = h("div", {}, statsRow());
-    return h("div", { class: "stack" }, statsHost, rollCard(), adSlot("top"));
+    return h("div", { class: "stack" }, statsHost, rollCard());
   }
 
   // Gagner : menu de categories, puis la liste choisie.
@@ -709,8 +824,7 @@
 
   function earnView() {
     const wrap = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
-    const back = () => h("button", { class: "btn ghost small", type: "button", style: "align-self:flex-start",
-      onclick: () => { earnTab = null; render(); } }, `← ${t("pickTask")}`);
+    const back = () => h("a", { class: "btn ghost small", href: "#earn", style: "align-self:flex-start;width:auto" }, `← ${t("pickTask")}`);
 
     // Bandeau : gains a valider, valides, et prochain paiement automatique (chaque heure pile).
     const payoutLine = h("b", {}, nextPayout());
@@ -735,7 +849,7 @@
         summary(),
         h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickTask")),
         h("div", { class: "game-menu four" }, cats.map((c) =>
-          h("button", { type: "button", class: `game-tile${c.n > 0 ? " ready" : ""}`, onclick: () => { earnTab = c.key; render(); } },
+          h("a", { class: `game-tile${c.n > 0 ? " ready" : ""}`, href: `#${c.key}` },
             h("span", { class: "game-ico", style: c.tone }, icon(c.ico)),
             h("span", { class: "game-name" }, c.name),
             h("span", { class: "game-text" }, c.text),
@@ -743,7 +857,7 @@
               c.n < 1 ? t("noneNow") : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
             h("span", { class: "btn small", style: "margin-top:auto" }, t("open"))))),
         h("p", { class: "note", style: "text-align:center" }, t("pendingNote")),
-        adSlot("bottom"));
+        adSlot("in_content"));
     };
 
     const emptyBox = (ico, text) => h("div", { class: "empty" }, h("div", { class: "empty-ico" }, icon(ico)), h("p", {}, text));
@@ -768,10 +882,13 @@
           onclick: async () => {
             if (busy) { toast(t("oneAtATime"), "bad"); return; }
             busy = true;
-            const win = window.open("about:blank", "_blank");
+            // Fenetre : nouvel onglet. Iframe et video : dans la page, compteur en pause si l'onglet est cache.
+            const inPage = c.kind === "iframe" || c.kind === "video";
+            const win = inPage ? null : window.open("about:blank", "_blank");
             const r = await api("ptc_start", { id: c.id });
             if (!r.ok) { busy = false; win?.close(); toast(message(r), "bad"); return; }
             if (win) { win.opener = null; win.location = r.url; }
+            const frame = inPage ? openFrame(r.url, c.kind, c.title, r.duration_seconds) : null;
             card.classList.add("on");
             const total = r.duration_seconds;
             let left = total;
@@ -779,10 +896,12 @@
             const label = h("span", { class: "row-sub" }, `${t("watch")} ${left} s`);
             foot.replaceChildren(h("div", { class: "task-bar" }, fill), label);
             const id = every(() => {
+              if (frame && (document.hidden || !frame.isConnected)) return;
               left -= 1;
               fill.style.width = `${Math.min(100, ((total - left) / total) * 100)}%`;
               if (left > 0) { label.textContent = `${t("watch")} ${left} s`; return; }
               clearInterval(id);
+              frame?.remove();
               const cap = captchaBox();
               const ok = h("button", {
                 class: "btn small gold", type: "button",
@@ -804,7 +923,8 @@
         foot.append(start);
         return card;
       });
-      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t("ptcHow")), h("div", { class: "task-grid" }, cards));
+      return h("section", { class: "panel" }, head, h("p", { class: "note" }, t("ptcHow")),
+        h("div", { class: "task-grid" }, cards.flatMap((c, i) => ((i + 1) % 6 === 0 ? [c, adSlot("list")] : [c])).filter(Boolean)));
     };
 
     // Raccourcis : un captcha commun, puis une carte par reseau avec ses passages restants.
@@ -851,7 +971,7 @@
       const area = h("div", {});
       const tiles = list.map((w) => h("button", { type: "button", class: "wall-tile", "data-code": w.code, onclick: () => pick(w) },
         h("span", { class: "wall-logo" }, w.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase()),
-        h("span", { class: "wall-name" }, w.name)));
+        h("span", { class: "wall-name" }, w.name), w.bonus > 0 ? h("span", { class: "badge good" }, `+${Number(w.bonus)} %`) : null));
       function pick(w) {
         wallSel[kind] = w.code;
         tiles.forEach((x) => x.setAttribute("aria-selected", String(x.dataset.code === w.code)));
@@ -860,6 +980,16 @@
           h("iframe", { class: "wall", src: w.iframe_url.replaceAll("{user}", encodeURIComponent(me.ref_code)), title: w.name }));
       }
       pick(list.find((w) => w.code === wallSel[kind]) || list[0]);
+      setTimeout(() => area.parentElement?.append(mine), 0);
+      const mine = h("div", {});
+      api("my_offers").then((r) => {
+        const list2 = (r.list || []).filter((o) => o.kind === kind).slice(0, 10);
+        if (!list2.length || !mine.isConnected) return;
+        mine.replaceChildren(h("div", { class: "panel-title", style: "margin-top:16px" }, t("myOffers")),
+          ...list2.map((o) => h("div", { class: "list-line" }, h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, o.wall), h("div", { class: "row-sub" }, when(o.at))),
+            h("span", { class: `badge ${o.status === "pending" ? "warn" : o.status === "rejected" || o.status === "reversed" ? "bad" : "good"}` }, t(`es_${o.status}`)),
+            h("span", { class: "amount plus" }, `+${num(o.tokens)}`))));
+      });
       return h("section", { class: "panel" }, head, h("p", { class: "note" }, t(sv ? "surveysHow" : "offersHow")), h("div", { class: "wall-grid" }, tiles), area);
     };
 
@@ -867,7 +997,7 @@
       if (!earn) return;
       if (!earnTab) { wrap.replaceChildren(menu()); return; }
       const panel = earnTab === "ptc" ? ptcPanel() : earnTab === "links" ? linksPanel() : offersPanel(earnTab === "surveys" ? "surveys" : "offers");
-      wrap.replaceChildren(...[back(), panel, adSlot("bottom")].filter(Boolean));
+      wrap.replaceChildren(...[back(), panel, adSlot("in_content")].filter(Boolean));
     };
     if (earn) draw();
     loadEarn().then(draw);
@@ -1062,6 +1192,9 @@
   const boosted = (n) => (me?.boost ? n + Math.floor((n * (status?.boost_percent || 0)) / 100) : n);
 
   function bonusCard() {
+    const rewards = status?.daily_streak_rewards?.length ? status.daily_streak_rewards : [me.daily_bonus_tokens || 5];
+    const streak = me.daily_streak || 0;
+    const nextDaily = rewards[(me.daily_done ? Math.max(streak - 1, 0) : streak) % rewards.length];
     const btn = h("button", {
       class: "btn gold", style: "width:100%", disabled: me.daily_done || me.claims_today < 1,
       onclick: async (e) => {
@@ -1072,22 +1205,25 @@
         await refreshMe();
         render();
       },
-    }, me.daily_done ? t("done") : `${t("collect")} ${tk(boosted(me.daily_bonus_tokens))}`);
+    }, me.daily_done ? t("done") : `${t("collect")} ${tk(boosted(nextDaily))}`);
+    // Calendrier de 7 jours : la case du jour brille, les jours deja pris sont coches.
+    const pos = streak > 0 ? ((streak - 1) % rewards.length) + 1 : 0;
+    const todayBox = me.daily_done ? pos : (streak % rewards.length) + 1;
     return h("section", { class: "panel" },
-      h("div", { class: "panel-title" }, t("bonus")),
-      h("div", { style: "display:flex;align-items:center;gap:14px;margin-bottom:14px" },
-        h("div", { class: "row-ico", style: "background:rgba(255,204,61,.14);color:var(--gold)" }, icon("gift")),
-        h("p", { class: "note", style: "margin:0" }, t("bonusText"))),
+      h("div", { class: "panel-title" }, t("bonus"), streak > 0 ? h("span", { class: "badge warn" }, `${streak} ${t("streakLbl")}`) : null),
+      h("div", { class: "cal" }, rewards.map((v, i) => h("div", { class: `cal-day${i + 1 < todayBox || (me.daily_done && i + 1 === todayBox) ? " got" : ""}${i + 1 === todayBox ? " today" : ""}` },
+        h("span", {}, `${t("dayN")} ${i + 1}`), h("b", {}, num(boosted(v))), i + 1 < todayBox || (me.daily_done && i + 1 === todayBox) ? icon("check") : coin()))),
+      h("p", { class: "note", style: "margin:12px 0" }, t("bonusText")),
       btn);
   }
 
   const QUEST = {
-    claims: { ico: "bolt", go: () => { location.hash = ""; } },
-    earned: { ico: "wallet", go: () => { earnTab = null; location.hash = "earn"; } },
-    ptc: { ico: "eye", go: () => { earnTab = "ptc"; location.hash = "earn"; } },
-    links: { ico: "link", go: () => { earnTab = "links"; location.hash = "earn"; } },
-    surveys: { ico: "quests", go: () => { earnTab = "surveys"; location.hash = "earn"; } },
-    offers: { ico: "gift", go: () => { earnTab = "offers"; location.hash = "earn"; } },
+    claims: { ico: "bolt", go: () => { location.hash = "faucet"; } },
+    earned: { ico: "wallet", go: () => { location.hash = "earn"; } },
+    ptc: { ico: "eye", go: () => { location.hash = "ptc"; } },
+    links: { ico: "link", go: () => { location.hash = "links"; } },
+    surveys: { ico: "quests", go: () => { location.hash = "surveys"; } },
+    offers: { ico: "gift", go: () => { location.hash = "offers"; } },
   };
   const questName = (c) => {
     const w = W[`q_${c.goal}`] || W.q_claims;
@@ -1095,11 +1231,12 @@
     return w[FR ? 0 : 1][c.target > 1 ? 1 : 0].replace("{n}", n);
   };
 
-  function questsCard() {
-    const list = me.challenges || [];
+  function questsCard(period = "day") {
+    const list = (me.challenges || []).filter((c) => (c.period || "day") === period);
+    if (!list.length) return null;
     const done = list.filter((c) => c.done).length;
     return h("section", { class: "panel" },
-      h("div", { class: "panel-title" }, t("questsTitle"), h("span", { class: `badge${done === list.length && list.length ? " good" : ""}` }, `${done}/${list.length}`)),
+      h("div", { class: "panel-title" }, t(period === "week" ? "questsWeek" : "questsTitle"), h("span", { class: `badge${done === list.length && list.length ? " good" : ""}` }, `${done}/${list.length}`)),
       list.map((c) => {
         const q = QUEST[c.goal] || QUEST.claims;
         const progress = Math.min(Number(c.progress) || 0, c.target);
@@ -1245,8 +1382,8 @@
     const current = games.find((x) => x.key === gameSel);
     if (current) {
       return h("div", { class: "stack" },
-        h("button", { class: "btn ghost small", type: "button", style: "align-self:flex-start", onclick: () => { gameSel = null; minesEnd = null; render(); } }, `← ${t("pickGame")}`),
-        h("div", { class: "game-solo" }, current.card()));
+        h("a", { class: "btn ghost small", href: "#games", style: "align-self:flex-start;width:auto" }, `← ${t("pickGame")}`),
+        h("div", { class: "game-solo" }, current.card(), adSlot("game")));
     }
     return h("div", { class: "stack" },
       h("a", { class: "shop-banner", href: "#shop" },
@@ -1255,15 +1392,15 @@
         h("span", { class: "coin-pill" }, coin(), num(me.available))),
       h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("pickGame")),
       h("div", { class: "game-menu" }, games.map((x) =>
-        h("button", { type: "button", class: `game-tile${x.ok ? " ready" : ""}`, onclick: () => { gameSel = x.key; render(); } },
+        h("a", { class: `game-tile${x.ok ? " ready" : ""}`, href: `#${x.key}` },
           h("span", { class: "game-ico", style: x.tone }, icon(x.ico)),
           h("span", { class: "game-name" }, x.name),
           h("span", { class: "game-text" }, x.text),
           h("span", { class: `badge ${x.ok ? "good" : ""}` }, x.state),
-          h("span", { class: "btn small", style: "margin-top:auto" }, t("play"))))));
+          h("span", { class: "btn small", style: "margin-top:auto" }, t("play"))))), adSlot("in_content"));
   }
 
-  const questsView = () => h("div", { class: "stack" }, tournamentCard(), bonusCard(), questsCard());
+  const questsView = () => h("div", { class: "stack" }, bonusCard(), questsCard("day"), adSlot("in_content"), questsCard("week"));
 
   // VIP : abonnement paye sur la page FaucetPay, active au retour du paiement.
   const fmtDate = (iso) => new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
@@ -1310,7 +1447,7 @@
   }
 
   // Espace annonceur : l'annonceur paie sur la page FaucetPay, la campagne passe ensuite en verification.
-  let adForm = { title: "", url: "https://", duration: 10, views: 1000 };
+  let adForm = { title: "", url: "https://", duration: 10, views: 1000, kind: "window" };
   function advertiseView() {
     const price = () => {
       const eurv = adForm.views * (status?.ad_price_eur_per_view || 0) * adForm.duration / 10;
@@ -1345,14 +1482,23 @@
       const label = (o) => o.status === "pending" ? ["ad_pending", "warn"] : o.review ? ["ad_review", "warn"] : o.enabled ? ["ad_active", "good"] : ["ad_stopped", "bad"];
       list.replaceChildren(...(r.orders.length ? r.orders.map((o) => {
         const [k, cls] = label(o);
-        return h("div", { class: "list-line" },
-          h("div", { style: "min-width:0" }, h("div", { style: "color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, o.title),
-            h("div", { class: "row-sub" }, `${fmtInt(o.shown)} / ${fmtInt(o.views)} ${t("views")} · ${o.duration} s · ${o.tokens_paid ? tk(o.tokens_paid) : `${Number(o.amount_usdt)} USDT`}`)),
-          h("span", { class: `badge ${cls}` }, t(k)));
+        const max = Math.max(1, ...(o.daily || []).map((d) => d.n));
+        const canToggle = o.campaign_id && !o.review && o.status === "paid" && o.shown < o.views;
+        return h("div", { class: "camp" },
+          h("div", { class: "list-line", style: "border:0;padding:0" },
+            h("div", { style: "min-width:0" }, h("div", { style: "color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, o.title),
+              h("div", { class: "row-sub" }, `${t(`kind_${o.kind || "window"}`)} · ${fmtInt(o.shown)} / ${fmtInt(o.views)} ${t("views")} · ${o.duration} s · ${o.tokens_paid ? tk(o.tokens_paid) : `${Number(o.amount_usdt)} USDT`}`)),
+            h("span", { class: `badge ${cls}` }, t(k))),
+          h("div", { class: "progress" }, h("i", { style: `width:${Math.min(100, (o.shown / Math.max(o.views, 1)) * 100)}%` })),
+          (o.daily || []).length ? h("div", { class: "bars", title: t("views14") }, (o.daily || []).map((d) => h("i", { style: `height:${Math.max(6, (d.n / max) * 100)}%`, title: `${d.day} : ${d.n}` }))) : null,
+          canToggle ? h("button", { class: "btn small ghost", type: "button", onclick: async () => {
+            const r2 = await api("ad_toggle", { id: o.campaign_id, enabled: !o.enabled });
+            toast(r2.ok ? t("saved") : message(r2), r2.ok ? "good" : "bad");
+            render();
+          } }, o.enabled ? t("pause") : t("resume")) : null);
       }) : [h("p", { class: "empty" }, t("noAds"))]));
     });
     return h("div", { class: "stack" },
-      h("a", { class: "btn ghost small", href: "#profile", style: "align-self:flex-start;width:auto" }, `← ${t("back")}`),
       h("section", { class: "panel" },
         h("div", { class: "panel-title" }, t("advertise")),
         h("p", { class: "note" }, t("adText")),
@@ -1373,6 +1519,8 @@
           h("label", { class: "field" }, t("adTitle"), h("input", { value: adForm.title, maxLength: 60, required: true, oninput: set("title"), style: "margin-top:6px" })),
           h("label", { class: "field" }, t("adUrl"), h("input", { type: "url", value: adForm.url, required: true, oninput: set("url"), style: "margin-top:6px" })),
           h("div", { class: "grid2", style: "gap:12px" },
+            h("label", { class: "field" }, t("adKind"), h("select", { style: "margin-top:6px", onchange: set("kind") },
+              [["window", t("kindWindow")], ["iframe", t("kindIframe")], ["video", t("kindVideo")]].map(([v, l]) => h("option", { value: v, selected: v === adForm.kind }, l)))),
             h("label", { class: "field" }, t("adDuration"), h("select", { style: "margin-top:6px", onchange: set("duration", Number) },
               [10, 15, 20, 30].map((s) => h("option", { value: s, selected: s === adForm.duration }, `${s} s`)))),
             h("label", { class: "field" }, t("adViews"), h("input", { type: "number", min: 100, max: 100000, step: 100, value: adForm.views, oninput: set("views", Number), style: "margin-top:6px" }))),
@@ -1386,7 +1534,8 @@
     faucet: ["Tirage", "Roll"], daily: ["Bonus quotidien", "Daily bonus"], challenge: ["Quête", "Quest"], referral: ["Parrainage", "Referral"], wheel: ["Roue du jour", "Daily wheel"],
     ptc: ["Pub", "Ad"], shortlink: ["Lien", "Link"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
     mines: ["Mines", "Mines"], dice: ["Dice", "Dice"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
-    shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
+    shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], achievement: ["Succès", "Achievement"], promo: ["Code promo", "Promo code"],
+    seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
   };
   function walletView() {
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
@@ -1437,7 +1586,8 @@
           me.pending > 0 ? h("span", { class: "badge warn" }, `${t("pending")} · ${tk(me.pending)}`) : null,
           me.validated > 0 ? h("span", { class: "badge good" }, `${t("validated")} · ${tk(me.validated)}`) : null) : null,
         me.validated > 0 ? h("p", { class: "note", style: "margin:8px 0 0" }, `${tk(me.validated)} ${t("wdValidated")}`) : null),
-      h("section", { class: "panel" }, seg, list));
+      h("section", { class: "panel" }, seg, list,
+        h("button", { class: "btn small ghost", type: "button", style: "margin-top:12px;width:auto", onclick: exportHistory }, t("exportCsv"))));
   }
 
   // Profil : niveau, parrainage, securite
@@ -1459,19 +1609,10 @@
         h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`),
         h("div", { class: "xp", style: "width:100%;height:10px" }, h("i", { style: `width:${lv.pct}%` }))),
       h("div", { class: "grid2" },
-        h("section", { class: "panel" },
-          h("div", { class: "panel-title" }, t("referral")),
+        h("a", { class: "panel ref-card", href: "#referral" }, h("div", { class: "panel-title" }, t("referral")),
           h("p", { class: "note" }, `${me.vip ? status?.vip_referral_percent ?? 0 : status?.referral_percent ?? 0} % ${t("refText")}`),
-          h("div", { class: "copy" }, field, h("button", {
-            class: "btn small", type: "button",
-            onclick: async () => {
-              try { await navigator.clipboard.writeText(url); } catch { field.select(); document.execCommand("copy"); }
-              toast(t("copied"), "good");
-            },
-          }, t("copy"))),
-          h("div", { class: "stats", style: "grid-template-columns:1fr 1fr;margin-top:12px" },
-            h("div", { class: "stat" }, h("div", { class: "stat-value" }, fmtInt(me.referrals)), h("div", { class: "stat-sub" }, t("refCount"))),
-            h("div", { class: "stat" }, h("div", { class: "stat-value" }, tk(me.referral_earned)), h("div", { class: "stat-sub" }, t("refEarned"))))),
+          h("div", { class: "bal-grid" }, h("div", { class: "bal" }, h("span", {}, t("refCount")), h("b", {}, fmtInt(me.referrals))),
+            h("div", { class: "bal" }, h("span", {}, t("refEarned")), h("b", {}, num(me.referral_earned))))),
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("security")),
           h("div", { class: `notice ${me.secured ? "good" : "info"}`, style: "margin-bottom:12px" }, me.secured ? t("secOn") : t("secOff")),
@@ -1513,31 +1654,498 @@
       h("div", { class: "foot-links" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: "https://faucetpay.io", rel: "noopener", target: "_blank" }, "FaucetPay")));
   }
 
+  // Coquille facon VieFaucet : barre du haut, menu lateral (tiroir sur mobile), 5 onglets en bas ------
+  const EARN_SUB = ["ptc", "links", "surveys", "offers"];
+  const GAME_SUB = ["wheel", "mines", "dice"];
+  // [route, cle de texte, icone] par groupe du menu
+  const MENU = [
+    [null, [["", "dashboard", "home"]]],
+    ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
+    ["menuGames", [["wheel", "wheel", "wheel"], ["mines", "mines", "grid"], ["dice", "dice", "dice"]]],
+    ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"], ["tournament", "tourney", "star"], ["promo", "promo", "gift"]]],
+    ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
+    ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
+    ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
+  ];
+  const ROUTES = new Set(MENU.flatMap(([, items]) => items.map(([k]) => k)).concat(["earn", "games", "rewards", "proofs", "notifications"]));
+  const TABS = [["", "home", "home"], ["earn", "earn", "earn"], ["games", "games", "games"], ["rewards", "rewardsShort", "trophy"]];
+  const routeNow = () => {
+    const r = location.hash.replace("#", "").split("?")[0];
+    return ROUTES.has(r) ? r : "";
+  };
+
+  // Pastilles : ce qui attend le membre
+  function pending() {
+    const cnt = me.window_count ?? 5;
+    const rollReady = !status?.paused && (me.retry_after || 0) <= 0 && (me.window_used ?? 0) < cnt;
+    const questsReady = (me.challenges || []).filter((c) => !c.done && (Number(c.progress) || 0) >= c.target).length;
+    const dailyReady = !me.daily_done && me.claims_today >= 1;
+    const wheelReady = !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1);
+    const g = me.games || {};
+    return {
+      faucet: rollReady ? "!" : null,
+      quests: questsReady + (dailyReady ? 1 : 0) || null,
+      wheel: wheelReady ? "!" : null,
+      mines: me.claims_today >= 1 && (g.mines_left ?? 0) > 0 ? g.mines_left : null,
+      dice: me.claims_today >= 1 && (g.dice_left ?? 0) > 0 ? g.dice_left : null,
+      rollReady, questsReady, dailyReady, wheelReady,
+    };
+  }
+
+  function sideMenu(route, onPick) {
+    const p = pending();
+    return h("nav", { class: "side-menu", ariaLabel: "Menu" }, MENU.map(([group, items]) => h("div", { class: "side-group" },
+      group ? h("div", { class: "side-title" }, t(group)) : null,
+      items.map(([k, label, ico]) => h("a", {
+        class: "side-link", href: `#${k}`, "aria-current": k === route ? "page" : undefined, onclick: onPick,
+      }, icon(ico), h("span", {}, t(label)), p[k] ? h("span", { class: "side-badge" }, String(p[k])) : null)))),
+      h("div", { class: "side-foot" },
+        h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "legal.html" }, t("legal")),
+        h("button", { type: "button", class: "side-out", onclick: logout }, t("logout"))));
+  }
+
+  async function logout() {
+    await api("logout");
+    session = null;
+    me = null;
+    store.del("cc.session");
+    location.hash = "";
+    render();
+  }
+
+  function openDrawer() {
+    const close = () => { layer.remove(); document.body.classList.remove("no-scroll"); };
+    const layer = h("div", { class: "drawer", onclick: (e) => { if (e.target === layer) close(); } },
+      h("div", { class: "drawer-panel" },
+        h("div", { class: "drawer-head" }, h("span", { class: "logo" }, coinSvg(), cfg.SITE_NAME),
+          h("button", { type: "button", class: "icon-btn", ariaLabel: t("close"), onclick: close }, "✕")),
+        sideMenu(routeNow(), close)));
+    document.body.append(layer);
+    document.body.classList.add("no-scroll");
+  }
+
+  // Fil d'activite : retraits recents (et gains valides quand le serveur les envoie).
+  function liveFeed(limit = 8) {
+    const list = (status?.recent || []).slice(0, limit);
+    return h("section", { class: "panel live" },
+      h("div", { class: "panel-title" }, h("span", { class: "live-dot" }, t("liveFeed"))),
+      list.length ? list.map((r) => h("div", { class: "live-row" },
+        h("span", { class: "live-who" }, r.who),
+        h("span", { class: "live-what" }, r.kind ? r.kind : t("withdrawal1")),
+        h("b", {}, `+${units(r.amount_units, r.decimals)} ${r.coin}`))) : h("p", { class: "empty" }, t("noActivity")));
+  }
+
   function shell() {
     const route = routeNow();
-    header = h("header", { class: "topline" });
+    header = h("div", { class: "topbar-right" });
     updateHeader();
-    const views = { "": homeView, earn: earnView, games: gamesView, quests: questsView, wallet: walletView, profile: profileView, advertise: advertiseView, vip: vipView, shop: shopView };
-    const dots = {
-      games: !me.wheel_done || (me.games?.mines_left ?? 0) > 0 || (me.games?.dice_left ?? 0) > 0,
-      quests: !me.daily_done || me.challenges.some((c) => !c.done && me.claims_today >= c.target),
-    };
-    const nav = h("nav", { class: "tabbar", ariaLabel: "Menu" }, TABS.map(([k, label]) =>
-      h("a", { class: "tab", href: `#${k}`, "aria-current": k === route ? "page" : undefined },
-        icon(label), h("span", { class: "tab-label" }, t(label)), dots[k] && me.claims_today > 0 ? h("span", { class: "dot" }) : null)));
-    return h("div", {},
+    const p = pending();
+    const main = h("main", { class: "main", id: "main" },
+      status?.paused ? h("div", { class: "notice warn", style: "margin-bottom:14px" }, t("paused")) : null,
+      adSlot("header"),
+      viewFor(route),
+      adSlot("footer"));
+    const tabs = h("nav", { class: "tabbar", ariaLabel: "Menu" },
+      TABS.map(([k, label, ico]) => h("a", {
+        class: "tab", href: `#${k}`,
+        "aria-current": (k === route || (k === "earn" && (EARN_SUB.includes(route) || route === "faucet")) || (k === "games" && GAME_SUB.includes(route))
+          || (k === "rewards" && ["quests", "achievements", "tournament", "promo"].includes(route))) ? "page" : undefined,
+      }, icon(ico), h("span", { class: "tab-label" }, t(label)),
+        (k === "earn" && p.rollReady) || (k === "games" && (p.wheel || p.mines || p.dice)) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
+      h("button", { type: "button", class: "tab", onclick: openDrawer }, icon("menu"), h("span", { class: "tab-label" }, t("more"))));
+    return h("div", { class: "app" },
       ticker(),
-      h("div", { class: "shell" },
-        header,
-        status?.paused ? h("div", { class: "notice warn", style: "margin-bottom:14px" }, t("paused")) : null,
-        views[route]()),
-      nav);
+      h("header", { class: "topbar" },
+        h("button", { type: "button", class: "icon-btn burger", ariaLabel: t("menu"), onclick: openDrawer }, icon("menu")),
+        h("a", { class: "logo", href: "#" }, coinSvg(), h("span", {}, cfg.SITE_NAME)),
+        header),
+      h("div", { class: "layout" },
+        h("aside", { class: "side" }, sideMenu(route), adSlot("side_left")),
+        main,
+        h("aside", { class: "rail" }, adSlot("side_right"), liveFeed(), railBoard())),
+      adSlot("sticky_mobile"),
+      tabs);
+  }
+
+  // Mini classement dans la colonne de droite
+  function railBoard() {
+    const box = h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("tourney")), h("p", { class: "empty" }, "…"));
+    api("board").then((r) => {
+      if (!r.ok || !box.isConnected) return;
+      box.replaceChildren(h("div", { class: "panel-title" }, h("a", { href: "#tournament" }, t("tourney")), r.me ? h("span", { class: "badge" }, `#${r.me.rank}`) : null),
+        ...(r.top.length ? r.top.slice(0, 5).map((x) => h("div", { class: `board-row${x.me ? " me" : ""}` },
+          h("span", { class: `rank r${Math.min(x.rank, 4)}` }, String(x.rank)),
+          h("div", { class: "board-who" }, h("div", { class: `board-name${nameCls(x)}` }, x.me ? t("you") : x.who)),
+          h("div", { class: "board-score" }, num(x.score)))) : [h("p", { class: "empty" }, t("tourneyEmpty"))]));
+    });
+    return box;
+  }
+
+  function viewFor(route) {
+    if (EARN_SUB.includes(route)) { earnTab = route; return earnView(); }
+    if (route === "earn") { earnTab = null; return earnView(); }
+    if (GAME_SUB.includes(route)) { gameSel = route; minesEnd = route === "mines" ? minesEnd : null; return gamesView(); }
+    if (route === "games") { gameSel = null; return gamesView(); }
+    const views = {
+      "": dashboardView, faucet: faucetView, rewards: rewardsView, quests: questsView, tournament: () => h("div", { class: "stack" }, tournamentCard()),
+      achievements: achievementsView, promo: promoView, shop: shopView, vip: vipView, referral: referralView,
+      wallet: walletView, advertise: advertiseView, profile: profileView, support: supportView, faq: faqView, proofs: proofsView,
+      notifications: notificationsView,
+    };
+    return (views[route] || dashboardView)();
+  }
+
+  // Tableau de bord ---------------------------------------------------------
+  function dashboardView() {
+    const p = pending();
+    const act = (ok, ico, title, sub, href, tone) => h("a", { class: `next${ok ? " ok" : ""}`, href },
+      h("span", { class: "next-ico", style: tone }, icon(ico)),
+      h("span", { class: "next-text" }, h("b", {}, title), h("span", {}, sub)),
+      h("span", { class: "chev" }, "›"));
+    const wheelLeft = me.wheel_done ? Math.ceil((me.wheel_retry_after || 0) / 60) : 0;
+    const actions = h("section", { class: "panel" },
+      h("div", { class: "panel-title" }, t("nextActions")),
+      h("div", { class: "next-list" },
+        act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? t("readyNow") : `${t("next")} ${clock(Math.max(0, me.retry_after || 0))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
+        act(p.questsReady > 0 || p.dailyReady, "flag", t("questsTitle"),
+          p.questsReady || p.dailyReady ? `${p.questsReady + (p.dailyReady ? 1 : 0)} ${t("toCollect")}` : `${(me.challenges || []).filter((c) => c.done).length}/${(me.challenges || []).length}`, "#quests", "--c1:#ffd34d;--c2:#ff8f1c"),
+        act(p.wheelReady, "wheel", t("wheel"), p.wheelReady ? t("readyNow") : me.wheel_done ? `${t("wheelNext")} ${Math.floor(wheelLeft / 60)} h ${wheelLeft % 60} min` : t("needRoll"), "#wheel", "--c1:#ffd34d;--c2:#ff5f8f"),
+        act(Boolean(p.mines || p.dice), "games", t("games"), `${t("mines")} ${me.games?.mines_left ?? 0} · ${t("dice")} ${me.games?.dice_left ?? 0}`, "#games", "--c1:#b48cff;--c2:#6b3dff"),
+        act(true, "eye", t("earn"), t("pickTask"), "#earn", "--c1:#45e3a6;--c2:#11a771")));
+    const payoutLine = h("b", {}, nextPayout());
+    every(() => { payoutLine.textContent = nextPayout(); }, 1000);
+    const balances = h("section", { class: "panel" },
+      h("div", { class: "panel-title" }, t("balance"), h("a", { href: "#wallet", class: "badge" }, t("withdrawNow"))),
+      h("div", { class: "bal-grid" },
+        h("div", { class: "bal main-bal" }, h("span", {}, t("available")), h("b", {}, coin(), num(me.available))),
+        h("div", { class: "bal" }, h("span", {}, t("pending")), h("b", {}, num(me.pending || 0))),
+        h("div", { class: "bal" }, h("span", {}, t("validated")), h("b", {}, num(me.validated || 0))),
+        h("div", { class: "bal" }, h("span", {}, t("nextPayout")), payoutLine)));
+    const activity = h("section", { class: "panel" },
+      h("div", { class: "panel-title" }, t("activity"), h("a", { href: "#wallet", class: "badge" }, t("seeAll"))),
+      (me.history || []).length ? me.history.slice(0, 8).map((r) => h("div", { class: "list-line" },
+        h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, (SOURCE[r.source] || [r.source, r.source])[FR ? 0 : 1]), h("div", { class: "row-sub" }, when(r.at))),
+        h("span", { class: `amount ${r.delta > 0 ? "plus" : "minus"}` }, `${r.delta > 0 ? "+" : ""}${num(r.delta)}`))) : h("p", { class: "empty" }, t("noHistory")));
+    statsHost = h("div", {}, statsRow());
+    return h("div", { class: "stack" }, announcementBar(), statsHost,
+      h("div", { class: "grid2" }, actions, balances),
+      adSlot("in_content"),
+      h("div", { class: "grid2" }, activity, liveFeed(6)));
+  }
+
+  function faucetView() {
+    statsHost = h("div", {}, statsRow());
+    return h("div", { class: "stack" }, rollCard(), statsHost);
+  }
+
+  function rewardsView() {
+    const tiles = [
+      ["quests", "flag", t("questsTitle"), t("rwQuests"), "--c1:#ffd34d;--c2:#ff8f1c"],
+      ["achievements", "trophy", t("achievements"), t("rwAch"), "--c1:#b48cff;--c2:#6b3dff"],
+      ["tournament", "star", t("tourney"), t("rwTourney"), "--c1:#4fd2ff;--c2:#2f6bff"],
+      ["promo", "gift", t("promo"), t("rwPromo"), "--c1:#ff8cc6;--c2:#e2367f"],
+    ];
+    return h("div", { class: "stack" }, h("div", { class: "panel-title", style: "margin:2px 2px 0" }, t("rewardsShort")),
+      h("div", { class: "game-menu four" }, tiles.map(([k, ico, name, text, tone]) => h("a", { class: "game-tile", href: `#${k}` },
+        h("span", { class: "game-ico", style: tone }, icon(ico)), h("span", { class: "game-name" }, name), h("span", { class: "game-text" }, text),
+        h("span", { class: "btn small", style: "margin-top:auto" }, t("open"))))), adSlot("in_content"));
+  }
+
+  // Pages de la refonte -----------------------------------------------------------
+
+  // Bandeau d'annonce : derniere annonce du site, fermable.
+  let notifCache = null;
+  async function loadNotifs() {
+    const r = await api("notifications");
+    if (r.ok) notifCache = r.list;
+    return notifCache;
+  }
+  const ntext = (n) => (FR ? n.text : n.text_en || n.text);
+  function announcementBar() {
+    const box = h("div", {});
+    const show = (list) => {
+      const a = (list || []).find((n) => n.kind === "announce" && Date.now() - new Date(n.at) < 7 * 86400000);
+      if (!a || store.get("cc.annDone") === String(a.id)) return;
+      box.replaceChildren(h("div", { class: "announce" }, icon("megaphone"),
+        a.link ? h("a", { href: a.link }, ntext(a)) : h("span", {}, ntext(a)),
+        h("button", { type: "button", class: "icon-btn", ariaLabel: t("close"), onclick: () => { store.set("cc.annDone", String(a.id)); box.replaceChildren(); } }, "✕")));
+    };
+    if (notifCache) show(notifCache);
+    else loadNotifs().then(show);
+    return box;
+  }
+
+  function notificationsView() {
+    const list = h("div", {}, h("p", { class: "empty" }, "…"));
+    loadNotifs().then(async (items) => {
+      list.replaceChildren(...((items || []).length ? items.map((n) => h(n.link ? "a" : "div", { class: `notif${n.unread ? " unread" : ""}`, href: n.link || undefined },
+        h("span", { class: "notif-ico" }, icon({ validated: "check", tournament: "trophy", ticket: "mail", announce: "megaphone" }[n.kind] || "star")),
+        h("span", { class: "notif-text" }, h("b", {}, ntext(n)), h("span", { class: "row-sub" }, when(n.at))))) : [h("p", { class: "empty" }, t("noNotif"))]));
+      if ((me.notif_unread || 0) > 0) { await api("read_notifications"); me.notif_unread = 0; updateHeader(); }
+    });
+    return h("div", { class: "stack" }, h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("notifications")), list));
+  }
+
+  // Succes
+  function achievementsView() {
+    const box = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
+    const draw = (list) => {
+      const done = list.filter((a) => a.done).length;
+      const groups = [...new Set(list.map((a) => a.kind))];
+      box.replaceChildren(
+        h("section", { class: "panel ach-hero" },
+          h("div", { class: "shop-hero-ico", style: "background:linear-gradient(145deg,#b48cff,#6b3dff);color:#fff" }, icon("trophy")),
+          h("div", {}, h("h2", {}, t("achievements")), h("p", { class: "row-sub" }, t("achText"))),
+          h("div", { class: "ach-count" }, h("b", {}, `${done}/${list.length}`), h("span", {}, t("unlocked")))),
+        ...groups.map((k) => h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, t(`ak_${k}`)),
+          h("div", { class: "ach-grid" }, list.filter((a) => a.kind === k).map((a) => {
+            const ready = !a.done && a.progress >= a.target;
+            return h("div", { class: `ach${a.done ? " done" : ready ? " ready" : ""}` },
+              h("div", { class: "ach-medal" }, icon(a.done ? "check" : "trophy")),
+              h("b", {}, FR ? a.name : a.name_en),
+              h("div", { class: "progress" }, h("i", { style: `width:${(a.progress / a.target) * 100}%` })),
+              h("span", { class: "row-sub" }, `${fmtInt(a.progress)} / ${fmtInt(a.target)}`),
+              ready ? h("button", {
+                class: "btn small gold", type: "button",
+                onclick: async (e) => {
+                  const b = e.currentTarget;
+                  b.disabled = true;
+                  const r = await api("claim_achievement", { code: a.code });
+                  if (r.ok) burst(b, `+${tk(r.tokens)}`);
+                  toast(r.ok ? `${tk(r.tokens)} ${t("won")}` : message(r), r.ok ? "good" : "bad");
+                  await refreshMe();
+                  load();
+                },
+              }, `${t("claimQuest")} +${num(a.reward_tokens)}`) : h("span", { class: "reward" }, "+", coin(), num(a.reward_tokens)));
+          })))));
+    };
+    const load = () => api("achievements").then((r) => { if (r.ok && box.isConnected) draw(r.list); });
+    load();
+    return box;
+  }
+
+  // Codes promo
+  function promoView() {
+    const input = h("input", { maxLength: 40, placeholder: "NOEL2026", autocapitalize: "characters", ariaLabel: t("promo") });
+    const cap = captchaBox();
+    const btn = h("button", { class: "btn big gold", type: "submit" }, t("redeem"));
+    return h("div", { class: "stack" },
+      h("section", { class: "panel promo" },
+        h("div", { class: "shop-hero-ico", style: "background:linear-gradient(145deg,#ff8cc6,#e2367f);color:#fff;margin:0 auto 12px" }, icon("gift")),
+        h("h2", { style: "text-align:center" }, t("promo")),
+        h("p", { class: "note", style: "text-align:center" }, t("promoText")),
+        h("form", {
+          onsubmit: async (e) => {
+            e.preventDefault();
+            if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+            btn.disabled = true;
+            const r = await api("redeem_promo", { code: input.value, captcha: captchaToken(cap) || "dev" });
+            captchaReset(cap);
+            btn.disabled = false;
+            if (r.ok) { burst(btn, `+${tk(r.tokens)}`); input.value = ""; await refreshMe(); }
+            toast(r.ok ? `${tk(r.tokens)} ${t("won")}` : message(r), r.ok ? "good" : "bad");
+          },
+        }, input, cap, btn)),
+      adSlot("in_content"));
+  }
+
+  // Parrainage
+  function referralView() {
+    const url = `${location.origin}${location.pathname}?ref=${me.ref_code}`;
+    const pct = me.vip ? status?.vip_referral_percent ?? 0 : status?.referral_percent ?? 0;
+    const field = h("input", { readOnly: true, value: url, ariaLabel: t("refLink") });
+    const copy = async (text) => { try { await navigator.clipboard.writeText(text); } catch { field.select(); document.execCommand("copy"); } toast(t("copied"), "good"); };
+    const list = h("div", {}, h("p", { class: "empty" }, "…"));
+    api("referrals").then((r) => {
+      if (!r.ok) return;
+      list.replaceChildren(...(r.list.length ? r.list.map((f) => h("div", { class: "list-line" },
+        h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, f.who), h("div", { class: "row-sub" }, fmtDate(f.since))),
+        h("span", { class: `badge ${f.active ? "good" : ""}` }, f.active ? t("active") : t("inactive")),
+        h("span", { class: "amount plus" }, `+${num(f.earned)}`))) : [h("p", { class: "empty" }, t("noRef"))]));
+    });
+    const share = [
+      [t("shareText1"), `${t("shareText1")} ${url}`],
+      [t("shareText2"), `${t("shareText2")} ${url}`],
+    ];
+    return h("div", { class: "stack" },
+      h("section", { class: "panel ref-hero" },
+        h("div", { class: "ref-pct" }, h("b", {}, `${pct} %`), h("span", {}, t("refText"))),
+        h("div", { class: "copy" }, field, h("button", { class: "btn small", type: "button", onclick: () => copy(url) }, t("copy"))),
+        h("div", { class: "bal-grid", style: "margin-top:14px" },
+          h("div", { class: "bal" }, h("span", {}, t("refCount")), h("b", {}, fmtInt(me.referrals))),
+          h("div", { class: "bal" }, h("span", {}, t("refEarned")), h("b", {}, coin(), num(me.referral_earned))))),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("shareReady")),
+        share.map(([label, text]) => h("div", { class: "share-line" }, h("p", {}, text), h("button", { class: "btn small ghost", type: "button", onclick: () => copy(text) }, t("copy"))))),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("myRefs")), list),
+      h("p", { class: "note", style: "text-align:center" }, t("refRules")));
+  }
+
+  // Support
+  function supportView() {
+    const box = h("div", {}, h("p", { class: "empty" }, "…"));
+    const subject = h("input", { maxLength: 120, required: true, placeholder: t("ticketSubject") });
+    const body = h("textarea", { rows: 4, maxLength: 4000, required: true, placeholder: t("ticketBody") });
+    const load = () => api("tickets").then((r) => {
+      if (!r.ok || !box.isConnected) return;
+      box.replaceChildren(...(r.list.length ? r.list.map((tk_) => {
+        const reply = h("textarea", { rows: 2, maxLength: 4000, placeholder: t("ticketReply") });
+        return h("details", { class: "ticket", open: tk_.status === "answered" },
+          h("summary", {}, h("b", {}, tk_.subject), h("span", { class: `badge ${tk_.status === "answered" ? "good" : tk_.status === "closed" ? "" : "warn"}` }, t(`tk_${tk_.status}`))),
+          (tk_.messages || []).map((m) => h("div", { class: `msg${m.admin ? " admin" : ""}` }, h("span", { class: "row-sub" }, `${m.admin ? t("supportTeam") : t("you")} · ${when(m.at)}`), h("p", {}, m.body))),
+          tk_.status !== "closed" ? h("form", {
+            class: "msg-form",
+            onsubmit: async (e) => {
+              e.preventDefault();
+              const r2 = await api("ticket_reply", { id: tk_.id, body: reply.value });
+              if (!r2.ok) { toast(message(r2), "bad"); return; }
+              load();
+            },
+          }, reply, h("button", { class: "btn small", type: "submit" }, t("send"))) : null);
+      }) : [h("p", { class: "empty" }, t("noTickets"))]));
+    });
+    load();
+    return h("div", { class: "stack" },
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("newTicket")),
+        h("p", { class: "note" }, t("ticketText"), " ", h("a", { href: "#faq" }, t("faq"))),
+        h("form", {
+          onsubmit: async (e) => {
+            e.preventDefault();
+            const r = await api("ticket_create", { subject: subject.value, body: body.value });
+            if (!r.ok) { toast(message(r), "bad"); return; }
+            subject.value = ""; body.value = "";
+            toast(t("ticketSent"), "good");
+            load();
+          },
+        }, h("label", { class: "field" }, t("ticketSubject"), subject), h("label", { class: "field" }, t("ticketBody"), body), h("button", { class: "btn", type: "submit" }, t("send")))),
+      h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("myTickets")), box));
+  }
+
+  // FAQ (publique et membre)
+  const FAQ = () => [
+    ["faq_what_q", "faq_what_a"], ["faq_pay_q", "faq_pay_a"], ["faq_min_q", "faq_min_a"], ["faq_pending_q", "faq_pending_a"],
+    ["faq_multi_q", "faq_multi_a"], ["faq_vpn_q", "faq_vpn_a"], ["faq_ref_q", "faq_ref_a"], ["faq_vip_q", "faq_vip_a"],
+    ["faq_ads_q", "faq_ads_a"], ["faq_gamble_q", "faq_gamble_a"],
+  ];
+  function faqView() {
+    return h("div", { class: "stack" },
+      h("section", { class: "panel" }, h("h2", { style: "margin-bottom:12px" }, t("faq")),
+        FAQ().map(([q, a]) => h("details", { class: "faq" }, h("summary", {}, t(q)), h("p", {}, t(a))))),
+      session && me ? h("a", { class: "row ad-link", href: "#support" }, h("div", { class: "row-ico" }, icon("mail")),
+        h("div", { class: "row-main" }, h("h3", {}, t("support")), h("div", { class: "row-sub" }, t("ticketText"))), h("span", { class: "chev" }, "›")) : null);
+  }
+
+  // Preuves de paiement (publique)
+  function proofsView() {
+    const list = h("div", {}, h("p", { class: "empty" }, "…"));
+    api("proofs").then((r) => {
+      if (!r.ok) return;
+      list.replaceChildren(...(r.proofs.length ? r.proofs.map((p) => h("div", { class: "list-line" },
+        h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, p.who), h("div", { class: "row-sub" }, `${when(p.at)}${p.payout_id ? ` · FaucetPay #${p.payout_id}` : ""}`)),
+        h("span", { class: "amount plus" }, `${units(p.amount_units, p.decimals)} ${p.coin}`))) : [h("p", { class: "empty" }, t("noProofs"))]));
+    });
+    return h("div", { class: "stack" },
+      h("section", { class: "panel" }, h("h2", {}, t("proofs")), h("p", { class: "note", style: "margin-top:6px" }, t("proofsText"))),
+      h("section", { class: "panel" }, list));
+  }
+
+  // Simulateur de gains (accueil public) : base sur les vraies recompenses du site.
+  function simulator() {
+    const s = status || {};
+    const tpe = s.tokens_per_eur || 10000;
+    const lines = [
+      ["simFaucet", "bolt", 0, 48, 24, s.faucet_reward_tokens || 2],
+      ["simPtc", "eye", 0, 50, 10, s.ptc_reward || 10],
+      ["simLinks", "link", 0, 20, 5, s.link_reward || 15],
+      ["simSurveys", "quests", 0, 10, 2, Math.round(0.5 * tpe * 0.5)],
+    ];
+    const vals = lines.map((l) => l[4]);
+    const out = h("div", { class: "sim-total" });
+    const rows = lines.map(([key, ico, min, max], i) => {
+      const v = h("b", {}, String(vals[i]));
+      const input = h("input", { type: "range", min, max, value: vals[i], class: "range", ariaLabel: t(key),
+        oninput: (e) => { vals[i] = Number(e.target.value); v.textContent = String(vals[i]); show(); } });
+      return h("div", { class: "sim-row" }, h("span", { class: "sim-ico" }, icon(ico)), h("span", { class: "sim-label" }, t(key)), v, input);
+    });
+    const show = () => {
+      const day = lines.reduce((sum, l, i) => sum + vals[i] * l[5], 0);
+      out.replaceChildren(h("div", {}, h("span", {}, t("simDay")), h("b", {}, tk(day))), h("div", {}, h("span", {}, t("simMonth")), h("b", {}, tk(day * 30))),
+        h("div", {}, h("span", {}, "≈"), h("b", {}, eur(day * 30))));
+    };
+    show();
+    return h("section", { class: "panel sim" }, h("div", { class: "panel-title" }, t("simTitle")), rows, out, h("p", { class: "note", style: "margin:10px 0 0" }, t("simNote")));
+  }
+
+  // Accueil public : vitrine + connexion
+  function landing(route) {
+    const s = status || {};
+    const ways = [["bolt", "faucet", "w_faucet"], ["eye", "ptc", "w_ptc"], ["link", "links", "w_links"], ["quests", "surveys", "w_surveys"],
+      ["gift", "offers", "w_offers"], ["games", "games", "w_games"], ["flag", "quests", "w_quests"], ["profile", "referral", "w_ref"]];
+    const pub = { proofs: proofsView, faq: faqView, classement: publicBoard };
+    const body = pub[route]
+      ? h("div", { class: "pub-page" }, h("a", { class: "btn ghost small", href: "#", style: "align-self:flex-start;width:auto" }, `← ${t("back")}`), pub[route]())
+      : h("div", { class: "pub-page" },
+          h("section", { class: "hero2" },
+            h("div", { class: "hero2-text" },
+              h("span", { class: "eyebrow2" }, t("heroEyebrow")),
+              h("h1", {}, t("heroTitle")),
+              h("p", { class: "lead2" }, t("heroLead")),
+              h("div", { class: "hero2-stats" },
+                h("div", {}, h("b", {}, fmtInt(s.users || 0)), h("span", {}, t("members"))),
+                h("div", {}, h("b", {}, eur(s.paid_tokens || 0)), h("span", {}, t("paidOut"))),
+                h("div", {}, h("b", {}, t("instant")), h("span", {}, t("withdrawals"))))),
+            gate(true)),
+          liveFeed(8),
+          h("h2", { class: "pub-h2" }, t("waysTitle")),
+          h("div", { class: "ways" }, ways.map(([ico, title, text]) => h("div", { class: "way" }, h("span", { class: "game-ico" }, icon(ico)), h("b", {}, t(title)), h("span", {}, t(text))))),
+          simulator(),
+          h("h2", { class: "pub-h2" }, t("stepsTitle")),
+          h("div", { class: "steps" }, [1, 2, 3].map((n) => h("div", { class: "step" }, h("span", { class: "step-n" }, String(n)), h("b", {}, t(`step${n}`)), h("span", {}, t(`step${n}t`))))),
+          h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("faq")), FAQ().slice(0, 5).map(([q, a]) => h("details", { class: "faq" }, h("summary", {}, t(q)), h("p", {}, t(a)))),
+            h("a", { href: "#faq", class: "btn ghost small", style: "width:auto;margin-top:10px" }, t("seeAll"))));
+    return h("div", { class: "public" },
+      ticker(),
+      h("header", { class: "topbar" },
+        h("a", { class: "logo", href: "#" }, coinSvg(), h("span", {}, cfg.SITE_NAME)),
+        h("nav", { class: "pub-nav" }, h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#classement" }, t("tourney")), h("a", { href: "#faq" }, t("faq"))),
+        h("a", { class: "btn small", href: "#", onclick: () => setTimeout(() => document.querySelector(".gate-card input")?.focus(), 50) }, t("enter"))),
+      h("main", { class: "pub-main" }, body),
+      h("footer", { class: "pub-foot" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq")),
+        h("span", {}, `© ${new Date().getFullYear()} ${cfg.SITE_NAME}`)));
+  }
+
+  function publicBoard() {
+    const box = h("section", { class: "panel tourney" }, h("div", { class: "panel-title" }, t("tourney")), h("p", { class: "empty" }, "…"));
+    api("board_public").then((r) => {
+      if (!r.ok) return;
+      const prizes = r.prizes || [];
+      box.replaceChildren(h("div", { class: "panel-title" }, t("tourney")),
+        r.top.length ? h("div", { class: "board" }, r.top.map((p) => h("div", { class: "board-row" },
+          h("span", { class: `rank r${Math.min(p.rank, 4)}` }, String(p.rank)),
+          h("div", { class: "board-who" }, h("div", { class: `board-name${nameCls(p)}` }, p.who)),
+          h("div", { class: "board-score" }, num(p.score), prizes[p.rank - 1] ? h("span", { class: "board-prize" }, `+${num(prizes[p.rank - 1])}`) : null)))) : h("p", { class: "empty" }, t("tourneyEmpty")),
+        h("p", { class: "note", style: "margin:12px 0 0" }, `${t("tourneyText")} ${prizes.length} ${t("tourneyText2")}`));
+    });
+    return box;
+  }
+
+  // Historique complet + export CSV
+  async function exportHistory() {
+    const r = await api("history");
+    if (!r.ok) { toast(message(r), "bad"); return; }
+    const rows = [["date", "source", "solde", "montant"], ...r.list.map((x) => [x.at, x.source, x.bucket, x.delta])];
+    const blob = new Blob([rows.map((l) => l.join(";")).join("\n")], { type: "text/csv" });
+    const a = h("a", { href: URL.createObjectURL(blob), download: `${cfg.SITE_NAME}-historique.csv` });
+    document.body.append(a);
+    a.click();
+    a.remove();
   }
 
   function render() {
     clearTimers();
     const root = document.getElementById("root");
-    root.replaceChildren(session && me ? shell() : gate());
+    root.replaceChildren(session && me ? shell() : landing(location.hash.replace("#", "")));
+    window.scrollTo(0, 0);
   }
 
   async function publicStatus() {
@@ -1560,7 +2168,7 @@
     render();
   }
 
-  window.addEventListener("hashchange", () => { if (session && me) refreshMe().then(render); });
+  window.addEventListener("hashchange", () => { if (session && me) refreshMe().then(render); else render(); });
   // Soldes et statut toutes les minutes, seulement si la page est visible.
   setInterval(async () => {
     if (document.hidden || !status) return;

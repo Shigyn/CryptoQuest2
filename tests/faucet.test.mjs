@@ -1028,3 +1028,167 @@ test("pub interdite : contenu sexuel = compte ferme et solde saisi ; jeux d'arge
   assert.equal((await ad(sneaky, "Promo", "https://redirige.com", "ad_order")).body.code, "ad_banned");
   assert.equal((await row(sneaky)).banned, true);
 });
+
+// Refonte ----------------------------------------------------------------------
+
+test("serie de 7 jours : la recompense monte chaque jour consecutif et repart a zero apres un trou", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const day = async () => {
+    await api(h, "claim", { session: u.session }, u.ip);
+    return (await api(h, "daily", { session: u.session }, u.ip)).body;
+  };
+  assert.deepEqual(await day(), { ok: true, tokens: 5, streak: 1 });
+  // Jour suivant : on recule le dernier bonus d'un jour.
+  await h.pg.query("update users set last_daily_day = last_daily_day - 1");
+  await age(h, 3600);
+  assert.equal((await day()).tokens, 6);
+  assert.equal((await me(h, u)).daily_streak, 2);
+  await h.pg.query("update users set last_daily_day = last_daily_day - 3");
+  await age(h, 3600);
+  assert.equal((await day()).tokens, 5, "trou : la serie repart");
+});
+
+test("bonus de niveau : +1 Coin tous les 10 niveaux sur le tirage de base, plafonne, jamais sur les paliers", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  // Niveau 51 : 50 000 Coins gagnes. +5 plafonne a 3.
+  await give(h, u, 50000);
+  await h.pg.query("update settings set roll_tiers = '[]'");
+  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.tokens, 2 + 3);
+  await h.pg.query("update settings set roll_tiers = '[{\"from\": 0, \"tokens\": 10}]'");
+  await age(h, 3600);
+  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.tokens, 10, "palier : pas de bonus");
+});
+
+test("succes : recuperables une fois, seulement l'objectif atteint", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const list = async () => (await api(h, "achievements", { session: u.session }, u.ip)).body.list;
+  const first = (await list()).find((a) => a.code === "claims_1");
+  assert.equal(first.progress, 0);
+  const claim = (code) => api(h, "claim_achievement", { session: u.session, code }, u.ip);
+  assert.equal((await claim("claims_1")).body.code, "not_reached");
+  await api(h, "claim", { session: u.session }, u.ip);
+  assert.equal((await me(h, u)).achievements_ready, 1);
+  assert.equal((await claim("claims_1")).body.tokens, 5);
+  assert.equal((await claim("claims_1")).body.code, "already_done");
+  assert.equal((await list()).find((a) => a.code === "claims_1").done, true);
+  assert.equal((await claim("level_100")).body.code, "not_reached");
+});
+
+test("codes promo : une fois par membre, nombre d'utilisations et date limite", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "save_promo", item: { code: "noel", tokens: 100, max_uses: 1 } });
+  await admin(h, { action: "save_promo", item: { code: "VIEUX", tokens: 100, expires_at: "2020-01-01T00:00:00Z" } });
+  const a = await newUser(h);
+  const b = await newUser(h);
+  const redeem = (u, code) => api(h, "redeem_promo", { session: u.session, code }, u.ip);
+  assert.equal((await redeem(a, " Noel ")).body.tokens, 100);
+  assert.equal((await redeem(a, "NOEL")).body.code, "promo_used_up");
+  assert.equal((await redeem(b, "NOEL")).body.code, "promo_used_up");
+  assert.equal((await redeem(b, "VIEUX")).body.code, "promo_invalid");
+  assert.equal((await redeem(b, "INCONNU")).body.code, "promo_invalid");
+  assert.equal((await me(h, a)).available, 100);
+  assert.equal((await admin(h, { action: "overview" })).body.promos.find((x) => x.code === "NOEL").uses, 1);
+});
+
+test("notifications : gains valides, annonce a tous, lues", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  await h.pg.query("select add_earning(id, 'ptc', 'n1', 'x', 40, 0) from users where fp_address = $1", [u.fp]);
+  await admin(h, { action: "validate", all_clean: true });
+  await admin(h, { action: "announce", item: { text: "Nouveau mur de sondages !", link: "#surveys" } });
+  assert.equal((await me(h, u)).notif_unread, 2);
+  const list = (await api(h, "notifications", { session: u.session }, u.ip)).body.list;
+  assert.equal(list.length, 2);
+  assert.ok(list.some((n) => n.kind === "validated" && n.text.startsWith("40 Coins")));
+  await api(h, "read_notifications", { session: u.session }, u.ip);
+  assert.equal((await me(h, u)).notif_unread, 0);
+});
+
+test("support : ticket, reponse de l'admin avec notification, limite de tickets ouverts", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const create = (subject) => api(h, "ticket_create", { session: u.session, subject, body: "Mon retrait n'est pas arrivé." }, u.ip);
+  const r = await create("Retrait");
+  assert.equal(r.body.ok, true);
+  assert.equal((await api(h, "ticket_create", { session: u.session, subject: "x", body: "y" }, u.ip)).body.code, "bad_request");
+  await admin(h, { action: "ticket_reply", id: r.body.id, body: "C'est réglé." });
+  const t = (await api(h, "tickets", { session: u.session }, u.ip)).body.list[0];
+  assert.equal(t.status, "answered");
+  assert.equal(t.messages.length, 2);
+  assert.equal(t.messages[1].admin, true);
+  assert.equal((await me(h, u)).notif_unread, 1);
+  await create("Deux");
+  await create("Trois");
+  await create("Quatre");
+  assert.equal((await create("Cinq")).body.code, "too_many_tickets");
+  assert.equal((await admin(h, { action: "tickets", status: "open" })).body.list.length, 3);
+});
+
+test("parrainage detaille, preuves publiques, historique complet, offres en attente", async () => {
+  const h = await createHarness();
+  const parrain = await newUser(h);
+  const code = (await me(h, parrain)).ref_code;
+  const filleul = await newUser(h, { ref: code });
+  await api(h, "claim", { session: filleul.session }, filleul.ip);
+  const list = (await api(h, "referrals", { session: parrain.session }, parrain.ip)).body.list;
+  assert.equal(list.length, 1);
+  assert.equal(list[0].active, true);
+  assert.ok(!list[0].who.includes("@"), "adresse masquee");
+  const proofs = await api(h, "proofs", {});
+  assert.equal(proofs.body.ok, true);
+  assert.ok(Array.isArray(proofs.body.proofs));
+  assert.ok((await api(h, "history", { session: filleul.session }, filleul.ip)).body.list.length >= 1);
+  await admin(h, { action: "save_offerwall", item: { code: "cpx", name: "CPX", iframe_url: "https://x/{user}", postback_secret: "s", kind: "surveys" } });
+  await postback(h, { wall: "cpx", secret: "s", user: (await me(h, filleul)).ref_code, tx: "Z1", usd: "0.11" });
+  const offers = (await api(h, "my_offers", { session: filleul.session }, filleul.ip)).body.list;
+  assert.deepEqual([offers[0].wall, offers[0].kind, offers[0].status], ["CPX", "surveys", "pending"]);
+});
+
+test("bonus d'un mur, quetes de la semaine", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "save_offerwall", item: { code: "mur", name: "Mur", iframe_url: "https://x/{user}", postback_secret: "s" } });
+  await admin(h, { action: "save_offerwall", item: { code: "mur", bonus_percent: 20 } });
+  const u = await newUser(h);
+  await postback(h, { wall: "mur", secret: "s", user: (await me(h, u)).ref_code, tx: "B1", usd: "1.10" });
+  assert.equal((await me(h, u)).pending, 6000, "5 000 + 20 %");
+  const m = await me(h, u);
+  const week = m.challenges.find((c) => c.period === "week" && c.goal === "earned");
+  assert.equal(week.progress, 6000);
+  const claims = m.challenges.find((c) => c.period === "week" && c.goal === "claims");
+  assert.equal((await api(h, "challenge", { session: u.session, id: claims.id }, u.ip)).body.code, "not_reached");
+});
+
+test("emplacements pub regles dans le dashboard, compteur d'affichages, campagne mise en pause par l'annonceur", async () => {
+  const h = await createHarness();
+  await admin(h, { action: "save_ads", slots: { header: ["<div>pub</div>"] } });
+  assert.deepEqual((await api(h, "status", {})).body.ad_slots, { header: ["<div>pub</div>"] });
+  await api(h, "ad_seen", { slots: ["header", "header", "roll_top", "MAUVAIS!"] });
+  const imp = (await admin(h, { action: "overview" })).body.ad_impressions;
+  assert.deepEqual(imp, { header: 2, roll_top: 1 });
+
+  const u = await newUser(h);
+  await give(h, u, 30000);
+  const r = await api(h, "ad_buy_tokens", { session: u.session, title: "Ma vidéo", url: "https://www.youtube.com/watch?v=abcdefgh", duration: 10, views: 100, kind: "video" }, u.ip);
+  assert.equal(r.body.ok, true);
+  assert.equal((await api(h, "ad_buy_tokens", { session: u.session, title: "Pas une vidéo", url: "https://exemple.com", duration: 10, views: 100, kind: "video" }, u.ip)).body.code, "bad_video");
+  assert.equal((await api(h, "ad_toggle", { session: u.session, id: r.body.campaign_id, enabled: false }, u.ip)).body.code, "not_found", "pas avant approbation");
+  await admin(h, { action: "save_ptc", item: { id: r.body.campaign_id, enabled: true } });
+  assert.equal((await api(h, "earn_list", { session: u.session }, u.ip)).body.ptc[0].kind, "video");
+  assert.equal((await api(h, "ad_toggle", { session: u.session, id: r.body.campaign_id, enabled: false }, u.ip)).body.ok, true);
+  const order = (await api(h, "ad_orders", { session: u.session }, u.ip)).body.orders[0];
+  assert.equal(order.enabled, false);
+  assert.equal(order.kind, "video");
+});
+
+test("tournoi : notification aux gagnants", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  await give(h, u, 300);
+  await h.pg.query("update ledger set at = at - interval '7 days'");
+  await h.pg.query("select close_tournament()");
+  const list = (await api(h, "notifications", { session: u.session }, u.ip)).body.list;
+  assert.ok(list.some((n) => n.kind === "tournament"));
+});
