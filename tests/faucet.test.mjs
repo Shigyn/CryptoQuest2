@@ -1049,16 +1049,40 @@ test("serie de 7 jours : la recompense monte chaque jour consecutif et repart a 
   assert.equal((await day()).tokens, 5, "trou : la serie repart");
 });
 
-test("bonus de niveau : +1 Coin tous les 10 niveaux sur le tirage de base, plafonne, jamais sur les paliers", async () => {
+test("niveaux par XP : 50 tirages puis +100 par niveau, plafond au niveau 50", async () => {
+  const h = await createHarness();
+  const info = async (xp) => (await h.pg.query("select level_info($1) i", [xp])).rows[0].i;
+  assert.deepEqual(await info(0), { level: 1, max: false, into: 0, need: 50, mult: 1 });
+  assert.equal((await info(49)).level, 1);
+  assert.deepEqual(await info(50), { level: 2, max: false, into: 0, need: 100, mult: 1.02 });
+  assert.equal((await info(149)).level, 2);
+  assert.deepEqual(await info(150), { level: 3, max: false, into: 0, need: 200, mult: 1.04 });
+  assert.deepEqual(await info(350), { level: 4, max: false, into: 0, need: 300, mult: 1.06 });
+  const top = await info(10_000_000);
+  assert.deepEqual([top.level, top.max, top.mult], [50, true, 1.98]);
+});
+
+test("XP du tirage : un point par tirage, montee de niveau signalee, multiplicateur sur tout sauf le jackpot, fractions gardees", async () => {
   const h = await createHarness();
   const u = await newUser(h);
-  // Niveau 51 : 50 000 Coins gagnes. +5 plafonne a 3.
-  await give(h, u, 50000);
+  const roll = async () => { await age(h, 3600); return (await api(h, "claim", { session: u.session }, u.ip)).body; };
+  // Passage au niveau 2 au 50e tirage.
+  await h.pg.query("update users set xp = 49 where fp_address = $1", [u.fp]);
   await h.pg.query("update settings set roll_tiers = '[]'");
-  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.tokens, 2 + 3);
-  await h.pg.query("update settings set roll_tiers = '[{\"from\": 0, \"tokens\": 10}]'");
-  await age(h, 3600);
-  assert.equal((await api(h, "claim", { session: u.session }, u.ip)).body.tokens, 10, "palier : pas de bonus");
+  const up = await roll();
+  assert.deepEqual([up.tokens, up.level, up.level_up], [2, 2, true]);
+  assert.equal((await me(h, u)).xp, 50);
+  // Niveau 50 : x1,98. 2 x 1,98 = 3,96 -> 3 (reste 0,96) ; puis 3,96 + 0,96 = 4,92 -> 4.
+  await h.pg.query("update users set xp = 10000000, faucet_carry = 0 where fp_address = $1", [u.fp]);
+  assert.equal((await roll()).tokens, 3);
+  assert.equal((await roll()).tokens, 4);
+  assert.equal((await me(h, u)).level_info.level, 50);
+  // Petit palier multiplie, jackpot (le plus gros palier) intact.
+  await h.pg.query("update users set faucet_carry = 0 where fp_address = $1", [u.fp]);
+  await h.pg.query("update settings set roll_tiers = '[{\"from\": 0, \"tokens\": 1000}, {\"from\": 99999, \"tokens\": 100000}]'");
+  assert.equal((await roll()).tokens, 1980);
+  await h.pg.query("update settings set roll_tiers = '[{\"from\": 0, \"tokens\": 100000}]'");
+  assert.equal((await roll()).tokens, 100000, "jackpot : jamais multiplie");
 });
 
 test("succes : recuperables une fois, seulement l'objectif atteint", async () => {
@@ -1074,7 +1098,7 @@ test("succes : recuperables une fois, seulement l'objectif atteint", async () =>
   assert.equal((await claim("claims_1")).body.tokens, 5);
   assert.equal((await claim("claims_1")).body.code, "already_done");
   assert.equal((await list()).find((a) => a.code === "claims_1").done, true);
-  assert.equal((await claim("level_100")).body.code, "not_reached");
+  assert.equal((await claim("level_40")).body.code, "not_reached");
 });
 
 test("codes promo : une fois par membre, nombre d'utilisations et date limite", async () => {

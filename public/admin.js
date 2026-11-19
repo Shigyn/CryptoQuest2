@@ -234,8 +234,10 @@ const FIELDS = [
   ["boost_price_tokens", `Boutique : prix du boost (${TK})`],
   ["boost_percent", "Boutique : bonus du boost sur tâches, bonus quotidien et quêtes (%)"],
   ["boost_hours", "Boutique : durée du boost (heures)"],
-  ["level_bonus_every", "Bonus de niveau : +1 Coin par tirage tous les N niveaux"],
-  ["level_bonus_max", "Bonus de niveau : maximum (Coins par tirage)"],
+  ["level_xp_first", "Niveaux : tirages pour passer du niveau 1 au 2"],
+  ["level_xp_step", "Niveaux : tirages en plus à chaque niveau suivant (2→3 = 1 fois, 3→4 = 2 fois…)"],
+  ["level_max", "Niveaux : niveau maximum"],
+  ["level_mult_percent", "Niveaux : bonus par niveau sur les gains du tirage, sauf le jackpot (%)"],
 ];
 
 function settingsTab() {

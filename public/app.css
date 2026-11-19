@@ -906,3 +906,11 @@ textarea:focus { outline: none; border-color: var(--sky); }
 .topbar, .public .topbar { top: 0; }
 @media (min-width: 1100px) { .side, .rail { top: 84px; max-height: calc(100vh - 100px); } }
 @media (max-width: 720px) { .topbar .who { display: none; } .topbar-right { gap: 6px; } }
+
+/* XP : multiplicateur sous la barre ; bannieres qui s'adaptent a l'ecran */
+.mult-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font: 600 12px var(--display); color: var(--gold); background: rgba(255, 204, 61, .14); }
+.ad img { max-width: 100%; height: auto; display: block; }
+/* Place reservee seulement tant que la pub n'est pas chargee */
+.ad-header, .ad-footer, .ad-in_content, .ad-roll_top, .ad-roll_bottom, .ad-game, .ad-after_claim, .ad-side_right, .ad-side_left, .ad-list { min-height: 0; }
+.ad-header:empty, .ad-footer:empty, .ad-in_content:empty { min-height: 60px; }
+.ad-roll_top:empty, .ad-roll_bottom:empty, .ad-game:empty, .ad-after_claim:empty, .ad-side_right:empty { min-height: 100px; }

@@ -55,8 +55,12 @@ create table settings (
   -- Refonte : emplacements pub (codes par emplacement), serie de 7 jours, bonus de niveau sur le tirage de base.
   ad_slots jsonb not null default '{}',
   daily_streak_rewards int[] not null default '{5,6,8,10,12,15,25}' check (cardinality(daily_streak_rewards) between 1 and 31),
-  level_bonus_every int not null default 10 check (level_bonus_every >= 1),
-  level_bonus_max int not null default 3 check (level_bonus_max >= 0),
+  -- Niveaux : 1 tirage = 1 XP. Niveau 1 -> 2 : level_xp_first ; niveau n -> n+1 : level_xp_step x (n - 1).
+  -- Chaque niveau multiplie le gain de base du tirage de level_mult_percent (2 % : x1,02 au niveau 2, x1,98 au niveau 50).
+  level_xp_first int not null default 50 check (level_xp_first >= 1),
+  level_xp_step int not null default 100 check (level_xp_step >= 1),
+  level_max int not null default 50 check (level_max between 2 and 200),
+  level_mult_percent numeric not null default 2 check (level_mult_percent between 0 and 20),
   tournament_prizes int[] not null default '{5000,3000,2000,1000,1000,500,500,500,500,500}' check (cardinality(tournament_prizes) between 1 and 50),
   -- Tirage gratuit du faucet : nombre de 0 a 99 999. Sous le premier palier, la recompense de base.
   roll_tiers jsonb not null default '[{"from": 99500, "tokens": 10}, {"from": 99950, "tokens": 1000}, {"from": 99999, "tokens": 100000}]',
@@ -97,6 +101,9 @@ create table users (
   ref_code text not null unique default substr(replace(gen_random_uuid()::text, '-', ''), 1, 10),
   referrer_id uuid references users (id),
   referral_carry numeric not null default 0,
+  -- XP (un point par tirage) et fractions de Coins en attente du multiplicateur de niveau.
+  xp bigint not null default 0,
+  faucet_carry numeric not null default 0,
   fp_address text not null,
   fp_norm text not null unique,
   fp_user_hash text unique,
@@ -404,7 +411,7 @@ insert into achievements (code, name, name_en, kind, target, reward_tokens, sort
   ('level_10', 'Niveau 10', 'Level 10', 'level', 10, 50, 20),
   ('level_25', 'Niveau 25', 'Level 25', 'level', 25, 150, 21),
   ('level_50', 'Niveau 50', 'Level 50', 'level', 50, 400, 22),
-  ('level_100', 'Niveau 100', 'Level 100', 'level', 100, 1500, 23),
+  ('level_40', 'Niveau 40', 'Level 40', 'level', 40, 1500, 23),
   ('ptc_10', '10 pubs vues', '10 ads watched', 'ptc', 10, 20, 30),
   ('ptc_100', '100 pubs vues', '100 ads watched', 'ptc', 100, 100, 31),
   ('links_10', '10 liens passés', '10 links done', 'links', 10, 30, 40),
@@ -666,6 +673,7 @@ declare
   u users;
   blk text;
   last_at timestamptz;
+  exact numeric;
   n int;
 begin
   select * into u from users where id = p_user for update;
@@ -708,14 +716,21 @@ begin
   roll := floor(random() * 100000)::int;
   reward := coalesce((select (t->>'tokens')::int from jsonb_array_elements(s.roll_tiers) t
                       where roll >= (t->>'from')::int order by (t->>'from')::int desc limit 1), s.faucet_reward_tokens);
-  if reward = s.faucet_reward_tokens then
-    reward := reward + least(s.level_bonus_max, floor((floor(sqrt(greatest(user_earned(p_user), 0) / 20.0))) / s.level_bonus_every))::int;
+  -- Niveau : multiplicateur sur tous les gains sauf le jackpot (le plus gros palier, qui reste fixe).
+  -- Les fractions s'accumulent : x1,02 sur 2 Coins finit par donner un Coin de plus.
+  if reward < coalesce((select max((t->>'tokens')::int) from jsonb_array_elements(s.roll_tiers) t), reward + 1) then
+    exact := reward * (level_info(u.xp)->>'mult')::numeric + u.faucet_carry;
+    reward := floor(exact)::int;
+    update users set faucet_carry = exact - reward where id = p_user;
   end if;
+  update users set xp = xp + 1 where id = p_user;
   insert into claims (user_id, ip_hash, tokens) values (p_user, p_ip_hash, reward);
   perform move_tokens(p_user, 'available', reward, 'faucet', roll::text);
   perform credit_referral(p_user, reward);
   return jsonb_build_object('ok', true, 'tokens', reward, 'roll', roll,
-    'available', u.available + reward, 'cooldown_seconds', s.cooldown_seconds);
+    'available', u.available + reward, 'cooldown_seconds', s.cooldown_seconds,
+    'level', (level_info(u.xp + 1)->>'level')::int,
+    'level_up', (level_info(u.xp + 1)->>'level')::int > (level_info(u.xp)->>'level')::int);
 end $$;
 
 create function claim_daily(p_user uuid, p_ip_hash text)
@@ -774,6 +789,28 @@ end $$;
 -- Avancement du jour (UTC) d'un membre sur un type d'objectif.
 -- Refonte : fonctions des nouvelles pages ------------------------------------
 
+-- Niveau a partir de l'XP : niveau, XP deja faite dans le niveau, XP du niveau, multiplicateur du tirage.
+create function level_info(p_xp bigint)
+returns jsonb language plpgsql stable set search_path = public as $$
+declare
+  s settings;
+  lvl int := 1;
+  need bigint;
+  rest bigint := greatest(coalesce(p_xp, 0), 0);
+begin
+  select * into s from settings where id = 1;
+  need := s.level_xp_first;
+  while lvl < s.level_max and rest >= need loop
+    rest := rest - need;
+    lvl := lvl + 1;
+    need := s.level_xp_step::bigint * (lvl - 1);
+  end loop;
+  return jsonb_build_object('level', lvl, 'max', lvl >= s.level_max,
+    'into', case when lvl >= s.level_max then 0 else rest end,
+    'need', case when lvl >= s.level_max then 0 else need end,
+    'mult', round(1 + (lvl - 1) * s.level_mult_percent / 100.0, 4));
+end $$;
+
 -- Total gagne (sert au niveau) et serie de jours avec au moins un tirage.
 create function user_earned(p_user uuid)
 returns bigint language sql stable set search_path = public as $$
@@ -821,7 +858,7 @@ returns bigint language sql stable set search_path = public as $$
   select case p_kind
     when 'claims' then (select count(*) from claims where user_id = p_user)
     when 'streak' then user_streak(p_user)::bigint
-    when 'level' then (floor(sqrt(greatest(user_earned(p_user), 0) / 20.0)) + 1)::bigint
+    when 'level' then (level_info((select xp from users where id = p_user))->>'level')::bigint
     when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc' and status not in ('rejected', 'reversed'))
     when 'links' then (select count(*) from earnings where user_id = p_user and source = 'shortlink' and status not in ('rejected', 'reversed'))
     when 'referrals' then (select count(*) from users r where r.referrer_id = p_user and exists (select 1 from claims c where c.user_id = r.id))
@@ -1648,7 +1685,7 @@ returns jsonb language sql stable set search_path = public as $$
     'tournament_prizes', to_jsonb(s.tournament_prizes),
     'ad_slots', s.ad_slots,
     'daily_streak_rewards', to_jsonb(s.daily_streak_rewards),
-    'level_bonus_every', s.level_bonus_every, 'level_bonus_max', s.level_bonus_max,
+    'level_max', s.level_max, 'level_mult_percent', s.level_mult_percent,
     'feed', coalesce((select jsonb_agg(f order by f->>'at' desc) from (
         select jsonb_build_object('at', e.created_at, 'kind', coalesce(o.name, e.label), 'tokens', e.tokens,
           'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end) as f
@@ -1712,6 +1749,8 @@ returns jsonb language sql stable set search_path = public as $$
                       order by at desc limit s.claims_window_count) w), 0), 0),
     -- Gamification : total gagne (niveau) et serie de jours consecutifs avec au moins une reclamation.
     'earned_total', user_earned(u.id),
+    'xp', u.xp,
+    'level_info', level_info(u.xp),
     'streak', user_streak(u.id),
     'referrals', (select count(*) from users r where r.referrer_id = u.id),
     'referral_earned', (select coalesce(sum(delta), 0) from ledger where user_id = u.id and source = 'referral'),
@@ -1902,8 +1941,10 @@ begin
     vip_task_bonus = coalesce((p->>'vip_task_bonus')::numeric, vip_task_bonus),
     vip_referral_percent = coalesce((p->>'vip_referral_percent')::numeric, vip_referral_percent),
     boost_price_tokens = coalesce((p->>'boost_price_tokens')::int, boost_price_tokens),
-    level_bonus_every = coalesce((p->>'level_bonus_every')::int, level_bonus_every),
-    level_bonus_max = coalesce((p->>'level_bonus_max')::int, level_bonus_max),
+    level_xp_first = coalesce((p->>'level_xp_first')::int, level_xp_first),
+    level_xp_step = coalesce((p->>'level_xp_step')::int, level_xp_step),
+    level_max = coalesce((p->>'level_max')::int, level_max),
+    level_mult_percent = coalesce((p->>'level_mult_percent')::numeric, level_mult_percent),
     daily_streak_rewards = case when jsonb_typeof(p->'daily_streak_rewards') = 'array'
                                 then (select array_agg(x::int) from jsonb_array_elements_text(p->'daily_streak_rewards') x)
                                 else daily_streak_rewards end,

@@ -43,8 +43,9 @@ createServer(async (req, res) => {
 
   if (url.pathname === "/config.js") {
     res.writeHead(200, { "Content-Type": "text/javascript" });
-    // 1x00000000000000000000AA : cle d'essai publique de Cloudflare, toujours valide.
-    res.end(`window.FAUCET_CONFIG = { SITE_NAME: "CryptoQuest", TOKEN: "Coins", API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA", ADS: { top: "", bottom: "" } };`);
+    // Le vrai config.js (nom, emplacements pub), avec le serveur local et la cle d'essai publique de Cloudflare.
+    const real = await readFile(join(root, "config.js"), "utf8");
+    res.end(`${real}\nObject.assign(window.FAUCET_CONFIG, { API_BASE: "/functions/v1", TURNSTILE_SITE_KEY: "1x00000000000000000000AA" });`);
     return;
   }
 

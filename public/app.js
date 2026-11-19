@@ -111,7 +111,9 @@
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
     step2: ["Joue et fais des tâches", "Play and do tasks"], step2t: ["Tirages, pubs, sondages, jeux, quêtes.", "Rolls, ads, surveys, games, quests."],
     step3: ["Retire en un clic", "Withdraw in one click"], step3t: ["Directement sur FaucetPay, dans la crypto de ton choix.", "Straight to FaucetPay, in the coin you like."],
-    lvBonus: ["par tirage grâce à ton niveau", "per roll thanks to your level"], myOffers: ["Mes dernières offres", "My latest offers"],
+    lvBonus: ["sur tes tirages : niveau", "on your rolls: level"],
+    rollsTo: ["tirages avant le niveau", "rolls to level"], rollTo: ["tirage avant le niveau", "roll to level"], maxLevel: ["Niveau maximum atteint !", "Max level reached!"],
+    onRolls: ["sur les tirages", "on rolls"], levelUp: ["Niveau", "Level"], myOffers: ["Mes dernières offres", "My latest offers"],
     es_pending: ["À valider", "Under review"], es_validated: ["Validée", "Approved"], es_paying: ["En paiement", "Paying"], es_paid: ["Payée", "Paid"],
     es_rejected: ["Refusée", "Refused"], es_reversed: ["Annulée", "Reversed"],
     questsWeek: ["Quêtes de la semaine", "Weekly quests"], dayN: ["Jour", "Day"],
@@ -417,13 +419,15 @@
   const shortAddr = (a) => (a && a.length > 22 ? `${a.slice(0, 10)}…${a.slice(-8)}` : a || "");
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Niveau : 20 CC pour le niveau 2, 80 pour le 3, 180 pour le 4…
-  function levelOf(earned) {
-    const lvl = Math.floor(Math.sqrt(Math.max(0, earned) / 20)) + 1;
-    const from = 20 * (lvl - 1) ** 2;
-    const to = 20 * lvl ** 2;
-    return { lvl, pct: Math.min(100, ((earned - from) / (to - from)) * 100), left: to - earned };
+  // Niveau : calcule par le serveur a partir de l'XP (1 tirage = 1 XP).
+  function levelOf() {
+    const i = me?.level_info || {};
+    const need = Number(i.need) || 0;
+    const into = Number(i.into) || 0;
+    return { lvl: i.level || 1, max: Boolean(i.max), mult: Number(i.mult) || 1, pct: need ? Math.min(100, (into / need) * 100) : 100, left: Math.max(0, need - into) };
   }
+  const lvText = (lv) => (lv.max ? t("maxLevel") : `${fmtInt(lv.left)} ${t(lv.left > 1 ? "rollsTo" : "rollTo")} ${lv.lvl + 1}`);
+  const multText = (m) => `×${m.toLocaleString(FR ? "fr-FR" : "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   let toastTimer = null;
   function toast(text, kind = "info") {
@@ -682,7 +686,7 @@
         h("div", { class: "player-main" },
           h("div", { class: "player-name" }, `${t("level")} ${lv.lvl}`),
           h("div", { class: "xpbar" }, h("i", { style: `width:${lv.pct}%` })),
-          h("div", { class: "player-sub" }, `${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`))),
+          h("div", { class: "player-sub" }, lvText(lv), lv.mult > 1 ? h("span", { class: "mult-tag" }, `${multText(lv.mult)} ${t("onRolls")}`) : null))),
       h("div", { class: "player-chips" },
         h("div", { class: "pchip fire" }, h("span", { class: "pchip-ico" }, icon("fire")),
           h("b", {}, fmtInt(me.streak)), h("span", {}, t("streakLbl"))),
@@ -711,10 +715,7 @@
 
   let statsHost = null;
   // Bonus fixe du niveau sur le tirage de base (meme regle que le serveur).
-  const lvBonus = () => {
-    const every_ = status?.level_bonus_every || 10;
-    return Math.min(status?.level_bonus_max ?? 3, Math.floor((levelOf(me.earned_total || 0).lvl - 1) / every_));
-  };
+  const lvMult = () => levelOf().mult;
   function rollCard() {
     const table = rows();
     const max = Math.max(...table.map((r) => r.tokens));
@@ -780,7 +781,7 @@
         after.replaceChildren(...[adSlot("after_claim")].filter(Boolean));
         readyAt = Date.now() + r.cooldown_seconds * 1000;
         burst(btn, `+${tk(r.tokens)}`);
-        toast(`${tk(r.tokens)} ${t("won")}`, "good");
+        toast(r.level_up ? `${t("levelUp")} ${r.level} ! ${multText(levelOf().mult + (status?.level_mult_percent ?? 2) / 100)} ${t("onRolls")}` : `${tk(r.tokens)} ${t("won")}`, "good");
         await refreshMe();
         statsHost?.replaceChildren(statsRow());
       } else {
@@ -797,7 +798,7 @@
         h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("rollHead")), digits),
         h("div", { class: "cooldown" }, fill),
         cap, adSlot("roll_top"), btn, adSlot("roll_bottom"), after,
-        lvBonus() ? h("p", { class: "lv-bonus" }, icon("star"), `+${lvBonus()} ${TK} ${t("lvBonus")}`) : null,
+        lvMult() > 1 ? h("p", { class: "lv-bonus" }, icon("star"), `${multText(lvMult())} ${t("lvBonus")} ${levelOf().lvl}`) : null,
         h("p", { class: "note", style: "text-align:center;margin:12px 0 0" }, t("free"))));
   }
 
@@ -1606,7 +1607,7 @@
         h("h2", { class: nameCls(me).trim() || null, style: "margin-top:14px;overflow-wrap:anywhere" }, me.fp_address),
         me.title && cosmeticName(me.title) ? h("div", { style: "margin-top:6px" }, h("span", { class: "title-tag" }, cosmeticName(me.title))) : null,
         h("div", { style: "margin-top:10px" }, h("a", { class: "btn small ghost", href: "#shop", style: "width:auto" }, icon("shop"), t("shop"))),
-        h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${tk(lv.left)} ${t("toNext")} ${lv.lvl + 1}`),
+        h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${lvText(lv)} · ${multText(lv.mult)} ${t("onRolls")}`),
         h("div", { class: "xp", style: "width:100%;height:10px" }, h("i", { style: `width:${lv.pct}%` }))),
       h("div", { class: "grid2" },
         h("a", { class: "panel ref-card", href: "#referral" }, h("div", { class: "panel-title" }, t("referral")),
