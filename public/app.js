@@ -495,6 +495,16 @@
     adSeen = new Set();
     if (slots.length) api("ad_seen", { slots });
   };
+  // Apres un tirage : chaque banniere de la page est rechargee (nouvel affichage, nouveau code de la rotation).
+  // Le bandeau mobile ferme par le membre et la pub d apres-gain (deja neuve) ne bougent pas.
+  function refreshAds() {
+    document.querySelectorAll(".ad[data-slot]").forEach((el) => {
+      const slot = el.dataset.slot;
+      if (slot === "after_claim" || slot === "sticky_mobile" || !el.isConnected) return;
+      const fresh = adSlot(slot);
+      if (fresh) el.replaceWith(fresh);
+    });
+  }
   const adSlot = (slot) => {
     if (me?.vip) return null;
     if (slot === "sticky_mobile" && Number(store.get("cc.stickyOff") || 0) > Date.now()) return null;
@@ -822,6 +832,7 @@
         if (i >= 0) rowEls[i].classList.add("hit");
         cooldown = r.cooldown_seconds;
         after.replaceChildren(...[adSlot("after_claim")].filter(Boolean));
+        refreshAds();
         readyAt = Date.now() + r.cooldown_seconds * 1000;
         burst(btn, `+${tk(r.tokens)}`);
         toast(r.level_up ? `${t("levelUp")} ${r.level} ! ${multText(levelOf().mult + (status?.level_mult_percent ?? 2) / 100)} ${t("onRolls")}` : `${tk(r.tokens)} ${t("won")}`, "good");
