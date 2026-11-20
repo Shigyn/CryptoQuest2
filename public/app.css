@@ -950,3 +950,9 @@ textarea:focus { outline: none; border-color: var(--sky); }
 .watch-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; font-weight: 700; }
 .watch-counter { font: 700 26px var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
 .watch-foot .task-confirm { width: 100%; }
+
+/* Paiement automatique */
+.autopay { margin: 12px 0; padding: 12px 14px; border-radius: 16px; background: rgba(49, 214, 138, .08); border: 2px solid rgba(49, 214, 138, .3); }
+.autopay p { display: flex; align-items: flex-start; gap: 8px; font-weight: 700; color: var(--ink); font-size: 14px; }
+.autopay p svg { flex: none; width: 18px; height: 18px; color: var(--green); margin-top: 1px; }
+.autopay .progress { margin: 8px 0 4px; }

@@ -25,6 +25,9 @@ create table settings (
   -- Chaque tirage coute 1 point ; cooldown_seconds reste le minimum entre deux tirages.
   -- Montant minimum d'un retrait (instantane ou lot horaire), en Coins.
   min_withdraw_tokens int not null default 1 check (min_withdraw_tokens >= 1),
+  -- Tirage en 2 etapes : secondes entre « Lancer » et « Recuperer ». Paiement auto du solde disponible au lot horaire.
+  roll_reveal_seconds int not null default 8 check (roll_reveal_seconds between 0 and 60),
+  auto_payout boolean not null default false,
   -- Watch Ads (videos recompensees) : la recompense = watch_revenue_eur x tokens_per_eur x watch_share_percent / 100.
   watch_daily_limit int not null default 30 check (watch_daily_limit >= 0),
   watch_gap_seconds int not null default 60 check (watch_gap_seconds >= 0),
@@ -118,6 +121,8 @@ create table users (
   energy numeric,
   energy_at timestamptz,
   chat_muted_until timestamptz,
+  -- Tirage fait mais pas encore recupere : {roll, tokens, at, level, level_up}.
+  pending_roll jsonb,
   faucet_carry numeric not null default 0,
   fp_address text not null,
   fp_norm text not null unique,
@@ -723,6 +728,11 @@ begin
   if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
   if u.fp_address is null then return jsonb_build_object('ok', false, 'code', 'link_faucetpay'); end if;
   if s.faucet_reward_tokens <= 0 then return jsonb_build_object('ok', false, 'code', 'paused'); end if;
+  -- Un tirage deja lance attend d'etre recupere.
+  if u.pending_roll is not null then
+    return jsonb_build_object('ok', false, 'code', 'roll_pending',
+      'retry_after', greatest(ceil(extract(epoch from (u.pending_roll->>'at')::timestamptz + make_interval(secs => s.roll_reveal_seconds) - now())), 0)::int);
+  end if;
 
   select max(at) into last_at from claims
    where at > now() - make_interval(secs => s.cooldown_seconds) and (user_id = p_user or ip_hash = p_ip_hash);
@@ -759,15 +769,15 @@ begin
     reward := floor(exact)::int;
     update users set faucet_carry = exact - reward where id = p_user;
   end if;
-  update users set xp = xp + 1, energy = en - 1, energy_at = now() where id = p_user;
+  update users set xp = xp + 1, energy = en - 1, energy_at = now(),
+    pending_roll = jsonb_build_object('roll', roll, 'tokens', reward, 'at', now(),
+      'level', (level_info(u.xp + 1)->>'level')::int,
+      'level_up', (level_info(u.xp + 1)->>'level')::int > (level_info(u.xp)->>'level')::int)
+  where id = p_user;
   insert into claims (user_id, ip_hash, tokens) values (p_user, p_ip_hash, reward);
-  perform move_tokens(p_user, 'available', reward, 'faucet', roll::text);
-  perform credit_referral(p_user, reward);
-  return jsonb_build_object('ok', true, 'tokens', reward, 'roll', roll,
-    'available', u.available + reward, 'cooldown_seconds', s.cooldown_seconds,
-    'level', (level_info(u.xp + 1)->>'level')::int,
-    'level_up', (level_info(u.xp + 1)->>'level')::int > (level_info(u.xp)->>'level')::int,
-    'energy', floor(en - 1)::int);
+  -- Le resultat reste cache jusqu'a l'etape 2.
+  return jsonb_build_object('ok', true, 'pending', true, 'wait', s.roll_reveal_seconds,
+    'cooldown_seconds', s.cooldown_seconds, 'energy', floor(en - 1)::int);
 end $$;
 
 create function claim_daily(p_user uuid, p_ip_hash text)
@@ -1362,6 +1372,41 @@ begin
   return false;
 end $$;
 
+-- Etape 2 du tirage : apres le compte a rebours, le gain est revele et credite.
+create function faucet_collect(p_user uuid, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  blk text;
+  p jsonb;
+  left_s numeric;
+begin
+  select * into s from settings where id = 1;
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  p := u.pending_roll;
+  if p is null then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  left_s := extract(epoch from (p->>'at')::timestamptz + make_interval(secs => s.roll_reveal_seconds) - now());
+  if left_s > 0 then return jsonb_build_object('ok', false, 'code', 'too_soon', 'retry_after', ceil(left_s)::int); end if;
+  update users set pending_roll = null where id = p_user;
+  perform move_tokens(p_user, 'available', (p->>'tokens')::bigint, 'faucet', p->>'roll');
+  perform credit_referral(p_user, (p->>'tokens')::bigint);
+  return jsonb_build_object('ok', true, 'tokens', (p->>'tokens')::int, 'roll', (p->>'roll')::int,
+    'available', u.available + (p->>'tokens')::bigint, 'level', (p->>'level')::int, 'level_up', (p->>'level_up')::boolean);
+end $$;
+
+-- Paiement automatique : membres dont le solde disponible atteint le minimum de retrait.
+create function auto_batch_users(p_limit int)
+returns jsonb language sql stable set search_path = public as $$
+  select coalesce(jsonb_agg(id), '[]'::jsonb) from (
+    select u.id from users u, settings s
+    where s.id = 1 and s.auto_payout and u.available >= greatest(s.min_withdraw_tokens, 1)
+      and u.fp_address is not null and not u.banned
+    order by u.available desc limit p_limit) x;
+$$;
+
 create function reserve_withdrawal(p_user uuid, p_kind text, p_ip_hash text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
@@ -1738,6 +1783,7 @@ returns jsonb language sql stable set search_path = public as $$
     'level_max', s.level_max, 'level_mult_percent', s.level_mult_percent,
     'energy_regen', s.energy_regen_seconds, 'energy_max', s.energy_max, 'energy_max_vip', s.energy_max_vip,
     'min_withdraw_tokens', s.min_withdraw_tokens,
+    'roll_reveal_seconds', s.roll_reveal_seconds, 'auto_payout', s.auto_payout,
     'watch_reward', floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::int,
     'watch_daily_limit', s.watch_daily_limit,
     'feed', coalesce((select jsonb_agg(f order by f->>'at' desc) from (
@@ -1777,6 +1823,8 @@ returns jsonb language sql stable set search_path = public as $$
     'energy_max', case when u.vip_until > now() then s.energy_max_vip else s.energy_max end,
     'energy_max_vip', s.energy_max_vip,
     'energy_regen', s.energy_regen_seconds,
+    'pending_roll', case when u.pending_roll is null then null else jsonb_build_object(
+      'retry_after', greatest(ceil(extract(epoch from (u.pending_roll->>'at')::timestamptz + make_interval(secs => s.roll_reveal_seconds) - now())), 0)::int) end,
     -- Secondes avant le prochain point d'energie (0 si la reserve est pleine).
     'energy_next', case when energy_now(u) >= case when u.vip_until > now() then s.energy_max_vip else s.energy_max end then 0
                         else ceil((1 - (energy_now(u) - floor(energy_now(u)))) * s.energy_regen_seconds)::int end,
@@ -1984,6 +2032,8 @@ begin
     wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
     wheel_hours = coalesce((p->>'wheel_hours')::int, wheel_hours),
     min_withdraw_tokens = coalesce((p->>'min_withdraw_tokens')::int, min_withdraw_tokens),
+    roll_reveal_seconds = coalesce((p->>'roll_reveal_seconds')::int, roll_reveal_seconds),
+    auto_payout = coalesce((p->>'auto_payout')::boolean, auto_payout),
     watch_daily_limit = coalesce((p->>'watch_daily_limit')::int, watch_daily_limit),
     watch_gap_seconds = coalesce((p->>'watch_gap_seconds')::int, watch_gap_seconds),
     watch_seconds = coalesce((p->>'watch_seconds')::int, watch_seconds),

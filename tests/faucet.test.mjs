@@ -7,12 +7,21 @@ import { BASE, SCENARIOS, simulate } from "../public/simulation.mjs";
 let ipCounter = 0;
 const freshIp = () => `10.${(++ipCounter >> 8) & 255}.${ipCounter & 255}.1`;
 
-async function api(h, action, body = {}, ip = freshIp()) {
+async function rawApi(h, action, body = {}, ip = freshIp()) {
   const res = await handleApi(
     new Request("http://x/api", { method: "POST", headers: { "cf-connecting-ip": ip }, body: JSON.stringify({ action, captcha: "ok", ...body }) }),
     h.deps,
   );
   return { status: res.status, body: await res.json() };
+}
+
+// Le tirage se fait en 2 etapes ; ici « claim » enchaine les deux en sautant le compte a rebours.
+async function api(h, action, body = {}, ip = freshIp()) {
+  const r = await rawApi(h, action, body, ip);
+  if (action !== "claim" || !r.body.pending) return r;
+  await h.pg.query("update users set pending_roll = jsonb_set(pending_roll, '{at}', to_jsonb(now() - interval '1 hour')) where pending_roll is not null");
+  const c = await rawApi(h, "collect", { session: body.session }, ip);
+  return { status: c.status, body: { ...c.body, cooldown_seconds: r.body.cooldown_seconds, energy: r.body.energy } };
 }
 
 const admin = async (h, body, password = h.deps.adminPassword) => {
@@ -1315,4 +1324,49 @@ test("retrait minimum : refuse sous le seuil, et le lot horaire attend le seuil"
   await h.pg.query("update users set validated = 50 where fp_address = $1", [u.fp]);
   assert.deepEqual((await h.pg.query("select hourly_batch_users(10) r")).rows[0].r, []);
   assert.equal((await api(h, "status", {})).body.min_withdraw_tokens, 100);
+});
+
+test("tirage en 2 etapes : gain cache, credite seulement apres le compte a rebours, jamais deux tirages en attente", async () => {
+  const h = await createHarness();
+  const u = await newUser(h);
+  const step1 = (await rawApi(h, "claim", { session: u.session }, u.ip)).body;
+  assert.deepEqual([step1.ok, step1.pending, step1.wait, step1.energy], [true, true, 8, 2]);
+  assert.equal(step1.tokens, undefined, "resultat cache a l'etape 1");
+  assert.equal(step1.roll, undefined);
+  let m = await me(h, u);
+  assert.equal(m.available, 0);
+  assert.ok(m.pending_roll.retry_after > 0);
+  const early = (await rawApi(h, "collect", { session: u.session }, u.ip)).body;
+  assert.equal(early.code, "too_soon");
+  // Pas de nouveau tirage tant que le precedent n'est pas recupere (meme apres le delai de 30 s).
+  await h.pg.query("update claims set at = at - interval '60 seconds'");
+  assert.equal((await rawApi(h, "claim", { session: u.session }, u.ip)).body.code, "roll_pending");
+  await h.pg.query("update users set pending_roll = jsonb_set(pending_roll, '{at}', to_jsonb(now() - interval '9 seconds'))");
+  const step2 = (await rawApi(h, "collect", { session: u.session }, u.ip)).body;
+  assert.equal(step2.ok, true);
+  assert.ok(step2.tokens >= 2 && Number.isInteger(step2.roll));
+  m = await me(h, u);
+  assert.equal(m.available, step2.tokens);
+  assert.equal(m.pending_roll, null);
+  assert.equal((await rawApi(h, "collect", { session: u.session }, u.ip)).body.code, "not_found", "une seule fois");
+});
+
+test("paiement automatique : le solde disponible part au lot horaire des qu'il atteint le minimum", async () => {
+  const h = await createHarness();
+  await h.pg.query("update settings set min_withdraw_tokens = 100, auto_payout = true");
+  const a = await newUser(h);
+  const b = await newUser(h);
+  await give(h, a, 150);
+  await give(h, b, 60);
+  const r = await cron(h);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.paid, 1);
+  assert.equal((await me(h, a)).available, 0);
+  assert.equal((await me(h, a)).withdrawals[0].status, "paid");
+  assert.equal((await me(h, b)).available, 60, "sous le minimum : rien ne part");
+  // Paiement auto coupe : rien ne part.
+  await h.pg.query("update settings set auto_payout = false");
+  await give(h, b, 100);
+  assert.equal((await cron(h)).body.paid, 0);
+  assert.equal((await api(h, "status", {})).body.auto_payout, false);
 });

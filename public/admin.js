@@ -213,6 +213,8 @@ const FIELDS = [
   ["energy_max", "Énergie : réserve maximum"],
   ["energy_max_vip", "Énergie : réserve maximum des VIP"],
   ["min_withdraw_tokens", `Retrait minimum (${TK})`],
+  ["auto_payout", "Paiement automatique du solde au-dessus du minimum, à chaque heure (1 = oui, 0 = non)"],
+  ["roll_reveal_seconds", "Tirage en 2 étapes : secondes avant « Récupérer mon gain »"],
   ["watch_daily_limit", "Watch Ads : vidéos par jour et par membre"],
   ["watch_gap_seconds", "Watch Ads : secondes minimum entre deux vidéos"],
   ["watch_seconds", "Watch Ads : durée de visionnage exigée (secondes)"],
@@ -249,7 +251,7 @@ const FIELDS = [
 
 function settingsTab() {
   const s = data.settings;
-  const inputs = Object.fromEntries(FIELDS.map(([k]) => [k, h("input", { type: "number", min: "0", step: "any", value: s[k], required: true })]));
+  const inputs = Object.fromEntries(FIELDS.map(([k]) => [k, h("input", { type: "number", min: "0", step: "any", value: typeof s[k] === "boolean" ? (s[k] ? 1 : 0) : s[k], required: true })]));
   const prizes = h("input", { value: (s.wheel_prizes || []).join(", "), required: true, pattern: "[0-9 ,]+" });
   const prizeList = () => prizes.value.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n >= 0);
   const mines = h("input", { value: (s.mines_rewards || []).join(", "), required: true, pattern: "[0-9 ,]+" });

@@ -274,6 +274,10 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
       return result(d, r);
     }
 
+    // Etape 2 du tirage : revele et credite le gain apres le compte a rebours.
+    case "collect":
+      return result(d, await d.rpc("faucet_collect", { p_user: userId, p_ip_hash: ipHash }));
+
     case "daily":
       return result(d, await d.rpc("claim_daily", { p_user: userId, p_ip_hash: ipHash }));
 
@@ -643,11 +647,14 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
   const rates = await refreshRates(d).catch((err) => ({ updated: [], skipped: [], error: String(err) }));
   // Tournoi : les gagnants de la semaine passee sont payes une seule fois, au premier lot du lundi.
   const tournament = await d.rpc("close_tournament").catch((err: unknown) => ({ ok: false, error: String(err) }));
+  // Gains valides (lot horaire) puis soldes disponibles au-dessus du minimum (paiement automatique).
   const users: string[] = await d.rpc("hourly_batch_users", { p_limit: 200 });
+  const autos: string[] = await d.rpc("auto_batch_users", { p_limit: 200 });
+  const queue: [string, "hourly" | "instant"][] = [...users.map((id): [string, "hourly"] => [id, "hourly"]), ...autos.map((id): [string, "instant"] => [id, "instant"])];
   let paid = 0, failed = 0, skipped = 0;
-  for (const id of users) {
+  for (const [id, kind] of queue) {
     if (Date.now() - started > budgetMs) break;
-    const r = await d.rpc("reserve_withdrawal", { p_user: id, p_kind: "hourly", p_ip_hash: "lot-horaire" });
+    const r = await d.rpc("reserve_withdrawal", { p_user: id, p_kind: kind, p_ip_hash: "lot-horaire" });
     if (!r.ok) {
       if (r.code === "paused" || r.code === "coin_empty") {
         if (r.tripped) await d.alert("Site en pause : plafond de paiement sur 24 h atteint.");
@@ -664,7 +671,7 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
     }
     await d.sleep(1000);
   }
-  return json(d, 200, { ok: true, paid, failed, skipped, candidates: users.length, rates, tournament });
+  return json(d, 200, { ok: true, paid, failed, skipped, candidates: queue.length, rates, tournament });
 }
 
 export async function handleAdmin(req: Request, d: Deps): Promise<Response> {

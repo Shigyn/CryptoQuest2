@@ -60,6 +60,11 @@
     tourneyEmpty: ["Personne n’a encore marqué de points cette semaine. Fais un tirage pour prendre la tête !", "Nobody has scored yet this week. Make a roll to take the lead!"],
     tourneyText: ["Gratuit : chaque Coin gagné cette semaine compte (tirages, jeux, tâches, parrainage ; pas les quêtes). Les", "Free: every Coin earned this week counts (rolls, games, tasks, referrals; not quests). The top"],
     tourneyText2: ["premiers sont payés lundi matin.", "players are paid on Monday morning."],
+    // Tirage en 2 etapes, paiement automatique
+    collectBtn: ["Récupérer mon gain", "Collect my prize"], revealIn: ["Ton gain dans", "Your prize in"], revealNow: ["Ton gain t'attend !", "Your prize is ready!"],
+    autoPay: ["Paiement automatique : dès que ton solde atteint", "Automatic payout: as soon as your balance reaches"],
+    autoPay2: ["il part tout seul sur FaucetPay, à chaque heure.", "it goes to FaucetPay on its own, every hour."],
+    autoLeft: ["avant ton prochain paiement", "before your next payout"], autoSoon: ["Prêt : il part au prochain paiement horaire.", "Ready: it goes out with the next hourly payout."],
     // Energie, chat, Watch Ads, retrait minimum
     energyIn: ["dans", "in"], energyFull: ["Réserve pleine", "Full"], noEnergy: ["Plus d'énergie", "Out of energy"],
     energyHelp: ["1 énergie toutes les 20 minutes. Chaque tirage en consomme une.", "1 energy every 20 minutes. Each roll uses one."],
@@ -233,6 +238,7 @@
     chat_link: ["Les liens ne sont pas autorisés dans le chat.", "Links are not allowed in the chat."],
     chat_blocked: ["Message bloqué par la modération.", "Message blocked by moderation."],
     chat_muted: ["Tu ne peux plus écrire pour le moment", "You can't write for now"],
+    roll_pending: ["Récupère d'abord ton tirage en cours.", "Collect your current roll first."],
     not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
@@ -790,11 +796,33 @@
     let cooldown = Math.max(status?.cooldown_seconds ?? 30, me.retry_after || 0);
     let readyAt = Date.now() + (me.retry_after || 0) * 1000;
     let busy = false;
+    // Tirage en 2 etapes : apres « Lancer », le gain attend pendingUntil puis « Recuperer mon gain ».
+    const rollLabel = h("div", { class: "roll-label" }, t("rollHead"));
+    let pendingUntil = me.pending_roll ? Date.now() + (me.pending_roll.retry_after || 0) * 1000 : 0;
+    let idle = null;
+    const startIdle = () => {
+      if (reduceMotion || idle) return;
+      reels.forEach((el) => { el.classList.remove("stop"); el.classList.add("spin"); });
+      idle = every(() => reels.forEach((el) => { el.textContent = String(Math.floor(Math.random() * 10)); }), 90);
+    };
+    const stopIdle = () => { if (idle) { clearInterval(idle); idle = null; } };
+    if (pendingUntil) startIdle();
 
     const tick = () => {
       const left = Math.ceil((readyAt - Date.now()) / 1000);
       fill.style.width = `${left > 0 ? (1 - left / cooldown) * 100 : 100}%`;
       if (busy) return;
+      if (pendingUntil) {
+        const wait = Math.ceil((pendingUntil - Date.now()) / 1000);
+        btn.className = "btn big gold";
+        btn.textContent = t("collectBtn");
+        btn.disabled = wait > 0;
+        rollLabel.textContent = wait > 0 ? `${t("revealIn")} ${wait}` : t("revealNow");
+        if (wait <= 0) btn.classList.add("ready");
+        return;
+      }
+      btn.className = "btn big";
+      rollLabel.textContent = t("rollHead");
       if (status?.paused) { btn.disabled = true; btn.textContent = t("closed"); }
       else if (left > 0) { btn.disabled = true; btn.textContent = (me.energy ?? 1) < 1 ? t("noEnergy") : t("rollBtn"); }
       else { btn.disabled = false; btn.textContent = t("rollBtn"); btn.classList.add("ready"); }
@@ -817,7 +845,37 @@
       }, 700 + i * 220));
     });
 
+    // Etape 2 : revele le resultat, credite le gain, recharge encore les bannieres.
+    const collect = async () => {
+      busy = true;
+      btn.disabled = true;
+      btn.classList.remove("ready");
+      const r = await api("collect");
+      if (!r.ok) {
+        busy = false;
+        if (r.code === "too_soon" && r.retry_after) pendingUntil = Date.now() + r.retry_after * 1000;
+        else if (r.code === "not_found") { pendingUntil = 0; stopIdle(); }
+        toast(message(r), "bad");
+        tick();
+        return;
+      }
+      pendingUntil = 0;
+      stopIdle();
+      await animateTo(r.roll ?? 0);
+      const i = table.findIndex((row) => r.roll >= row.from && r.roll <= row.to);
+      if (i >= 0) rowEls[i].classList.add("hit");
+      after.replaceChildren(...[adSlot("after_claim")].filter(Boolean));
+      refreshAds();
+      burst(btn, `+${tk(r.tokens)}`);
+      toast(r.level_up ? `${t("levelUp")} ${r.level} ! ${multText(levelOf().mult + (status?.level_mult_percent ?? 2) / 100)} ${t("onRolls")}` : `${tk(r.tokens)} ${t("won")}`, "good");
+      await refreshMe();
+      statsHost?.replaceChildren(statsRow());
+      busy = false;
+      tick();
+    };
+
     btn.onclick = async () => {
+      if (pendingUntil) { collect(); return; }
       if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
       btn.classList.remove("ready");
       busy = true;
@@ -826,7 +884,19 @@
       rowEls.forEach((el) => el.classList.remove("hit"));
       const r = await api("claim", { captcha: captchaToken(cap) || "dev" });
       captchaReset(cap);
-      if (r.ok) {
+      if (r.ok && r.pending) {
+        // Etape 1 faite : nouvelles bannieres, rouleaux qui tournent jusqu'a la recuperation.
+        pendingUntil = Date.now() + (r.wait || 0) * 1000;
+        cooldown = r.cooldown_seconds;
+        readyAt = Date.now() + r.cooldown_seconds * 1000;
+        refreshAds();
+        startIdle();
+        await refreshMe();
+        statsHost?.replaceChildren(statsRow());
+      } else if (r.code === "roll_pending") {
+        pendingUntil = Date.now() + (r.retry_after || 0) * 1000;
+        startIdle();
+      } else if (r.ok) {
         await animateTo(r.roll ?? 0);
         const i = table.findIndex((row) => r.roll >= row.from && r.roll <= row.to);
         if (i >= 0) rowEls[i].classList.add("hit");
@@ -849,7 +919,7 @@
     return h("div", { class: "grid2 roll-grid" },
       h("section", { class: "panel" }, h("div", { class: "panel-title" }, t("prizes"), h("span", { class: "badge" }, unitLabel())), rowEls),
       h("section", { class: "panel" },
-        h("div", { class: "roll" }, h("div", { class: "roll-label" }, t("rollHead")), digits),
+        h("div", { class: "roll" }, rollLabel, digits),
         h("div", { class: "cooldown" }, fill),
         cap, adSlot("roll_top"), btn, adSlot("roll_bottom"), after,
         lvMult() > 1 ? h("p", { class: "lv-bonus" }, icon("star"), `${multText(lvMult())} ${t("lvBonus")} ${levelOf().lvl}`) : null,
@@ -1593,6 +1663,17 @@
     shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], achievement: ["Succès", "Achievement"], promo: ["Code promo", "Promo code"],
     seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
   };
+  // « Des que ton solde atteint X, il part tout seul » + barre de progression.
+  function autoPayBox() {
+    if (!status?.auto_payout) return null;
+    const min = status.min_withdraw_tokens || 1;
+    const have = Math.max(0, me.available || 0);
+    return h("div", { class: "autopay" },
+      h("p", {}, icon("bolt"), `${t("autoPay")} ${tk(min)}, ${t("autoPay2")}`),
+      h("div", { class: "progress" }, h("i", { style: `width:${Math.min(100, (have / min) * 100)}%` })),
+      h("span", { class: "row-sub" }, have >= min ? t("autoSoon") : `${num(min - have)} ${unitLabel()} ${t("autoLeft")}`));
+  }
+
   function walletView() {
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
     const est = c && me.available > 0 ? (me.available / (status?.tokens_per_eur || 10000)) * c.per_eur : 0;
@@ -1635,6 +1716,7 @@
               render();
             },
           }, me.coins.map((x) => h("option", { value: x.code, selected: x.code === me.payout_coin }, `${x.code} · ${x.name}`)))) : null,
+        autoPayBox(),
         btn,
         (status?.min_withdraw_tokens || 1) > 1 ? h("p", { class: "note", style: "margin:10px 0 0;text-align:center" }, `${t("wdMin")} ${tk(status.min_withdraw_tokens)}`) : null,
         h("p", { class: "note", style: "margin:10px 0 0;font-style:italic;text-align:center" }, t("wdDelay")),
@@ -1880,6 +1962,7 @@
         h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, (SOURCE[r.source] || [r.source, r.source])[FR ? 0 : 1]), h("div", { class: "row-sub" }, when(r.at))),
         h("span", { class: `amount ${r.delta > 0 ? "plus" : "minus"}` }, `${r.delta > 0 ? "+" : ""}${num(r.delta)}`))) : h("p", { class: "empty" }, t("noHistory")));
     statsHost = h("div", {}, statsRow());
+    balances.append(...[autoPayBox()].filter(Boolean));
     return h("div", { class: "stack" }, announcementBar(), statsHost,
       h("div", { class: "grid2" }, actions, balances),
       adSlot("in_content"),
