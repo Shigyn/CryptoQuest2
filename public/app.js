@@ -2320,7 +2320,6 @@
       every(tick, 500);
       const boosts = [
         ["video", "play", "--c1:#ff8cc6;--c2:#e2367f", st.video_ghs, "#watch"],
-        ["ptc", "eye", "--c1:#4fd2ff;--c2:#2f6bff", st.ptc_ghs, "#ptc"],
       ].map(([k, ico, tone, ghs, href]) => h("a", { class: "boost-card", href },
         h("span", { class: "game-ico", style: tone }, icon(ico)),
         h("span", { class: "boost-text" }, h("b", {}, t(k === "video" ? "watchAds" : "ptc")), h("span", {}, `+${fmtGhs(ghs)} · ${st.hours} h`)),
@@ -2331,15 +2330,15 @@
           h("div", { class: "mine-main" },
             h("span", { class: "row-sub" }, t("miningPower")),
             h("b", { class: "mine-power" }, fmtGhs(st.power)),
-            h("span", { class: "row-sub" }, t("miningNow")), counter, rate)),
+            h("span", { class: "row-sub" }, t("miningNow")), counter, rate),
+          h("div", { class: "mine-boost" },
+            h("div", { class: "mine-boost-head" }, h("b", {}, t("miningBoost")), h("span", { class: "badge" }, `${st.ads_hour_left} ${t("adsHourLeft")}`)),
+            boosts)),
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("kindBase"), h("span", { class: "badge" }, `${fmtGhs(st.base_ghs)} · ${st.hours} h`)),
           st.base ? baseLine : h("div", {}, h("p", { class: "note" }, t("miningBaseText")), cap, startBtn),
           after),
         adSlot("roll_bottom"),
-        h("section", { class: "panel" },
-          h("div", { class: "panel-title" }, t("miningBoost"), h("span", { class: "badge" }, `${st.ads_hour_left} ${t("adsHourLeft")}`)),
-          h("div", { class: "boost-list" }, boosts)),
         sessionsView(),
         h("p", { class: "note", style: "text-align:center" }, t("miningFair")));
       tick();

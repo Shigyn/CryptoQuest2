@@ -1068,3 +1068,8 @@ a.pchip { text-decoration: none; color: inherit; }
 .lang-menu button:hover, .lang-menu button.on { background: rgba(255, 122, 0, .1); }
 .pub-nav { align-items: center; }
 @media (max-width: 720px) { .lang-pick .lang-code { display: none; } .lang-pick summary { padding: 0 8px; } }
+/* Boost dans le bloc puissance */
+.mine-boost { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mine-boost-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mine-boost-head b { color: var(--ink); font: 600 16px var(--display); }
+.mine-boost .boost-card { background: #fff; }
