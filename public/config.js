@@ -7,6 +7,12 @@
   const VIEFAUCET = `<a href="https://viefaucet.com?r=6480dff3371c056c0073e194" target="_blank" rel="noopener"><img src="https://viefaucet.com/banners/300x250.gif" width="300" height="250" alt="Vie Faucet" /></a>`;
   const EARNBITSUN = `<a href="https://earnbitsun.club?ref=ISONAED7" target="_blank" rel="noopener"><img src="https://earnbitsun.club/promo/EBS-468x60.gif" width="468" height="60" alt="Earnbitsun — gagnez des cryptos toutes les 5 minutes" style="border:0"></a>`;
 
+  // A-Ads, bloc 2462840 (taille adaptative) : banniere payee a l affichage.
+  const aads = (height) => `<iframe data-aa="2462840" src="//acceptable.a-ads.com/2462840/?size=Adaptive" title="A-Ads" style="border:0;padding:0;width:100%;height:${height}px;overflow:hidden;display:block;margin:auto"></iframe>`;
+  const AADS = aads(90);
+  const AADS_BOX = aads(250);
+  const AADS_STICKY = aads(60);
+
   window.FAUCET_CONFIG = {
     SITE_NAME: "BitPool",
     TOKEN: "Coins",
@@ -16,14 +22,16 @@
     TURNSTILE_SITE_KEY: "0x4AAAAAAF1U79urd_S35J5R",
     // Code HTML par emplacement. Une liste = rotation au hasard. Absent : emplacement masque.
     ADS: {
-      header: [ROLLERCOIN_3, ROLLERCOIN_2, EARNBITSUN],
+      // Pub payee en premier : A-Ads seul aux emplacements les plus vus, parrainages ailleurs.
+      header: [AADS],
+      sticky_mobile: [AADS_STICKY],
       roll_top: [VIEFAUCET],
       roll_bottom: [ROLLERCOIN_3, ROLLERCOIN_2],
       after_claim: [VIEFAUCET],
-      in_content: [EARNBITSUN, ROLLERCOIN_3, ROLLERCOIN_2],
+      in_content: [AADS],
       game: [VIEFAUCET],
-      side_right: [VIEFAUCET],
-      footer: [ROLLERCOIN_3, ROLLERCOIN_2, EARNBITSUN],
+      side_right: [AADS_BOX],
+      footer: [AADS],
     },
   };
 })();

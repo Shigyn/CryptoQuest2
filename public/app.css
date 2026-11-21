@@ -1077,3 +1077,6 @@ a.pchip { text-decoration: none; color: inherit; }
 .fee-box { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 122, 0, .06); border: 1px solid var(--line); display: grid; gap: 4px; }
 .fee-box p { margin: 0; font-size: 14px; }
 .fee-box b { color: var(--ink); }
+/* Bandeau pub du bas : mobile seulement, fond blanc */
+.sticky-ad { background: #fff; box-shadow: 0 8px 24px rgba(160, 70, 0, .18); }
+@media (min-width: 1100px) { .sticky-ad { display: none; } }
