@@ -8,7 +8,7 @@
   const EARNBITSUN = `<a href="https://earnbitsun.club?ref=ISONAED7" target="_blank" rel="noopener"><img src="https://earnbitsun.club/promo/EBS-468x60.gif" width="468" height="60" alt="Earnbitsun — gagnez des cryptos toutes les 5 minutes" style="border:0"></a>`;
 
   window.FAUCET_CONFIG = {
-    SITE_NAME: "CryptoQuest",
+    SITE_NAME: "BitPool",
     TOKEN: "Coins",
     // https://VOTRE-PROJET.supabase.co/functions/v1
     API_BASE: "https://snvfovahyugxpqtthfoo.supabase.co/functions/v1",

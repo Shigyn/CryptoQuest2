@@ -328,12 +328,12 @@
     s.innerHTML = `<path d="${PATHS[name]}"/>`;
     return s;
   }
-  // Piece bleue CryptoQuest
+  // Piece orange BitPool
   let coinSeq = 0;
   function coinSvg(cls = "coin") {
     const id = `cq${++coinSeq}`;
     const w = h("span", { style: "display:inline-flex" });
-    w.innerHTML = `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9be6ff"/><stop offset=".5" stop-color="#3b82ff"/><stop offset="1" stop-color="#1640b8"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f9dff"/><stop offset="1" stop-color="#1d4fd6"/></linearGradient><radialGradient id="${id}s" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="31" fill="url(#${id}r)"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}f)"/><circle cx="32" cy="32" r="28.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.6" stroke-dasharray="1.6 3.4"/><circle cx="32" cy="32" r="25.5" fill="none" stroke="rgba(8,30,100,.45)" stroke-width="1.5"/><path d="M39.5 24.2a10.4 10.4 0 1 0 0 15.6" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/><path d="M30 16.5v5M30 42.5v5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}s)"/></svg>`;
+    w.innerHTML = `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe0b8"/><stop offset=".5" stop-color="#ff8a1f"/><stop offset="1" stop-color="#c4560a"/></linearGradient><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffa24d"/><stop offset="1" stop-color="#e86a00"/></linearGradient><radialGradient id="${id}s" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="31" fill="url(#${id}r)"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}f)"/><circle cx="32" cy="32" r="28.2" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.6" stroke-dasharray="1.6 3.4"/><circle cx="32" cy="32" r="25.5" fill="none" stroke="rgba(120,50,0,.4)" stroke-width="1.5"/><path d="M39.5 24.2a10.4 10.4 0 1 0 0 15.6" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/><path d="M30 16.5v5M30 42.5v5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="25.5" fill="url(#${id}s)"/></svg>`;
     return w.firstChild;
   }
 
@@ -359,6 +359,7 @@
   }
   const perEurOf = (code) => Number(me?.coins?.find((c) => c.code === code)?.per_eur) || geckoRates?.perEur?.[code] || null;
   const unitInfo = () => {
+    if (status?.mining_enabled && Number(status?.coins_per_sat) > 0) return { kind: "sat" };
     if (unit === "EUR") return { kind: "eur" };
     const p = unit === "COINS" ? null : perEurOf(unit);
     if (!p) return { kind: "coins" };
@@ -367,11 +368,15 @@
   };
   const unitLabel = () => {
     const u = unitInfo();
-    return u.kind === "coins" ? TK : u.kind === "eur" ? "€" : u.sat ? (unit === "BTC" ? "sat" : `sat ${unit}`) : unit;
+    return u.kind === "sat" ? "sat" : u.kind === "coins" ? TK : u.kind === "eur" ? "€" : u.sat ? (unit === "BTC" ? "sat" : `sat ${unit}`) : unit;
   };
   function num(tokens) {
     const u = unitInfo();
     if (u.kind === "coins") return Number(tokens).toLocaleString(FR ? "fr-FR" : "en-US");
+    if (u.kind === "sat") {
+      const sat = tokens / Number(status.coins_per_sat);
+      return sat.toLocaleString(FR ? "fr-FR" : "en-US", { maximumFractionDigits: Math.abs(sat) < 100 ? 2 : 0 });
+    }
     const e = tokens / (status?.tokens_per_eur || 10000);
     const loc = FR ? "fr-FR" : "en-US";
     if (u.kind === "eur") return e.toLocaleString(loc, { minimumFractionDigits: e !== 0 && Math.abs(e) < 0.01 ? 4 : 2, maximumFractionDigits: 4 });
@@ -382,6 +387,7 @@
   function coin(cls = "coin") {
     const u = unitInfo();
     if (u.kind === "coins") return coinSvg(cls);
+    if (u.kind === "sat") return h("span", { class: `${cls} unit-badge u-BTC`, "aria-hidden": "true" }, "₿");
     const sym = u.kind === "eur" ? "€" : (UNITS.find((x) => x[0] === unit)?.[2] || unit.slice(0, 1));
     return h("span", { class: `${cls} unit-badge u-${unit}`, "aria-hidden": "true" }, sym);
   }
@@ -699,11 +705,11 @@
     if (!header || !me) return;
     const lv = levelOf(me.earned_total || 0);
     header.replaceChildren(
-      h("select", {
+      ...(miningOn() ? [] : [h("select", {
         class: "unit-pick", "aria-label": t("unitPick"), title: t("unitPick"),
         onchange: async (e) => { unit = e.target.value; store.set("cc.unit", unit); await loadRates(); render(); },
       }, UNITS.filter(([c]) => c === "COINS" || c === "EUR" || perEurOf(c)).map(([c]) =>
-        h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c))),
+        h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c)))]),
       h("a", { class: "icon-btn bell", href: "#notifications", "aria-label": t("notifications") }, icon("bell"),
         me.notif_unread > 0 ? h("span", { class: "bell-n" }, String(Math.min(me.notif_unread, 99))) : null),
       h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null),
@@ -756,7 +762,7 @@
     const powerChip = miningOn() ? (() => {
       const b = h("b", {}, mining ? fmtGhs(mining.power) : "…");
       if (!mining) loadMining().then(() => { b.textContent = fmtGhs(mining?.power || 0); });
-      return h("a", { class: "pchip energy", href: "#sessions" }, h("span", { class: "pchip-ico power" }, icon("fan")), b, h("span", {}, t("miningPower")));
+      return h("a", { class: "pchip energy", href: "#" }, h("span", { class: "pchip-ico power" }, icon("fan")), b, h("span", {}, t("miningPower")));
     })() : null;
     return h("section", { class: "panel player" },
       h("div", { class: "player-top" },
@@ -1826,8 +1832,13 @@
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
   ];
-  const ROUTES = new Set(MENU.flatMap(([, items]) => items.map(([k]) => k)).concat(["earn", "rewards", "proofs", "notifications"]));
-  const TABS = [["", "home", "home"], ["faucet", "faucet", "bolt"], ["earn", "earn", "earn"], ["rewards", "rewardsShort", "trophy"]];
+  const MENU_MINING = MENU.filter(([g]) => g !== null).map(([g, items]) => [g, items
+    .filter(([k]) => k !== "sessions")
+    .map((it) => (it[0] === "faucet" ? ["", it[1], it[2]] : it))]);
+  const menuNow = () => (miningOn() ? MENU_MINING : MENU);
+  const ROUTES = new Set(MENU.flatMap(([, items]) => items.map(([k]) => k)).concat(["earn", "rewards", "proofs", "notifications", "faucet", "sessions"]));
+  const TABS_ALL = [["", "home", "home"], ["faucet", "faucet", "bolt"], ["earn", "earn", "earn"], ["rewards", "rewardsShort", "trophy"]];
+  const TABS_MINING = [["", "faucet", "bolt"], ["earn", "earn", "earn"], ["rewards", "rewardsShort", "trophy"]];
   const routeNow = () => {
     const r = location.hash.replace("#", "").split("?")[0];
     return ROUTES.has(r) ? r : "";
@@ -1852,11 +1863,11 @@
 
   function sideMenu(route, onPick) {
     const p = pending();
-    return h("nav", { class: "side-menu", ariaLabel: "Menu" }, MENU.map(([group, items]) => h("div", { class: "side-group" },
+    return h("nav", { class: "side-menu", ariaLabel: "Menu" }, menuNow().map(([group, items]) => h("div", { class: "side-group" },
       group ? h("div", { class: "side-title" }, t(group)) : null,
       items.map(([k, label, ico]) => h("a", {
         class: "side-link", href: `#${k}`, "aria-current": k === route ? "page" : undefined, onclick: onPick,
-      }, icon(ico), h("span", {}, t(label)), p[k] ? h("span", { class: "side-badge" }, String(p[k])) : null)))),
+      }, icon(ico), h("span", {}, t(label)), (p[k] || (k === "" && miningOn() && p.faucet)) ? h("span", { class: "side-badge" }, String(p[k] || p.faucet)) : null)))),
       h("div", { class: "side-foot" },
         h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "legal.html" }, t("legal")),
         h("button", { type: "button", class: "side-out", onclick: logout }, t("logout"))));
@@ -1904,12 +1915,12 @@
       viewFor(route),
       adSlot("footer"));
     const tabs = h("nav", { class: "tabbar", ariaLabel: "Menu" },
-      TABS.map(([k, label, ico]) => h("a", {
+      (miningOn() ? TABS_MINING : TABS_ALL).map(([k, label, ico]) => h("a", {
         class: "tab", href: `#${k}`,
         "aria-current": (k === route || (k === "earn" && EARN_SUB.includes(route))
           || (k === "rewards" && ["quests", "achievements"].includes(route))) ? "page" : undefined,
       }, icon(ico), h("span", { class: "tab-label" }, t(label)),
-        (k === "faucet" && p.rollReady) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
+        ((k === "faucet" || (k === "" && miningOn())) && p.rollReady) || (k === "rewards" && p.quests) ? h("span", { class: "dot" }) : null)),
       h("button", { type: "button", class: "tab", onclick: openDrawer }, icon("menu"), h("span", { class: "tab-label" }, t("more"))));
     return h("div", { class: "app" },
       ticker(),
@@ -1950,6 +1961,7 @@
       wallet: walletView, advertise: advertiseView, profile: profileView, support: supportView, faq: faqView, proofs: proofsView,
       notifications: notificationsView,
     };
+    if (miningOn() && ["", "faucet", "sessions"].includes(route)) return miningView();
     return (views[route] || dashboardView)();
   }
 
@@ -2188,6 +2200,7 @@
           toast(`${t("miningStarted")} ${fmtGhs(r.ghs)} · ${st.hours} h`, "good");
           refreshAds();
           await Promise.all([loadMining(), refreshMe()]);
+          statsHost?.replaceChildren(statsRow());
           draw();
         },
       }, `${t("miningStart")} · ${st.hours} h`);
@@ -2224,7 +2237,6 @@
             h("span", { class: "row-sub" }, t("miningPower")),
             h("b", { class: "mine-power" }, fmtGhs(st.power)),
             h("span", { class: "row-sub" }, t("miningNow")), counter, rate)),
-        adSlot("roll_top"),
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("kindBase"), h("span", { class: "badge" }, `${fmtGhs(st.base_ghs)} · ${st.hours} h`)),
           st.base ? baseLine : h("div", {}, h("p", { class: "note" }, t("miningBaseText")), cap, startBtn),
@@ -2232,8 +2244,8 @@
         adSlot("roll_bottom"),
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("miningBoost"), h("span", { class: "badge" }, `${st.ads_hour_left} ${t("adsHourLeft")}`)),
-          h("div", { class: "boost-list" }, boosts),
-          h("a", { class: "btn ghost small", href: "#sessions", style: "width:auto;margin-top:12px" }, `${t("sessions")} (${st.active.length})`)),
+          h("div", { class: "boost-list" }, boosts)),
+        sessionsView(),
         h("p", { class: "note", style: "text-align:center" }, t("miningFair")));
       tick();
     };
@@ -2275,15 +2287,13 @@
       box.replaceChildren(
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("sessionsActive"), h("span", { class: "badge good" }, `${fmtGhs(st.power)}`)),
-          rows.length ? h("div", { class: "sess-list" }, rows) : h("div", { class: "empty" }, h("p", {}, t("noSessions")), h("a", { class: "btn small", href: "#faucet", style: "width:auto;margin-top:8px" }, t("miningStart")))),
-        adSlot("in_content"),
+          rows.length ? h("div", { class: "sess-list" }, rows) : h("p", { class: "empty" }, t("noSessions"))),
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("sessionsDone"), h("span", { class: "badge" }, `+${fmtSat(toSats(st.done_today_tokens || 0), 2)}`)),
           done.length ? done : h("p", { class: "empty" }, t("noSessionsDone")),
           h("p", { class: "note", style: "margin:10px 0 0" }, t("sessionsNote"))));
-      every(() => { if (st.active.some((x) => new Date(x.ends_at).getTime() <= serverNow())) loadMining().then(draw); }, 5000);
     };
-    loadMining().then(draw);
+    if (mining) queueMicrotask(draw); else loadMining().then(draw);
     return box;
   }
 
