@@ -1,8 +1,23 @@
 (function () {
   const cfg = window.FAUCET_CONFIG;
   const TK = cfg.TOKEN;
-  const lang = (navigator.language || "en").toLowerCase().startsWith("fr") ? "fr" : "en";
+  // Langues : choix memorise, sinon langue du navigateur, sinon anglais.
+  const LANGS = { en: ["English", "en-US"], fr: ["Français", "fr-FR"], es: ["Español", "es-ES"], pt: ["Português", "pt-BR"], id: ["Indonesia", "id-ID"], ru: ["Русский", "ru-RU"], tr: ["Türkçe", "tr-TR"] };
+  const lang = (() => {
+    let saved = null;
+    try { saved = localStorage.getItem("cc.lang"); } catch { /* navigation privee */ }
+    if (saved && LANGS[saved]) return saved;
+    for (const l of navigator.languages || [navigator.language || ""]) {
+      const c = String(l).slice(0, 2).toLowerCase();
+      if (LANGS[c]) return c;
+    }
+    return "en";
+  })();
   const FR = lang === "fr";
+  const LOCALE = LANGS[lang][1];
+  const L = (window.FAUCET_I18N || {})[lang] || {};
+  // Texte d'une paire [francais, anglais], traduit si la langue choisie a la cle.
+  const tr = (pair, key) => (FR ? pair[0] : L[key] ?? pair[1]);
   document.documentElement.lang = lang;
   document.title = cfg.SITE_NAME;
 
@@ -202,6 +217,11 @@
     wheelShort: ["Fais tourner, gagne des Coins.", "Spin it, win Coins."],
     referral: ["Parrainage", "Referrals"], refText: ["de tout ce que gagnent tes filleuls te revient.", "of everything your referrals earn goes to you."],
     refLink: ["Ton lien", "Your link"], copy: ["Copier", "Copy"], copied: ["Lien copié.", "Link copied."], refCount: ["filleuls", "referrals"], refEarned: ["gagnés grâce à eux", "earned from them"],
+    pseudo: ["Pseudo", "Username"], pseudoAsk: ["Choisis un pseudo : c'est lui qui s'affiche dans le chat et les gains en direct, jamais ton e-mail.", "Pick a username: it's what shows in the chat and live feed, never your email."],
+    pseudoField: ["Pseudo (3 à 16 lettres, chiffres, . _ -)", "Username (3 to 16 letters, digits, . _ -)"], pseudoSave: ["Enregistrer le pseudo", "Save username"], pseudoDone: ["Pseudo enregistré.", "Username saved."],
+    pseudoNow: ["Ton pseudo :", "Your username:"], secTitle: ["Sécurité de ton compte", "Your account security"], secLater: ["Plus tard", "Later"], secClose: ["C'est bon", "All good"],
+    secWarn: ["Sans mot de passe, n'importe qui connaissant ton adresse FaucetPay peut entrer sur ton compte et retirer tes gains.", "Without a password, anyone who knows your FaucetPay address can enter your account and withdraw your earnings."],
+    advertiseBtn: ["Faire ma pub", "Advertise"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -212,7 +232,7 @@
     paused: ["Le site est en pause. Tes CryptoCoin restent sur ton compte.", "The site is paused. Your CryptoCoin stay on your account."],
   };
   // {jp} : le jackpot actuel en euros, lu dans la table des gains.
-  const t = (k) => (W[k] ? W[k][FR ? 0 : 1] : k).replace("{jp}", () => eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens))));
+  const t = (k) => (W[k] ? tr(W[k], k) : k).replace("{jp}", () => eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens))));
 
   const ERR = {
     captcha: ["Le captcha a échoué. Valide-le de nouveau.", "The captcha failed. Complete it again."],
@@ -224,6 +244,10 @@
     too_many_signups: ["Trop de comptes créés depuis cette connexion. Réessaie demain.", "Too many accounts from this connection. Try again tomorrow."],
     cooldown: ["Patiente jusqu'à la fin du compte à rebours.", "Wait until the countdown ends."],
     daily_limit: ["Limite du jour atteinte. Reviens demain.", "Daily limit reached. Come back tomorrow."],
+    need_pseudo: ["Choisis d'abord un pseudo pour écrire dans le chat.", "Pick a username first to write in the chat."],
+    bad_pseudo: ["Pseudo invalide : 3 à 16 caractères, lettres, chiffres, point, tiret ou souligné.", "Invalid username: 3 to 16 characters, letters, digits, dot, dash or underscore."],
+    pseudo_taken: ["Ce pseudo est déjà pris.", "This username is taken."],
+    pseudo_refused: ["Ce pseudo n'est pas accepté.", "This username isn't allowed."],
     banned: ["Ce compte ne peut plus jouer ici.", "This account can no longer play here."],
     paused: W.paused,
     coin_empty: ["Le solde de cette crypto est vide. Tes CryptoCoin sont intacts.", "This coin has run dry. Your CryptoCoin are safe."],
@@ -262,7 +286,7 @@
     vip_unavailable: ["Le VIP ouvre bientôt. Reviens dans quelques jours.", "VIP opens soon. Come back in a few days."],
     ads_unavailable: ["L'espace annonceur ouvre bientôt. Reviens dans quelques jours.", "Advertising opens soon. Come back in a few days."],
   };
-  const message = (r) => (r.code === "offline" ? t("offline") : (ERR[r.code] || ERR.try_later)[FR ? 0 : 1]);
+  const message = (r) => (r.code === "offline" ? t("offline") : (ERR[r.code] ? tr(ERR[r.code], `e:${r.code}`) : tr(ERR.try_later, "e:try_later")));
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -372,13 +396,13 @@
   };
   function num(tokens) {
     const u = unitInfo();
-    if (u.kind === "coins") return Number(tokens).toLocaleString(FR ? "fr-FR" : "en-US");
+    if (u.kind === "coins") return Number(tokens).toLocaleString(LOCALE);
     if (u.kind === "sat") {
       const sat = tokens / Number(status.coins_per_sat);
-      return sat.toLocaleString(FR ? "fr-FR" : "en-US", { maximumFractionDigits: Math.abs(sat) < 100 ? 2 : 0 });
+      return sat.toLocaleString(LOCALE, { maximumFractionDigits: Math.abs(sat) < 100 ? 2 : 0 });
     }
     const e = tokens / (status?.tokens_per_eur || 10000);
-    const loc = FR ? "fr-FR" : "en-US";
+    const loc = LOCALE;
     if (u.kind === "eur") return e.toLocaleString(loc, { minimumFractionDigits: e !== 0 && Math.abs(e) < 0.01 ? 4 : 2, maximumFractionDigits: 4 });
     const v = e * u.p;
     if (u.sat) { const sat = v * 1e8; return sat.toLocaleString(loc, { maximumFractionDigits: Math.abs(sat) < 10 ? 2 : 0 }); }
@@ -390,6 +414,33 @@
     if (u.kind === "sat") return h("span", { class: `${cls} unit-badge u-BTC`, "aria-hidden": "true" }, "₿");
     const sym = u.kind === "eur" ? "€" : (UNITS.find((x) => x[0] === unit)?.[2] || unit.slice(0, 1));
     return h("span", { class: `${cls} unit-badge u-${unit}`, "aria-hidden": "true" }, sym);
+  }
+
+  // Drapeaux (SVG simplifies, rendus partout, y compris sous Windows)
+  const FLAGS = {
+    en: '<rect width="30" height="20" fill="#012169"/><path d="M0 0l30 20M30 0L0 20" stroke="#fff" stroke-width="4"/><path d="M0 0l30 20M30 0L0 20" stroke="#c8102e" stroke-width="1.6"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="6"/><path d="M15 0v20M0 10h30" stroke="#c8102e" stroke-width="3.4"/>',
+    fr: '<rect width="10" height="20" fill="#0055a4"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#ef4135"/>',
+    es: '<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>',
+    pt: '<rect width="30" height="20" fill="#009c3b"/><path d="M15 2.5L27 10 15 17.5 3 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.2q4.4-1.4 8.8 1.4" stroke="#fff" stroke-width=".9" fill="none"/>',
+    id: '<rect width="30" height="10" fill="#e70011"/><rect y="10" width="30" height="10" fill="#fff"/>',
+    ru: '<rect width="30" height="7" fill="#fff"/><rect y="6.6" width="30" height="6.8" fill="#0039a6"/><rect y="13.3" width="30" height="6.7" fill="#d52b1e"/>',
+    tr: '<rect width="30" height="20" fill="#e30a17"/><circle cx="11.5" cy="10" r="5" fill="#fff"/><circle cx="12.8" cy="10" r="4" fill="#e30a17"/><path d="M15.6 10l3.9-1.3-2.4 3.3V8l2.4 3.3z" fill="#fff"/>',
+  };
+  const flag = (code) => {
+    const w = h("span", { class: "flag", "aria-hidden": "true" });
+    w.innerHTML = `<svg viewBox="0 0 30 20" preserveAspectRatio="none">${FLAGS[code]}</svg>`;
+    return w;
+  };
+  function langPicker() {
+    const box = h("details", { class: "lang-pick" },
+      h("summary", { "aria-label": "Language" }, flag(lang), h("span", { class: "lang-code" }, lang.toUpperCase())),
+      h("div", { class: "lang-menu", role: "menu" }, Object.entries(LANGS).map(([code, [name]]) => h("button", {
+        type: "button", role: "menuitem", class: code === lang ? "on" : "",
+        onclick: () => { store.set("cc.lang", code); location.reload(); },
+      }, flag(code), h("span", {}, name)))));
+    // Ferme le menu au clic ailleurs.
+    document.addEventListener("click", (e) => { if (!box.contains(e.target)) box.open = false; });
+    return box;
   }
 
   // Serveur ----------------------------------------------------------------
@@ -459,7 +510,7 @@
   }
 
   // Mise en forme
-  const locale = FR ? "fr-FR" : "en-US";
+  const locale = LOCALE;
   const fmtInt = (n) => Number(n).toLocaleString(locale);
   const tk = (n) => (unitInfo().kind === "coins" ? `${fmtInt(n)} ${Math.abs(n) <= 1 && TK.endsWith("s") ? TK.slice(0, -1) : TK}` : `${num(n)} ${unitLabel()}`);
   const eur = (tokens) => {
@@ -480,7 +531,7 @@
     return { lvl: i.level || 1, max: Boolean(i.max), mult: Number(i.mult) || 1, pct: need ? Math.min(100, (into / need) * 100) : 100, left: Math.max(0, need - into) };
   }
   const lvText = (lv) => (lv.max ? t("maxLevel") : `${fmtInt(lv.left)} ${t(lv.left > 1 ? "rollsTo" : "rollTo")} ${lv.lvl + 1}`);
-  const multText = (m) => `×${m.toLocaleString(FR ? "fr-FR" : "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const multText = (m) => `×${m.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   let toastTimer = null;
   function toast(text, kind = "info") {
@@ -626,10 +677,12 @@
     requestAnimationFrame(frame);
   }
 
+  // Paiement affiche en sats en mode minage (montant en Coins converti au cours du jour), sinon dans sa crypto.
+  const payText = (r) => (unitInfo().kind === "sat" && r.tokens != null ? `+${num(r.tokens)} sat` : `+${units(r.amount_units, r.decimals)} ${r.coin}`);
   function ticker() {
     const list = status?.recent || [];
     if (!list.length) return null;
-    const items = list.map((r) => h("span", { class: "ticker-item" }, r.who, h("b", {}, `+${units(r.amount_units, r.decimals)} ${r.coin}`)));
+    const items = list.map((r) => h("span", { class: "ticker-item" }, r.who, h("b", {}, payText(r))));
     // Contenu double pour un defilement sans coupure.
     return h("div", { class: "ticker", "aria-label": FR ? "Derniers paiements" : "Latest payouts" },
       h("span", { class: "ticker-live" }, icon("star"), t("lastWins")),
@@ -638,7 +691,7 @@
 
   // Ecran d'entree ---------------------------------------------------------
   function gate(embedded = false) {
-    const address = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, required: true, placeholder: "toi@exemple.com", value: store.get("cc.address") || "", ariaLabel: t("fpField") });
+    const address = h("input", { autocomplete: "username", autocapitalize: "off", spellcheck: false, maxLength: 128, required: true, placeholder: FR ? "toi@exemple.com" : "you@example.com", value: store.get("cc.address") || "", ariaLabel: t("fpField") });
     const pass = h("input", { type: "password", autocomplete: "current-password", ariaLabel: t("passwordShort"), placeholder: t("passwordShort") });
     const passWrap = h("div", { class: "input", hidden: true, style: "margin-top:10px" }, icon("lock"), pass);
     const msg = h("div", { role: "alert", style: "margin-top:12px" });
@@ -656,6 +709,7 @@
           store.set("cc.session", session);
           location.hash = "";
           await boot();
+          if (me) securityPopup();
         } else if (r.code === "password_required") {
           passWrap.hidden = false;
           msg.replaceChildren(h("div", { class: "notice info" }, t("passwordAsk")));
@@ -710,14 +764,15 @@
         onchange: async (e) => { unit = e.target.value; store.set("cc.unit", unit); await loadRates(); render(); },
       }, UNITS.filter(([c]) => c === "COINS" || c === "EUR" || perEurOf(c)).map(([c]) =>
         h("option", { value: c, selected: c === unit }, c === "COINS" ? TK : c === "EUR" ? "€" : c)))]),
+      langPicker(),
       h("a", { class: "icon-btn bell", href: "#notifications", "aria-label": t("notifications") }, icon("bell"),
         me.notif_unread > 0 ? h("span", { class: "bell-n" }, String(Math.min(me.notif_unread, 99))) : null),
-      h("a", { class: "coin-pill", href: "#shop", title: t("shop") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null),
+      h("a", { class: "coin-pill", href: "#wallet", title: t("wallet") }, coin(), num(me.available), me.boost ? h("span", { class: "boost-dot", title: t("boostName") }, icon("bolt")) : null),
       h("a", { class: "who", href: "#profile" },
         h("div", { class: `avatar${me.vip ? " vip" : ""}${frameCls(me)}` }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
           me.vip ? h("span", { class: "crown" }, icon("crown")) : null),
         h("div", { class: "who-text" },
-          h("div", { class: `who-name${nameCls(me)}` }, shortAddr(me.fp_address)),
+          h("div", { class: `who-name${nameCls(me)}` }, me.pseudo || shortAddr(me.fp_address)),
           h("div", { class: "who-lvl" }, me.title && cosmeticName(me.title) ? `${cosmeticName(me.title)} · ${t("lvlShort")} ${lv.lvl}` : `${t("level")} ${lv.lvl}`))));
   }
 
@@ -1017,7 +1072,9 @@
     const ptcPanel = () => {
       const list = earn.ptc;
       const head = h("div", { class: "panel-title" }, h("span", {}, t("ptc")),
-        list.length ? h("span", { class: "badge good" }, `${list.length} ${t("availableN")} · ${tk(sumRewards(list))}`) : null);
+        h("span", { class: "ptc-head-right" },
+          list.length ? h("span", { class: "badge good" }, `${list.length} ${t("availableN")}`) : null,
+          h("a", { class: "btn small", href: "#advertise", style: "width:auto" }, icon("megaphone"), t("advertiseBtn"))));
       if (!list.length) return h("section", { class: "panel" }, head, emptyBox("eye", t("noPtc")));
       let busy = false;
       const cards = list.map((c) => {
@@ -1378,7 +1435,8 @@
     offers: { ico: "gift", go: () => { location.hash = "offers"; } },
   };
   const questName = (c) => {
-    const w = W[`q_${c.goal}`] || W.q_claims;
+    const key = W[`q_${c.goal}`] ? `q_${c.goal}` : "q_claims";
+    const w = [W[key][0], L[key] || W[key][1]];
     const n = c.goal === "earned" ? tk(c.target) : fmtInt(c.target);
     return w[FR ? 0 : 1][c.target > 1 ? 1 : 0].replace("{n}", n);
   };
@@ -1687,7 +1745,7 @@
     ptc: ["Pub", "Ad"], shortlink: ["Lien", "Link"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
     mines: ["Mines", "Mines"], dice: ["Dice", "Dice"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
     shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], achievement: ["Succès", "Achievement"], promo: ["Code promo", "Promo code"],
-    seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
+    mining: ["Minage", "Mining"], seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
   };
   // « Des que ton solde atteint X, il part tout seul » + barre de progression.
   function autoPayBox() {
@@ -1723,7 +1781,7 @@
           h("span", { class: `badge ${w.status === "paid" ? "good" : w.status === "failed" ? "bad" : "warn"}` }, t(`st_${w.status}`))))
         : h("p", { class: "empty" }, t("noWd")))
       : (me.history.length ? me.history.map((r) => h("div", { class: "list-line" },
-          h("div", {}, h("div", { style: "color:var(--ink);font-weight:600" }, (SOURCE[r.source] || [r.source, r.source])[FR ? 0 : 1]), h("div", { class: "row-sub" }, `${when(r.at)} · ${bucket[r.bucket]}`)),
+          h("div", {}, h("div", { style: "color:var(--ink);font-weight:600" }, tr(SOURCE[r.source] || [r.source, r.source], `s:${r.source}`)), h("div", { class: "row-sub" }, `${when(r.at)} · ${bucket[r.bucket]}`)),
           h("span", { class: `amount ${r.delta > 0 ? "plus" : "minus"}` }, `${r.delta > 0 ? "+" : ""}${fmtInt(r.delta)}`)))
         : h("p", { class: "empty" }, t("noHistory")));
 
@@ -1755,14 +1813,68 @@
         h("button", { class: "btn small ghost", type: "button", style: "margin-top:12px;width:auto", onclick: exportHistory }, t("exportCsv"))));
   }
 
+  // Formulaire du pseudo (chat, fenetre de securite, profil)
+  function pseudoForm(onDone) {
+    const input = h("input", { maxLength: 16, autocomplete: "nickname", value: me.pseudo || "", ariaLabel: t("pseudo"), pattern: "[A-Za-z0-9_.\\-]{3,16}" });
+    const btn = h("button", { class: "btn", type: "submit", style: "width:100%" }, t("pseudoSave"));
+    const msg = h("div", { role: "alert" });
+    return h("form", {
+      onsubmit: async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        const r = await api("set_pseudo", { pseudo: input.value.trim() });
+        btn.disabled = false;
+        if (!r.ok) { msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r))); return; }
+        me.pseudo = r.pseudo;
+        toast(t("pseudoDone"), "good");
+        updateHeader();
+        onDone?.();
+      },
+    }, h("label", { class: "field" }, t("pseudoField"), h("div", { class: "input" }, icon("profile"), input)), btn, msg);
+  }
+  function passwordForm(onDone) {
+    const pass = h("input", { type: "password", autocomplete: "new-password", minLength: 8, required: true });
+    const msg = h("div", { role: "alert" });
+    const save = h("button", { class: "btn", type: "submit", style: "width:100%" }, me.secured ? t("secChange") : t("secSave"));
+    return h("form", {
+      onsubmit: async (e) => {
+        e.preventDefault();
+        save.disabled = true;
+        const r = await api("set_password", { password: pass.value });
+        save.disabled = false;
+        if (r.ok) {
+          session = r.session;
+          store.set("cc.session", session);
+          toast(t("secDone"), "good");
+          await refreshMe();
+          onDone?.();
+        } else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
+      },
+    }, h("label", { class: "field" }, t("secNew"), h("div", { class: "input" }, icon("lock"), pass)), save, msg);
+  }
+  // Fenetre de securite, ouverte a chaque connexion.
+  function securityPopup() {
+    const close = () => { layer.remove(); document.body.classList.remove("no-scroll"); render(); };
+    const box = h("div", { class: "sec-box panel" });
+    const draw = () => box.replaceChildren(...[
+      h("div", { class: "sec-head" }, h("span", { class: `sec-ico${me.secured ? " ok" : ""}` }, icon("lock")), h("h2", {}, t("secTitle"))),
+      h("div", { class: `notice ${me.secured ? "good" : "warn"}` }, me.secured ? t("secOn") : t("secWarn")),
+      passwordForm(draw),
+      h("div", { class: "sec-sep" }),
+      me.pseudo ? h("p", { class: "note" }, `${t("pseudoNow")} `, h("b", {}, me.pseudo)) : h("p", { class: "note" }, t("pseudoAsk")),
+      me.pseudo ? null : pseudoForm(draw),
+      h("button", { class: "btn ghost", type: "button", style: "width:100%;margin-top:12px", onclick: close }, me.secured && me.pseudo ? t("secClose") : t("secLater"))].filter(Boolean));
+    const layer = h("div", { class: "frame-layer sec-layer", role: "dialog", "aria-modal": "true" }, box);
+    draw();
+    document.body.append(layer);
+    document.body.classList.add("no-scroll");
+  }
+
   // Profil : niveau, parrainage, securite
   function profileView() {
     const lv = levelOf(me.earned_total || 0);
     const url = `${location.origin}${location.pathname}?ref=${me.ref_code}`;
     const field = h("input", { readOnly: true, value: url, ariaLabel: t("refLink") });
-    const pass = h("input", { type: "password", autocomplete: "new-password", minLength: 8, required: true });
-    const msg = h("div", { role: "alert" });
-    const save = h("button", { class: "btn", type: "submit", style: "width:100%" }, me.secured ? t("secChange") : t("secSave"));
     return h("div", { class: "stack" },
       h("section", { class: "panel", style: "text-align:center" },
         h("div", { class: `avatar${me.vip ? " vip" : ""}${frameCls(me)}`, style: "width:72px;height:72px;margin:0 auto;font-size:28px;border-radius:20px" }, (me.fp_address || "?").slice(0, 1).toUpperCase(), h("span", { class: "lvl" }, String(lv.lvl)),
@@ -1770,7 +1882,6 @@
         me.vip ? h("div", { style: "margin-top:12px" }, h("span", { class: "badge vip-badge" }, icon("crown"), t("vip"))) : null,
         h("h2", { class: nameCls(me).trim() || null, style: "margin-top:14px;overflow-wrap:anywhere" }, me.fp_address),
         me.title && cosmeticName(me.title) ? h("div", { style: "margin-top:6px" }, h("span", { class: "title-tag" }, cosmeticName(me.title))) : null,
-        h("div", { style: "margin-top:10px" }, h("a", { class: "btn small ghost", href: "#shop", style: "width:auto" }, icon("shop"), t("shop"))),
         h("p", { class: "note", style: "margin:4px 0 10px" }, `${t("level")} ${lv.lvl} · ${lvText(lv)} · ${multText(lv.mult)} ${t("onRolls")}`),
         h("div", { class: "xp", style: "width:100%;height:10px" }, h("i", { style: `width:${lv.pct}%` }))),
       h("div", { class: "grid2" },
@@ -1781,26 +1892,11 @@
         h("section", { class: "panel" },
           h("div", { class: "panel-title" }, t("security")),
           h("div", { class: `notice ${me.secured ? "good" : "info"}`, style: "margin-bottom:12px" }, me.secured ? t("secOn") : t("secOff")),
-          h("form", {
-            onsubmit: async (e) => {
-              e.preventDefault();
-              save.disabled = true;
-              const r = await api("set_password", { password: pass.value });
-              save.disabled = false;
-              if (r.ok) {
-                session = r.session;
-                store.set("cc.session", session);
-                toast(t("secDone"), "good");
-                await refreshMe();
-                render();
-              } else msg.replaceChildren(h("div", { class: "notice bad", style: "margin-top:10px" }, message(r)));
-            },
-          }, h("label", { class: "field" }, t("secNew"), h("div", { class: "input" }, icon("lock"), pass)), save, msg))),
-      h("a", { class: "row ad-link vip-link", href: "#vip" },
-        h("div", { class: "row-ico vip-ico" }, icon("crown")),
-        h("div", { class: "row-main" }, h("h3", {}, me.vip ? t("vipActive") : t("vipTitle")),
-          h("div", { class: "row-sub" }, me.vip ? `${t("vipUntil")} ${fmtDate(me.vip_until)}` : t("vipLink"))),
-        h("span", { class: "chev" }, "›")),
+          passwordForm(render),
+          h("div", { class: "sec-sep" }),
+          h("div", { class: "panel-title" }, t("pseudo")),
+          h("p", { class: "note" }, me.pseudo ? `${t("pseudoNow")} ${me.pseudo}` : t("pseudoAsk")),
+          pseudoForm(render))),
       h("a", { class: "row ad-link", href: "#advertise" },
         h("div", { class: "row-ico", style: "background:rgba(255,204,61,.14);color:var(--gold)" }, icon("megaphone")),
         h("div", { class: "row-main" }, h("h3", {}, t("advertise")), h("div", { class: "row-sub" }, t("adText"))),
@@ -1827,8 +1923,7 @@
     [null, [["", "dashboard", "home"]]],
     ["menuEarn", [["faucet", "faucet", "bolt"], ["sessions", "sessions", "quests"], ["ptc", "ptc", "eye"], ["watch", "watchAds", "play"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
     ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"]]],
-    ["menuCommunity", [["chat", "chat", "chat"]]],
-    ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
+    ["menuCommunity", [["chat", "chat", "chat"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
     ["menuAccount", [["profile", "profile", "profile"], ["support", "support", "mail"], ["faq", "faq", "quests"]]],
   ];
@@ -1901,7 +1996,7 @@
       list.length ? list.map((r) => h("div", { class: "live-row" },
         h("span", { class: "live-who" }, r.who),
         h("span", { class: "live-what" }, r.kind ? r.kind : t("withdrawal1")),
-        h("b", {}, `+${units(r.amount_units, r.decimals)} ${r.coin}`))) : h("p", { class: "empty" }, t("noActivity")));
+        h("b", {}, payText(r)))) : h("p", { class: "empty" }, t("noActivity")));
   }
 
   function shell() {
@@ -1991,7 +2086,7 @@
     const activity = h("section", { class: "panel" },
       h("div", { class: "panel-title" }, t("activity"), h("a", { href: "#wallet", class: "badge" }, t("seeAll"))),
       (me.history || []).length ? me.history.slice(0, 8).map((r) => h("div", { class: "list-line" },
-        h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, (SOURCE[r.source] || [r.source, r.source])[FR ? 0 : 1]), h("div", { class: "row-sub" }, when(r.at))),
+        h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, tr(SOURCE[r.source] || [r.source, r.source], `s:${r.source}`)), h("div", { class: "row-sub" }, when(r.at))),
         h("span", { class: `amount ${r.delta > 0 ? "plus" : "minus"}` }, `${r.delta > 0 ? "+" : ""}${num(r.delta)}`))) : h("p", { class: "empty" }, t("noHistory")));
     statsHost = h("div", {}, statsRow());
     balances.append(...[autoPayBox()].filter(Boolean));
@@ -2072,7 +2167,7 @@
     return h("div", { class: "stack" },
       h("section", { class: "panel chat" },
         h("div", { class: "panel-title" }, h("span", { class: "live-dot" }, t("chat")), h("span", { class: "badge" }, t("chatRulesShort"))),
-        list, form,
+        list, me.pseudo ? form : h("div", { class: "chat-pseudo" }, h("p", { class: "note" }, t("pseudoAsk")), pseudoForm(render)),
         h("p", { class: "note", style: "margin:10px 0 0" }, t("chatRules"))));
   }
 
@@ -2557,7 +2652,7 @@
       ticker(),
       h("header", { class: "topbar" },
         h("a", { class: "logo", href: "#" }, coinSvg(), h("span", {}, cfg.SITE_NAME)),
-        h("nav", { class: "pub-nav" }, h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq"))),
+        h("nav", { class: "pub-nav" }, h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq")), langPicker()),
         h("a", { class: "btn small", href: "#", onclick: () => setTimeout(() => document.querySelector(".gate-card input")?.focus(), 50) }, t("enter"))),
       h("main", { class: "pub-main" }, body),
       h("footer", { class: "pub-foot" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: "#proofs" }, t("proofs")), h("a", { href: "#faq" }, t("faq")),

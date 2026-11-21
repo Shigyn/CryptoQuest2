@@ -433,6 +433,13 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "chat":
       return json(d, 200, { ok: true, list: await d.rpc("chat_list", { p_user: userId, p_after: Number(b.after) || 0 }) });
 
+    case "set_pseudo": {
+      const name = String(b.pseudo ?? "").trim();
+      const m = moderateChat(name);
+      if (m.flag || m.text !== name) return refuse(d, 400, "pseudo_refused");
+      return result(d, await d.rpc("set_pseudo", { p_user: userId, p_name: name }));
+    }
+
     case "chat_send": {
       const m = moderateChat(String(b.body ?? ""));
       if (m.flag === "empty") return refuse(d, 400, "bad_request");

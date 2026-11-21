@@ -133,6 +133,8 @@ create table users (
   energy numeric,
   energy_at timestamptz,
   chat_muted_until timestamptz,
+  -- Pseudo public (chat, gains en direct) : l'adresse FaucetPay n'est jamais montree.
+  pseudo text,
   -- Tirage fait mais pas encore recupere : {roll, tokens, at, level, level_up}.
   pending_roll jsonb,
   -- Fractions de Coins en attente entre deux sessions de minage versees.
@@ -519,6 +521,8 @@ create table ticket_messages (
 create index ticket_messages_idx on ticket_messages (ticket_id, at);
 
 -- Chat global. hidden : masque (moderation automatique ou admin) ; flagged : raison du blocage.
+create unique index users_pseudo_idx on users (lower(pseudo));
+
 create table chat_messages (
   id bigint generated always as identity primary key,
   user_id uuid not null references users (id),
@@ -1125,6 +1129,11 @@ begin
 end $$;
 
 -- Parrainage, historique, preuves --------------------------------------------
+create function public_who(p_pseudo text, p_addr text)
+returns text language sql immutable set search_path = public as $$
+  select coalesce(p_pseudo, case when length(p_addr) >= 10 then left(p_addr, 3) || '…' || right(p_addr, 3) else '…' end);
+$$;
+
 create function referral_list(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -1154,9 +1163,10 @@ create function public_proofs()
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('at', w.finished_at, 'coin', w.coin, 'amount_units', w.amount_units,
       'decimals', c.decimals, 'tokens', w.tokens, 'payout_id', w.payout_id,
-      'who', case when length(w.to_address) >= 10 then left(w.to_address, 3) || '…' || right(w.to_address, 3) else '…' end)
+      'who', public_who(u.pseudo, w.to_address))
       order by w.finished_at desc), '[]'::jsonb)
-  from (select * from withdrawals where status = 'paid' order by finished_at desc limit 100) w join coins c on c.code = w.coin;
+  from (select * from withdrawals where status = 'paid' order by finished_at desc limit 100) w join coins c on c.code = w.coin
+  join users u on u.id = w.user_id;
 $$;
 
 -- Pubs : compteur d'affichages et campagnes de l'annonceur --------------------
@@ -1976,7 +1986,7 @@ returns jsonb language sql stable set search_path = public as $$
     'watch_daily_limit', s.watch_daily_limit,
     'feed', coalesce((select jsonb_agg(f order by f->>'at' desc) from (
         select jsonb_build_object('at', e.created_at, 'kind', coalesce(o.name, e.label), 'tokens', e.tokens,
-          'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end) as f
+          'who', public_who(u.pseudo, u.fp_address)) as f
         from earnings e join users u on u.id = e.user_id left join offerwalls o on o.code = e.label
         where e.source = 'offer' and e.status in ('validated', 'paying', 'paid') order by e.created_at desc limit 10) x), '[]'::jsonb),
     'usdt_per_eur', (select per_eur from coins where code = 'USDT'),
@@ -1991,8 +2001,8 @@ returns jsonb language sql stable set search_path = public as $$
       select jsonb_agg(r) from (
         select jsonb_build_object('at', w.finished_at, 'coin', w.coin, 'amount_units', w.amount_units,
           'decimals', c.decimals, 'tokens', w.tokens,
-          'who', case when length(w.to_address) >= 10 then left(w.to_address, 3) || '…' || right(w.to_address, 3) else '…' end) as r
-        from withdrawals w join coins c on c.code = w.coin
+          'who', public_who(u.pseudo, w.to_address)) as r
+        from withdrawals w join coins c on c.code = w.coin join users u on u.id = w.user_id
         where w.status = 'paid' order by w.finished_at desc limit 10) x), '[]'::jsonb)
   ) from settings s where s.id = 1;
 $$;
@@ -2000,7 +2010,7 @@ $$;
 create function user_profile(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select jsonb_build_object(
-    'ref_code', u.ref_code, 'secured', u.password_hash is not null,
+    'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'pseudo', u.pseudo,
     'vip', coalesce(u.vip_until > now(), false), 'vip_until', u.vip_until, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
@@ -2575,13 +2585,27 @@ create function chat_list(p_user uuid, p_after bigint)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(m order by (m->>'id')::bigint), '[]'::jsonb) from (
     select jsonb_build_object('id', c.id, 'at', c.at, 'body', c.body, 'me', c.user_id = p_user,
-      'who', case when length(u.fp_address) >= 10 then left(u.fp_address, 3) || '…' || right(u.fp_address, 3) else '…' end,
+      'who', public_who(u.pseudo, u.fp_address),
       'level', (level_info(u.xp)->>'level')::int, 'vip', coalesce(u.vip_until > now(), false),
       'frame', u.frame, 'name_color', u.name_color, 'title', u.title) as m
     from chat_messages c join users u on u.id = c.user_id
     where not c.hidden and not u.banned and c.id > coalesce(p_after, 0)
     order by c.id desc limit 50) x;
 $$;
+
+-- Pseudo : 3 a 16 caracteres, lettres, chiffres, point, tiret, souligne ; unique sans tenir compte des majuscules.
+create function set_pseudo(p_user uuid, p_name text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  n text := trim(coalesce(p_name, ''));
+begin
+  if n !~ '^[A-Za-z0-9_.-]{3,16}$' then return jsonb_build_object('ok', false, 'code', 'bad_pseudo'); end if;
+  if exists (select 1 from users where lower(pseudo) = lower(n) and id <> p_user) then
+    return jsonb_build_object('ok', false, 'code', 'pseudo_taken');
+  end if;
+  update users set pseudo = n where id = p_user;
+  return jsonb_build_object('ok', true, 'pseudo', n);
+end $$;
 
 -- p_flag : raison donnee par la moderation automatique du serveur (lien, contenu interdit), sinon vide.
 create function chat_send(p_user uuid, p_body text, p_flag text, p_ip_hash text)
@@ -2600,6 +2624,7 @@ begin
   if u.chat_muted_until > now() then
     return jsonb_build_object('ok', false, 'code', 'chat_muted', 'until', u.chat_muted_until);
   end if;
+  if u.pseudo is null then return jsonb_build_object('ok', false, 'code', 'need_pseudo'); end if;
   if not exists (select 1 from claims where user_id = p_user) and not exists (select 1 from mining_sessions where user_id = p_user) then
     return jsonb_build_object('ok', false, 'code', 'chat_need_roll');
   end if;

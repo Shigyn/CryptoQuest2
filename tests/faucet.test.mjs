@@ -1251,6 +1251,16 @@ test("chat : moderation souple (gros mots masques, liens et contenus graves bloq
   const u = await newUser(h);
   const send = (body) => api(h, "chat_send", { session: u.session, body }, u.ip);
   const wait = () => h.pg.query("update chat_messages set at = at - interval '10 seconds'");
+  assert.equal((await send("Salut tout le monde")).body.code, "need_pseudo", "un pseudo d'abord");
+  const pseudo = (x, who = u) => api(h, "set_pseudo", { session: who.session, pseudo: x }, who.ip);
+  assert.equal((await pseudo("ab")).body.code, "bad_pseudo");
+  assert.equal((await pseudo("moi@mail.com")).body.ok, false, "pas d'e-mail");
+  assert.equal((await pseudo("monsite.com")).body.code, "pseudo_refused", "pas de lien");
+  assert.equal((await pseudo("onlyfans")).body.code, "pseudo_refused");
+  assert.equal((await pseudo("Nico_34")).body.ok, true);
+  const v = await newUser(h);
+  assert.equal((await pseudo("nico_34", v)).body.code, "pseudo_taken", "unique sans les majuscules");
+  assert.equal((await api(h, "me", { session: u.session }, u.ip)).body.pseudo, "Nico_34");
   assert.equal((await send("Salut tout le monde")).body.code, "chat_need_roll", "un tirage d'abord");
   await api(h, "claim", { session: u.session }, u.ip);
   assert.equal((await send("Salut tout le monde")).body.ok, true);
@@ -1265,6 +1275,7 @@ test("chat : moderation souple (gros mots masques, liens et contenus graves bloq
   assert.deepEqual(list.map((m) => m.body), ["Salut tout le monde", "Ce site est une M**** ou pas ?", "Je crie tres fort ici pour rien", "Essex est une région, rien de grave"]);
   assert.equal(list[0].me, true);
   assert.ok(!list[0].who.includes("@"));
+  assert.equal(list[0].who, "Nico_34", "le pseudo, jamais l'adresse");
   // Suite : seulement les nouveaux messages
   assert.equal((await api(h, "chat", { session: u.session, after: list[2].id }, u.ip)).body.list.length, 1);
 

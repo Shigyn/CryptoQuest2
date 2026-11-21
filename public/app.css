@@ -1044,3 +1044,27 @@ a.pchip { text-decoration: none; color: inherit; }
 .drawer-panel, .frame-box { color: var(--text); }
 .panel { box-shadow: 0 4px 0 var(--edge), 0 14px 30px rgba(200, 90, 0, .08); }
 .toast { box-shadow: 0 12px 30px rgba(160, 70, 0, .2); }
+
+/* Fenetre de securite, pseudo, en-tete PTC */
+.sec-layer { background: rgba(60, 25, 0, .45); }
+.sec-box { width: min(440px, 100%); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.sec-head { display: flex; align-items: center; gap: 12px; }
+.sec-head h2 { margin: 0; color: var(--ink); }
+.sec-ico { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #ff9a3d, #ff7a00); }
+.sec-ico.ok { background: linear-gradient(145deg, #3ad08a, #12a45f); }
+.sec-sep { height: 1px; background: var(--line); margin: 6px 0; }
+.chat-pseudo { padding-top: 10px; }
+.ptc-head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.ptc-head-right .btn svg { width: 16px; height: 16px; }
+
+/* Selecteur de langue */
+.lang-pick { position: relative; }
+.lang-pick summary { list-style: none; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px; border-radius: 12px; cursor: pointer; background: #fff; border: 2px solid var(--line-2); color: var(--ink); font: 700 13px var(--display); }
+.lang-pick summary::-webkit-details-marker { display: none; }
+.flag { display: inline-block; width: 24px; height: 16px; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0, 0, 0, .12); flex: none; }
+.flag svg { display: block; width: 100%; height: 100%; }
+.lang-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 80; min-width: 170px; padding: 6px; border-radius: 14px; background: #fff; border: 2px solid var(--line-2); box-shadow: 0 14px 30px rgba(160, 70, 0, .18); display: grid; gap: 2px; }
+.lang-menu button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 10px; background: none; cursor: pointer; color: var(--ink); font: 600 14px var(--body); text-align: left; }
+.lang-menu button:hover, .lang-menu button.on { background: rgba(255, 122, 0, .1); }
+.pub-nav { align-items: center; }
+@media (max-width: 720px) { .lang-pick .lang-code { display: none; } .lang-pick summary { padding: 0 8px; } }
