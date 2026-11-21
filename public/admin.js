@@ -213,6 +213,8 @@ const FIELDS = [
   ["energy_max", "Énergie : réserve maximum"],
   ["energy_max_vip", "Énergie : réserve maximum des VIP"],
   ["min_withdraw_tokens", `Retrait minimum (${TK})`],
+  ["min_withdraw_sats", "Retrait minimum en sats (converti au cours du BTC ; 0 = seulement le minimum en Coins)"],
+  ["withdraw_fee_sats", "Frais de transfert par retrait, en sats, retenus sur le montant du membre (BTC)"],
   ["auto_payout", "Paiement automatique du solde au-dessus du minimum, à chaque heure (1 = oui, 0 = non)"],
   ["mining_enabled", "Minage virtuel activé (1 = oui, 0 = tirage classique)"],
   ["mining_session_hours", "Minage : durée d'une session (heures)"],

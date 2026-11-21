@@ -1073,3 +1073,7 @@ a.pchip { text-decoration: none; color: inherit; }
 .mine-boost-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .mine-boost-head b { color: var(--ink); font: 600 16px var(--display); }
 .mine-boost .boost-card { background: #fff; }
+
+.fee-box { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 122, 0, .06); border: 1px solid var(--line); display: grid; gap: 4px; }
+.fee-box p { margin: 0; font-size: 14px; }
+.fee-box b { color: var(--ink); }

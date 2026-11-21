@@ -427,4 +427,9 @@
 "s:ad_refund":"Reklam reddedildi, bakiye iade edildi",
 "s:mining":"Madencilik",
 "rollTo":"XP: sonraki seviye",
-"rollsTo":"XP: sonraki seviye"}
+"rollsTo":"XP: sonraki seviye",
+"wdFee":"Transfer ücreti (sana ait):",
+"wdFeeFree":"0 sat: FaucetPay hesapları arasında gönderim ücretsizdir.",
+"wdGet":"Alacağın tutar",
+"wdFeeOut":"BTC'ni FaucetPay'den harici bir cüzdana çekmek için FaucetPay yaklaşık 1.000 sats ağ ücreti alır (minimum 120.000 sats).",
+"feeShort":"ücret"}

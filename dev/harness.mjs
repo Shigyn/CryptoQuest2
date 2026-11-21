@@ -81,6 +81,8 @@ export function createMockFaucetPay({ balance = 1_000_000_000, accounts = {} } =
 
 export async function createHarness(options = {}) {
   const { pg, rpc } = await createDb();
+  // Les anciens tests de retrait supposent aucun minimum en sats ; le serveur local garde celui de la prod.
+  if (!options.minSats) await pg.query("update settings set min_withdraw_sats = 0 where id = 1");
   const mock = createMockFaucetPay(options);
   const alerts = [];
   const deps = {

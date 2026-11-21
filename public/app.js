@@ -222,6 +222,11 @@
     pseudoNow: ["Ton pseudo :", "Your username:"], secTitle: ["Sécurité de ton compte", "Your account security"], secLater: ["Plus tard", "Later"], secClose: ["C'est bon", "All good"],
     secWarn: ["Sans mot de passe, n'importe qui connaissant ton adresse FaucetPay peut entrer sur ton compte et retirer tes gains.", "Without a password, anyone who knows your FaucetPay address can enter your account and withdraw your earnings."],
     advertiseBtn: ["Faire ma pub", "Advertise"],
+    wdFee: ["Frais de transfert (à ta charge) :", "Transfer fee (paid by you):"],
+    wdFeeFree: ["0 sat : un envoi entre comptes FaucetPay est gratuit.", "0 sat: sending between FaucetPay accounts is free."],
+    wdGet: ["Tu recevras", "You will receive"],
+    wdFeeOut: ["Pour sortir tes BTC de FaucetPay vers un portefeuille externe, FaucetPay prend environ 1 000 sats de frais réseau (minimum 120 000 sats).", "To move your BTC from FaucetPay to an external wallet, FaucetPay charges about 1,000 sats network fee (minimum 120,000 sats)."],
+    feeShort: ["frais", "fee"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -1758,6 +1763,7 @@
       h("span", { class: "row-sub" }, have >= min ? t("autoSoon") : `${num(min - have)} ${unitLabel()} ${t("autoLeft")}`));
   }
 
+  const wdAmount = (w) => (w.coin === "BTC" ? `${Number(w.amount_units).toLocaleString(LOCALE)} sat` : `${units(w.amount_units, w.decimals)} ${w.coin}`);
   function walletView() {
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
     const est = c && me.available > 0 ? (me.available / (status?.tokens_per_eur || 10000)) * c.per_eur : 0;
@@ -1766,7 +1772,7 @@
       onclick: async () => {
         btn.disabled = true;
         const r = await api("withdraw");
-        if (r.ok) { burst(btn, `${units(r.amount_units, r.decimals)} ${r.coin}`); toast(`${units(r.amount_units, r.decimals)} ${r.coin} ${t("wdDone")} ${r.payout_id}`, "good"); }
+        if (r.ok) { burst(btn, wdAmount(r)); toast(`${wdAmount(r)} ${t("wdDone")} ${r.payout_id}`, "good"); }
         else toast(message(r), r.code === "pending" ? "info" : "bad");
         await refreshMe();
         render();
@@ -1777,7 +1783,7 @@
     const bucket = { available: t("available"), pending: t("pending"), validated: t("validated") };
     const list = walletTab === "withdrawals"
       ? (me.withdrawals.length ? me.withdrawals.map((w) => h("div", { class: "list-line" },
-          h("div", {}, h("div", { class: "amount" }, `${units(w.amount_units, w.decimals)} ${w.coin}`), h("div", { class: "row-sub" }, when(w.at))),
+          h("div", {}, h("div", { class: "amount" }, wdAmount(w)), h("div", { class: "row-sub" }, `${when(w.at)}${w.fee_units > 0 ? ` · ${t("feeShort")} ${w.fee_units} sat` : ""}`)),
           h("span", { class: `badge ${w.status === "paid" ? "good" : w.status === "failed" ? "bad" : "warn"}` }, t(`st_${w.status}`))))
         : h("p", { class: "empty" }, t("noWd")))
       : (me.history.length ? me.history.map((r) => h("div", { class: "list-line" },
@@ -1802,7 +1808,7 @@
           }, me.coins.map((x) => h("option", { value: x.code, selected: x.code === me.payout_coin }, `${x.code} · ${x.name}`)))) : null,
         autoPayBox(),
         btn,
-        (status?.min_withdraw_tokens || 1) > 1 ? h("p", { class: "note", style: "margin:10px 0 0;text-align:center" }, `${t("wdMin")} ${tk(status.min_withdraw_tokens)}`) : null,
+        (status?.min_withdraw_tokens || 1) > 1 ? h("p", { class: "note", style: "margin:10px 0 0;text-align:center" }, `${t("wdMin")} ${status.min_withdraw_sats > 0 && c?.code === "BTC" ? `${status.min_withdraw_sats} sat` : tk(status.min_withdraw_tokens)}`) : null,
         h("p", { class: "note", style: "margin:10px 0 0;font-style:italic;text-align:center" }, t("wdDelay")),
         h("p", { class: "note", style: "margin:12px 0 0;overflow-wrap:anywhere" }, `${t("sentTo")} `, h("b", { style: "color:var(--ink)" }, me.fp_address)),
         (me.pending > 0 || me.validated > 0) ? h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" },

@@ -1337,6 +1337,26 @@ test("retrait minimum : refuse sous le seuil, et le lot horaire attend le seuil"
   assert.equal((await api(h, "status", {})).body.min_withdraw_tokens, 100);
 });
 
+test("retrait BTC : minimum en sats au cours du BTC, frais de transfert retenus sur le membre", async () => {
+  const h = await createHarness({ minSats: true });
+  // 1 sat = 0,00068 EUR, soit 6,8 Coins : 20 sats = 136 Coins.
+  await h.pg.query("update coins set per_eur = 1 / 0.00068 / 100000000, enabled = (code = 'BTC') where code in ('BTC', 'USDT', 'LTC')");
+  await h.pg.query("update settings set withdraw_fee_sats = 2");
+  const u = await newUser(h);
+  await h.pg.query("update users set payout_coin = 'BTC' where fp_address = $1", [u.fp]);
+  assert.equal((await api(h, "status", {})).body.min_withdraw_tokens, 136);
+  await give(h, u, 120);
+  const r = (await api(h, "withdraw", { session: u.session }, u.ip)).body;
+  assert.deepEqual([r.code, r.min], ["below_minimum", 136]);
+  await give(h, u, 30);
+  const ok = (await api(h, "withdraw", { session: u.session }, u.ip)).body;
+  assert.equal(ok.ok, true);
+  assert.equal(ok.coin, "BTC");
+  const w = (await h.pg.query("select amount_units, fee_units from withdrawals")).rows[0];
+  assert.deepEqual([Number(w.amount_units), Number(w.fee_units)], [20, 2], "150 Coins = 22 sats, moins 2 sats de frais");
+  assert.equal((await me(h, u)).withdrawals[0].fee_units, 2);
+});
+
 test("tirage en 2 etapes : gain cache, credite seulement apres le compte a rebours, jamais deux tirages en attente", async () => {
   const h = await createHarness();
   const u = await newUser(h);

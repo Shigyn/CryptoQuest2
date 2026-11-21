@@ -25,6 +25,9 @@ create table settings (
   -- Chaque tirage coute 1 point ; cooldown_seconds reste le minimum entre deux tirages.
   -- Montant minimum d'un retrait (instantane ou lot horaire), en Coins.
   min_withdraw_tokens int not null default 1 check (min_withdraw_tokens >= 1),
+  -- Minimum de retrait en sats (converti en Coins au cours du BTC) et frais de transfert en sats, payes par le membre.
+  min_withdraw_sats numeric not null default 20 check (min_withdraw_sats >= 0),
+  withdraw_fee_sats numeric not null default 0 check (withdraw_fee_sats >= 0),
   -- Tirage en 2 etapes : secondes entre « Lancer » et « Recuperer ». Paiement auto du solde disponible au lot horaire.
   roll_reveal_seconds int not null default 8 check (roll_reveal_seconds between 0 and 60),
   -- Minage virtuel (finance par la pub) : session de base a relancer, chaque PTC / video ouvre sa propre session.
@@ -216,7 +219,9 @@ create table withdrawals (
   status text not null default 'reserved' check (status in ('reserved', 'paid', 'failed', 'unknown')),
   payout_id text,
   error text,
-  finished_at timestamptz
+  finished_at timestamptz,
+  -- Frais de transfert retenus sur ce retrait, dans la plus petite unite de la crypto (sats pour BTC).
+  fee_units bigint not null default 0
 );
 create index withdrawals_status_idx on withdrawals (status, created_at desc);
 create index withdrawals_user_idx on withdrawals (user_id, created_at desc);
@@ -1592,12 +1597,22 @@ begin
     'available', u.available + (p->>'tokens')::bigint, 'level', (p->>'level')::int, 'level_up', (p->>'level_up')::boolean);
 end $$;
 
+-- Minimum de retrait en Coins : le plus grand du minimum en Coins et du minimum en sats au cours du jour.
+create function withdraw_min_tokens()
+returns int language plpgsql stable set search_path = public as $$
+declare
+  s settings;
+begin
+  select * into s from settings where id = 1;
+  return greatest(s.min_withdraw_tokens, ceil(s.min_withdraw_sats * coins_per_sat())::int, 1);
+end $$;
+
 -- Paiement automatique : membres dont le solde disponible atteint le minimum de retrait.
 create function auto_batch_users(p_limit int)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(id), '[]'::jsonb) from (
     select u.id from users u, settings s
-    where s.id = 1 and s.auto_payout and u.available >= greatest(s.min_withdraw_tokens, 1)
+    where s.id = 1 and s.auto_payout and u.available >= withdraw_min_tokens()
       and u.fp_address is not null and not u.banned
     order by u.available desc limit p_limit) x;
 $$;
@@ -1611,6 +1626,8 @@ declare
   blk text;
   tokens bigint;
   units bigint;
+  fee bigint := 0;
+  min_tokens int := withdraw_min_tokens();
   new_id uuid;
 begin
   select * into u from users where id = p_user for update;
@@ -1624,11 +1641,14 @@ begin
 
   tokens := case when p_kind = 'instant' then u.available else u.validated end;
   if tokens <= 0 then return jsonb_build_object('ok', false, 'code', 'nothing_to_withdraw'); end if;
-  if tokens < s.min_withdraw_tokens then
-    return jsonb_build_object('ok', false, 'code', 'below_minimum', 'min', s.min_withdraw_tokens);
+  if tokens < min_tokens then
+    return jsonb_build_object('ok', false, 'code', 'below_minimum', 'min', min_tokens);
   end if;
 
   units := floor(tokens::numeric / s.tokens_per_eur * c.per_eur * power(10::numeric, c.decimals));
+  -- Frais de transfert a la charge du membre (en sats, donc seulement sur le BTC).
+  if c.code = 'BTC' then fee := ceil(s.withdraw_fee_sats)::bigint; end if;
+  units := units - fee;
   if units <= 0 then return jsonb_build_object('ok', false, 'code', 'amount_too_small'); end if;
 
   if c.last_balance_units is not null and c.last_balance_units < units
@@ -1637,8 +1657,8 @@ begin
   end if;
   if payout_cap_reached(tokens) then return jsonb_build_object('ok', false, 'code', 'paused', 'tripped', true); end if;
 
-  insert into withdrawals (user_id, kind, tokens, coin, amount_units, to_address)
-  values (p_user, p_kind, tokens, c.code, units, u.fp_address) returning id into new_id;
+  insert into withdrawals (user_id, kind, tokens, coin, amount_units, to_address, fee_units)
+  values (p_user, p_kind, tokens, c.code, units, u.fp_address, fee) returning id into new_id;
 
   if p_kind = 'instant' then
     perform move_tokens(p_user, 'available', -tokens, 'withdrawal', new_id::text);
@@ -1647,7 +1667,7 @@ begin
     update earnings set status = 'paying', withdrawal_id = new_id where user_id = p_user and status = 'validated';
   end if;
   return jsonb_build_object('ok', true, 'id', new_id, 'tokens', tokens, 'coin', c.code, 'amount_units', units,
-    'decimals', c.decimals, 'to', u.fp_address);
+    'decimals', c.decimals, 'to', u.fp_address, 'fee_units', fee);
 end $$;
 
 -- Seul un retrait encore ouvert peut changer. Refuse : les tokens reviennent.
@@ -1685,7 +1705,7 @@ end $$;
 create function hourly_batch_users(p_limit int)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(id), '[]'::jsonb) from (
-    select id from users where validated >= greatest((select min_withdraw_tokens from settings where id = 1), 1)
+    select id from users where validated >= withdraw_min_tokens()
       and fp_address is not null and not banned
     order by validated desc limit p_limit) x;
 $$;
@@ -1977,7 +1997,7 @@ returns jsonb language sql stable set search_path = public as $$
     'daily_streak_rewards', to_jsonb(s.daily_streak_rewards),
     'level_max', s.level_max, 'level_mult_percent', s.level_mult_percent,
     'energy_regen', s.energy_regen_seconds, 'energy_max', s.energy_max, 'energy_max_vip', s.energy_max_vip,
-    'min_withdraw_tokens', s.min_withdraw_tokens,
+    'min_withdraw_tokens', withdraw_min_tokens(), 'min_withdraw_sats', s.min_withdraw_sats, 'withdraw_fee_sats', s.withdraw_fee_sats,
     'roll_reveal_seconds', s.roll_reveal_seconds, 'auto_payout', s.auto_payout,
     'mining_enabled', s.mining_enabled, 'mining_hours', s.mining_session_hours, 'mining_base_ghs', s.mining_base_ghs,
     'mining_ptc_ghs', s.mining_ptc_ghs, 'mining_video_ghs', s.mining_video_ghs, 'mining_sat_per_ths_hour', s.mining_sat_per_ths_hour,
@@ -2069,7 +2089,7 @@ returns jsonb language sql stable set search_path = public as $$
                   from ledger where user_id = u.id order by at desc, id desc limit 20) x),
     'withdrawals', (select coalesce(jsonb_agg(w), '[]'::jsonb) from (
                   select jsonb_build_object('at', wd.created_at, 'tokens', wd.tokens, 'coin', wd.coin, 'amount_units', wd.amount_units,
-                    'decimals', co.decimals, 'status', wd.status, 'payout_id', wd.payout_id, 'kind', wd.kind) w
+                    'decimals', co.decimals, 'status', wd.status, 'payout_id', wd.payout_id, 'kind', wd.kind, 'fee_units', wd.fee_units) w
                   from withdrawals wd join coins co on co.code = wd.coin
                   where wd.user_id = u.id order by wd.created_at desc limit 10) x)
   ) from users u, settings s where u.id = p_user and s.id = 1;
@@ -2230,6 +2250,8 @@ begin
     wheel_min_claims = coalesce((p->>'wheel_min_claims')::int, wheel_min_claims),
     wheel_hours = coalesce((p->>'wheel_hours')::int, wheel_hours),
     min_withdraw_tokens = coalesce((p->>'min_withdraw_tokens')::int, min_withdraw_tokens),
+    min_withdraw_sats = coalesce((p->>'min_withdraw_sats')::numeric, min_withdraw_sats),
+    withdraw_fee_sats = coalesce((p->>'withdraw_fee_sats')::numeric, withdraw_fee_sats),
     roll_reveal_seconds = coalesce((p->>'roll_reveal_seconds')::int, roll_reveal_seconds),
     mining_enabled = coalesce((p->>'mining_enabled')::boolean, mining_enabled),
     mining_session_hours = coalesce((p->>'mining_session_hours')::numeric, mining_session_hours),

@@ -427,4 +427,9 @@
 "s:ad_refund":"Anúncio recusado, saldo devolvido",
 "s:mining":"Mineração",
 "rollTo":"XP para o nível",
-"rollsTo":"XP para o nível"}
+"rollsTo":"XP para o nível",
+"wdFee":"Taxa de transferência (por sua conta):",
+"wdFeeFree":"0 sat: um envio entre contas FaucetPay é grátis.",
+"wdGet":"Você vai receber",
+"wdFeeOut":"Para tirar seus BTC da FaucetPay para uma carteira externa, a FaucetPay cobra cerca de 1 000 sats de taxa de rede (mínimo 120 000 sats).",
+"feeShort":"taxa"}

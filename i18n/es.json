@@ -427,4 +427,9 @@
 "s:ad_refund":"Anuncio rechazado, saldo devuelto",
 "s:mining":"Minería",
 "rollTo":"XP para el nivel",
-"rollsTo":"XP para el nivel"}
+"rollsTo":"XP para el nivel",
+"wdFee":"Comisión de transferencia (a tu cargo):",
+"wdFeeFree":"0 sat: un envío entre cuentas FaucetPay es gratis.",
+"wdGet":"Recibirás",
+"wdFeeOut":"Para sacar tus BTC de FaucetPay a una cartera externa, FaucetPay cobra unos 1 000 sats de comisión de red (mínimo 120 000 sats).",
+"feeShort":"comisión"}

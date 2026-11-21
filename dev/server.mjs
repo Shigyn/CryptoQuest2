@@ -12,11 +12,11 @@ const root = fileURLToPath(new URL("../public", import.meta.url));
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css" };
 
 process.env.KEEP_ROLL = "1";
-const h = await createHarness({ siteUrl: `http://localhost:${PORT}/` });
+const h = await createHarness({ minSats: true, siteUrl: `http://localhost:${PORT}/` });
 const handlers = { api: handleApi, admin: handleAdmin, postback: handlePostback, cron: handleCron, merchant: handleMerchant };
 
 // Memes reglages qu'en ligne : minage actif, paiement automatique.
-await h.pg.query("update settings set mining_enabled = true, daily_bonus_min_claims = 0, auto_payout = true where id = 1");
+await h.pg.query("update settings set mining_enabled = true, daily_bonus_min_claims = 0, auto_payout = false where id = 1");
 // Contenus d'essai
 await h.rpc("admin_save_ptc", { p: { title: "Pub d'essai", url: `http://localhost:${PORT}/legal.html`, reward_tokens: 10, duration_seconds: 5, max_views: 100, price_eur_per_view: 0.002 } });
 await h.rpc("admin_save_shortlink", { p: { name: "Lien d'essai", api_url: "https://exemple.invalid/api?url={url}", reward_tokens: 15, daily_limit: 2, revenue_eur_per_view: 0.003 } });
