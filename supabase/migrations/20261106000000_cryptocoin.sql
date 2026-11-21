@@ -1,7 +1,7 @@
 -- CryptoCoin : schema complet. Rejouable : efface d'abord l'ancienne version, sans donnees reelles a ce stade.
 -- Toute regle d'argent est ici. Tables fermees (RLS sans politique), fonctions reservees a service_role.
 
-drop table if exists watch_views, chat_messages, ad_impressions, ticket_messages, tickets, notifications, promo_redemptions, promo_codes,
+drop table if exists mining_sessions, watch_views, chat_messages, ad_impressions, ticket_messages, tickets, notifications, promo_redemptions, promo_codes,
   user_achievements, achievements, tournament_awards, user_cosmetics, cosmetics, game_plays, vip_orders, ad_orders, challenge_done, challenges, offerwalls, ptc_views, ptc_campaigns, shortlink_visits,
   shortlink_providers, earnings, withdrawals, claims, ledger, sessions, users, bans, coins, settings cascade;
 do $$
@@ -27,6 +27,18 @@ create table settings (
   min_withdraw_tokens int not null default 1 check (min_withdraw_tokens >= 1),
   -- Tirage en 2 etapes : secondes entre « Lancer » et « Recuperer ». Paiement auto du solde disponible au lot horaire.
   roll_reveal_seconds int not null default 8 check (roll_reveal_seconds between 0 and 60),
+  -- Minage virtuel (finance par la pub) : session de base a relancer, chaque PTC / video ouvre sa propre session.
+  -- Gain : 1 TH/s pendant 1 heure = mining_sat_per_ths_hour sats, convertis en Coins au cours du BTC au demarrage.
+  mining_enabled boolean not null default false,
+  mining_session_hours numeric not null default 8 check (mining_session_hours > 0),
+  mining_base_ghs numeric not null default 30 check (mining_base_ghs >= 0),
+  mining_ptc_ghs numeric not null default 20 check (mining_ptc_ghs >= 0),
+  mining_video_ghs numeric not null default 50 check (mining_video_ghs >= 0),
+  mining_sat_per_ths_hour numeric not null default 1 check (mining_sat_per_ths_hour >= 0),
+  mining_ads_per_hour int not null default 30 check (mining_ads_per_hour >= 0),
+  mining_ads_per_day int not null default 100 check (mining_ads_per_day >= 0),
+  -- Valeur d'1 sat en euros si le cours du BTC n'est pas connu.
+  mining_sat_eur numeric not null default 0.00068 check (mining_sat_eur > 0),
   auto_payout boolean not null default false,
   -- Watch Ads (videos recompensees) : la recompense = watch_revenue_eur x tokens_per_eur x watch_share_percent / 100.
   watch_daily_limit int not null default 30 check (watch_daily_limit >= 0),
@@ -123,6 +135,8 @@ create table users (
   chat_muted_until timestamptz,
   -- Tirage fait mais pas encore recupere : {roll, tokens, at, level, level_up}.
   pending_roll jsonb,
+  -- Fractions de Coins en attente entre deux sessions de minage versees.
+  mining_carry numeric not null default 0,
   faucet_carry numeric not null default 0,
   fp_address text not null,
   fp_norm text not null unique,
@@ -344,7 +358,7 @@ create table challenges (
   name text not null,
   -- Objectif du jour : claims = tirages, earned = Coins gagnes, ptc = pubs vues, links = liens passes,
   -- surveys = sondages termines, offers = offres terminees. target_claims porte la valeur a atteindre.
-  goal text not null default 'claims' check (goal in ('claims', 'earned', 'ptc', 'links', 'surveys', 'offers')),
+  goal text not null default 'claims' check (goal in ('claims', 'earned', 'ptc', 'links', 'surveys', 'offers', 'sessions', 'ads')),
   period text not null default 'day' check (period in ('day', 'week')),
   target_claims int not null check (target_claims >= 1),
   reward_tokens int not null check (reward_tokens > 0),
@@ -360,6 +374,10 @@ insert into challenges (name, goal, period, target_claims, reward_tokens) values
   ('150 tirages cette semaine', 'claims', 'week', 150, 30), ('20 000 Coins cette semaine', 'earned', 'week', 20000, 300),
   ('30 pubs cette semaine', 'ptc', 'week', 30, 40), ('15 liens cette semaine', 'links', 'week', 15, 60),
   ('10 sondages cette semaine', 'surveys', 'week', 10, 200);
+-- Quetes du minage virtuel.
+insert into challenges (name, goal, period, target_claims, reward_tokens) values
+  ('3 sessions de minage', 'sessions', 'day', 3, 10), ('10 pubs', 'ads', 'day', 10, 15), ('30 pubs', 'ads', 'day', 30, 40),
+  ('15 sessions cette semaine', 'sessions', 'week', 15, 60), ('150 pubs cette semaine', 'ads', 'week', 150, 150);
 create table challenge_done (
   challenge_id bigint not null references challenges (id),
   user_id uuid not null references users (id),
@@ -521,6 +539,23 @@ create table watch_views (
 );
 create index watch_views_user_idx on watch_views (user_id, started_at desc);
 
+-- Minage : une ligne par session (base, ptc, video). Versee au solde a sa fin (credited).
+create table mining_sessions (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references users (id),
+  kind text not null check (kind in ('base', 'ptc', 'video')),
+  ghs numeric not null,
+  started_at timestamptz not null default now(),
+  ends_at timestamptz not null,
+  coins_per_hour numeric not null,
+  revenue_eur numeric,
+  ref text unique,
+  credited boolean not null default false,
+  credited_tokens bigint
+);
+create index mining_sessions_user_idx on mining_sessions (user_id, started_at desc);
+create index mining_sessions_open_idx on mining_sessions (ends_at) where not credited;
+
 create table ad_impressions (
   day date not null default (now() at time zone 'utc')::date,
   slot text not null,
@@ -560,6 +595,7 @@ alter table ticket_messages enable row level security;
 alter table ad_impressions enable row level security;
 alter table chat_messages enable row level security;
 alter table watch_views enable row level security;
+alter table mining_sessions enable row level security;
 
 -- Mouvements -------------------------------------------------------------
 
@@ -871,13 +907,14 @@ end $$;
 create function user_earned(p_user uuid)
 returns bigint language sql stable set search_path = public as $$
   select coalesce(sum(delta), 0)::bigint from ledger where user_id = p_user and delta > 0
-    and source in ('faucet', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer', 'video', 'mines', 'dice', 'tournament', 'achievement', 'promo');
+    and source in ('faucet', 'mining', 'daily', 'wheel', 'challenge', 'referral', 'ptc', 'shortlink', 'offer', 'video', 'mines', 'dice', 'tournament', 'achievement', 'promo');
 $$;
 
 create function user_streak(p_user uuid)
 returns int language sql stable set search_path = public as $$
-  with d as (select distinct (at at time zone 'utc')::date as day from claims
-             where user_id = p_user and at > now() - interval '400 days'),
+  with d as (select (at at time zone 'utc')::date as day from claims where user_id = p_user and at > now() - interval '400 days'
+             union
+             select (started_at at time zone 'utc')::date from mining_sessions where user_id = p_user and kind = 'base' and started_at > now() - interval '400 days'),
        g as (select day, day - (row_number() over (order by day))::int as grp from d)
   select coalesce(case when max(day) >= (now() at time zone 'utc')::date - 1
               then (select count(*) from g g2 where g2.grp = (select grp from g order by day desc limit 1)) else 0 end, 0)::int
@@ -889,11 +926,14 @@ create function challenge_progress_since(p_user uuid, p_goal text, p_since times
 returns bigint language sql stable set search_path = public as $$
   select case p_goal
     when 'claims' then (select count(*) from claims where user_id = p_user and at >= p_since)
+    when 'sessions' then (select count(*) from mining_sessions where user_id = p_user and kind = 'base' and started_at >= p_since)
+    when 'ads' then (select count(*) from mining_sessions where user_id = p_user and kind in ('ptc', 'video') and started_at >= p_since)
     when 'earned' then (select coalesce(sum(delta), 0) from ledger where user_id = p_user and delta > 0
                           and bucket in ('available', 'pending') and at >= p_since
-                          and source in ('faucet', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer', 'video'))::bigint
-    when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc'
+                          and source in ('faucet', 'mining', 'daily', 'wheel', 'mines', 'dice', 'referral', 'ptc', 'shortlink', 'offer', 'video'))::bigint
+    when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc' and ref not like 'mine:%'
                        and status not in ('rejected', 'reversed') and created_at >= p_since)
+                  + (select count(*) from mining_sessions where user_id = p_user and kind = 'ptc' and started_at >= p_since)
     when 'links' then (select count(*) from earnings where user_id = p_user and source = 'shortlink'
                          and status not in ('rejected', 'reversed') and created_at >= p_since)
     else (select count(*) from earnings e join offerwalls o on o.code = e.label
@@ -913,6 +953,7 @@ create function achievement_progress(p_user uuid, p_kind text)
 returns bigint language sql stable set search_path = public as $$
   select case p_kind
     when 'claims' then (select count(*) from claims where user_id = p_user)
+                     + (select count(*) from mining_sessions where user_id = p_user and kind = 'base')
     when 'streak' then user_streak(p_user)::bigint
     when 'level' then (level_info((select xp from users where id = p_user))->>'level')::bigint
     when 'ptc' then (select count(*) from earnings where user_id = p_user and source = 'ptc' and status not in ('rejected', 'reversed'))
@@ -1198,6 +1239,145 @@ begin
   return jsonb_build_object('ok', true, 'tokens', tokens);
 end $$;
 
+-- Minage virtuel -------------------------------------------------------------------
+-- Valeur d'1 sat en Coins (cours du BTC du site, sinon le reglage de secours).
+create function coins_per_sat()
+returns numeric language sql stable set search_path = public as $$
+  select s.tokens_per_eur * coalesce(0.00000001 / nullif((select per_eur from coins where code = 'BTC'), 0), s.mining_sat_eur)
+  from settings s where s.id = 1;
+$$;
+
+-- Plafond de pubs (PTC + videos) du minage : par heure et par jour.
+create function mining_ad_block(p_user uuid)
+returns text language sql stable set search_path = public as $$
+  select case
+    when not s.mining_enabled then null
+    when (select count(*) from mining_sessions where user_id = p_user and kind in ('ptc', 'video') and started_at > now() - interval '1 hour') >= s.mining_ads_per_hour then 'mining_ad_limit'
+    when (select count(*) from mining_sessions where user_id = p_user and kind in ('ptc', 'video') and started_at > now() - interval '24 hours') >= s.mining_ads_per_day then 'daily_limit'
+  end
+  from settings s where s.id = 1;
+$$;
+
+-- Session de base : une a la fois, puissance x multiplicateur de niveau.
+create function mining_start(p_user uuid, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  blk text;
+  active mining_sessions;
+  ghs numeric;
+  ends timestamptz;
+begin
+  select * into s from settings where id = 1;
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  if u.fp_address is null then return jsonb_build_object('ok', false, 'code', 'link_faucetpay'); end if;
+  if not s.mining_enabled or s.paused then return jsonb_build_object('ok', false, 'code', 'paused'); end if;
+  select * into active from mining_sessions where user_id = p_user and kind = 'base' and ends_at > now() order by ends_at desc limit 1;
+  if found then
+    return jsonb_build_object('ok', false, 'code', 'mining_active', 'retry_after', ceil(extract(epoch from active.ends_at - now()))::int);
+  end if;
+  ghs := round(s.mining_base_ghs * (level_info(u.xp)->>'mult')::numeric, 2);
+  ends := now() + make_interval(secs => (s.mining_session_hours * 3600)::int);
+  insert into mining_sessions (user_id, kind, ghs, ends_at, coins_per_hour)
+  values (p_user, 'base', ghs, ends, ghs / 1000 * s.mining_sat_per_ths_hour * coins_per_sat());
+  update users set xp = xp + 1 where id = p_user;
+  return jsonb_build_object('ok', true, 'ghs', ghs, 'ends_at', ends);
+end $$;
+
+-- Session ouverte par une PTC ou une video validee (une seule par vue, grace a p_ref).
+create function mining_add(p_user uuid, p_kind text, p_ref text, p_revenue numeric)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  ghs numeric;
+  new_id bigint;
+begin
+  select * into s from settings where id = 1;
+  ghs := case when p_kind = 'video' then s.mining_video_ghs else s.mining_ptc_ghs end;
+  insert into mining_sessions (user_id, kind, ghs, ends_at, coins_per_hour, revenue_eur, ref)
+  values (p_user, p_kind, ghs, now() + make_interval(secs => (s.mining_session_hours * 3600)::int),
+          ghs / 1000 * s.mining_sat_per_ths_hour * coins_per_sat(), p_revenue, p_ref)
+  on conflict (ref) do nothing returning id into new_id;
+  if new_id is null then return jsonb_build_object('ok', true, 'duplicate', true); end if;
+  update users set xp = xp + 1 where id = p_user;
+  return jsonb_build_object('ok', true, 'mining', true, 'kind', p_kind, 'ghs', ghs, 'hours', s.mining_session_hours);
+end $$;
+
+-- Verse les sessions terminees : base dans le solde disponible, PTC et videos dans « a valider » (controle anti-triche).
+create function mining_settle(p_user uuid)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  u users;
+  m mining_sessions;
+  exact numeric;
+  carry numeric;
+  tokens bigint;
+  total bigint := 0;
+begin
+  select * into u from users where id = p_user for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  carry := u.mining_carry;
+  for m in select * from mining_sessions where user_id = p_user and not credited and ends_at <= now() order by ends_at for update loop
+    exact := m.coins_per_hour * extract(epoch from m.ends_at - m.started_at) / 3600 + carry;
+    tokens := floor(exact);
+    carry := exact - tokens;
+    update mining_sessions set credited = true, credited_tokens = tokens where id = m.id;
+    if tokens > 0 then
+      if m.kind = 'base' then
+        perform move_tokens(p_user, 'available', tokens, 'mining', m.id::text);
+        perform credit_referral(p_user, tokens);
+      else
+        perform add_earning(p_user, m.kind, 'mine:' || m.id, case when m.kind = 'video' then 'Watch Ads' else 'PTC' end, tokens, m.revenue_eur);
+      end if;
+    end if;
+    total := total + tokens;
+  end loop;
+  update users set mining_carry = carry where id = p_user;
+  return jsonb_build_object('ok', true, 'credited', total);
+end $$;
+
+-- Au lot horaire : verse les sessions terminees de tout le monde.
+create function mining_settle_all(p_limit int)
+returns int language plpgsql set search_path = public as $$
+declare
+  uid uuid;
+  n int := 0;
+begin
+  for uid in select distinct user_id from mining_sessions where not credited and ends_at <= now() limit p_limit loop
+    perform mining_settle(uid);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+-- Ecran Minage et onglet Sessions : sessions en cours (avec le mine jusqu'ici), terminees du jour, plafonds.
+create function mining_status(p_user uuid)
+returns jsonb language sql stable set search_path = public as $$
+  with a as (select * from mining_sessions where user_id = p_user and ends_at > now()),
+       base as (select * from a where kind = 'base' order by ends_at desc limit 1)
+  select jsonb_build_object(
+    'enabled', s.mining_enabled,
+    'now', now(),
+    'coins_per_sat', coins_per_sat(),
+    'hours', s.mining_session_hours,
+    'base_ghs', round(s.mining_base_ghs * (level_info(u.xp)->>'mult')::numeric, 2),
+    'ptc_ghs', s.mining_ptc_ghs, 'video_ghs', s.mining_video_ghs,
+    'sat_per_ths_hour', s.mining_sat_per_ths_hour,
+    'power', coalesce((select sum(ghs) from a), 0),
+    'base', (select jsonb_build_object('started_at', started_at, 'ends_at', ends_at, 'ghs', ghs) from base),
+    'active', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'kind', kind, 'ghs', ghs, 'started_at', started_at, 'ends_at', ends_at,
+        'coins_per_hour', coins_per_hour) order by ends_at) from a), '[]'::jsonb),
+    'done_today', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'kind', kind, 'ghs', ghs, 'ends_at', ends_at, 'tokens', credited_tokens) order by ends_at desc)
+        from (select * from mining_sessions where user_id = p_user and credited and ends_at > now() - interval '24 hours' order by ends_at desc limit 50) d), '[]'::jsonb),
+    'done_today_tokens', coalesce((select sum(credited_tokens) from mining_sessions where user_id = p_user and credited and ends_at > now() - interval '24 hours'), 0),
+    'ads_hour_left', greatest(s.mining_ads_per_hour - (select count(*) from mining_sessions where user_id = p_user and kind in ('ptc', 'video') and started_at > now() - interval '1 hour'), 0),
+    'ads_day_left', greatest(s.mining_ads_per_day - (select count(*) from mining_sessions where user_id = p_user and kind in ('ptc', 'video') and started_at > now() - interval '24 hours'), 0))
+  from settings s, users u where s.id = 1 and u.id = p_user;
+$$;
+
 create function ptc_list(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'title', c.title, 'reward_tokens', c.reward_tokens,
@@ -1220,6 +1400,8 @@ begin
   blk := user_block(u, p_ip_hash);
   if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
   if u.fp_address is null then return jsonb_build_object('ok', false, 'code', 'link_faucetpay'); end if;
+  blk := mining_ad_block(p_user);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
   select * into c from ptc_campaigns where id = p_id and enabled and views < max_views;
   if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
   if exists (select 1 from ptc_views where campaign_id = p_id and user_id = p_user and day = today and completed_at is not null) then
@@ -1254,6 +1436,9 @@ begin
   if c.views >= c.max_views then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
   update ptc_views set completed_at = now() where id = v.id;
   update ptc_campaigns set views = views + 1 where id = p_id;
+  if (select mining_enabled from settings where id = 1) then
+    return mining_add(p_user, 'ptc', 'ptc:' || p_id || ':' || p_user || ':' || today, c.price_eur_per_view);
+  end if;
   return add_earning(p_user, 'ptc', p_id || ':' || p_user || ':' || today, c.title, c.reward_tokens, c.price_eur_per_view);
 end $$;
 
@@ -1784,6 +1969,9 @@ returns jsonb language sql stable set search_path = public as $$
     'energy_regen', s.energy_regen_seconds, 'energy_max', s.energy_max, 'energy_max_vip', s.energy_max_vip,
     'min_withdraw_tokens', s.min_withdraw_tokens,
     'roll_reveal_seconds', s.roll_reveal_seconds, 'auto_payout', s.auto_payout,
+    'mining_enabled', s.mining_enabled, 'mining_hours', s.mining_session_hours, 'mining_base_ghs', s.mining_base_ghs,
+    'mining_ptc_ghs', s.mining_ptc_ghs, 'mining_video_ghs', s.mining_video_ghs, 'mining_sat_per_ths_hour', s.mining_sat_per_ths_hour,
+    'coins_per_sat', coins_per_sat(),
     'watch_reward', floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::int,
     'watch_daily_limit', s.watch_daily_limit,
     'feed', coalesce((select jsonb_agg(f order by f->>'at' desc) from (
@@ -2033,6 +2221,15 @@ begin
     wheel_hours = coalesce((p->>'wheel_hours')::int, wheel_hours),
     min_withdraw_tokens = coalesce((p->>'min_withdraw_tokens')::int, min_withdraw_tokens),
     roll_reveal_seconds = coalesce((p->>'roll_reveal_seconds')::int, roll_reveal_seconds),
+    mining_enabled = coalesce((p->>'mining_enabled')::boolean, mining_enabled),
+    mining_session_hours = coalesce((p->>'mining_session_hours')::numeric, mining_session_hours),
+    mining_base_ghs = coalesce((p->>'mining_base_ghs')::numeric, mining_base_ghs),
+    mining_ptc_ghs = coalesce((p->>'mining_ptc_ghs')::numeric, mining_ptc_ghs),
+    mining_video_ghs = coalesce((p->>'mining_video_ghs')::numeric, mining_video_ghs),
+    mining_sat_per_ths_hour = coalesce((p->>'mining_sat_per_ths_hour')::numeric, mining_sat_per_ths_hour),
+    mining_ads_per_hour = coalesce((p->>'mining_ads_per_hour')::int, mining_ads_per_hour),
+    mining_ads_per_day = coalesce((p->>'mining_ads_per_day')::int, mining_ads_per_day),
+    mining_sat_eur = coalesce((p->>'mining_sat_eur')::numeric, mining_sat_eur),
     auto_payout = coalesce((p->>'auto_payout')::boolean, auto_payout),
     watch_daily_limit = coalesce((p->>'watch_daily_limit')::int, watch_daily_limit),
     watch_gap_seconds = coalesce((p->>'watch_gap_seconds')::int, watch_gap_seconds),
@@ -2403,7 +2600,7 @@ begin
   if u.chat_muted_until > now() then
     return jsonb_build_object('ok', false, 'code', 'chat_muted', 'until', u.chat_muted_until);
   end if;
-  if not exists (select 1 from claims where user_id = p_user) then
+  if not exists (select 1 from claims where user_id = p_user) and not exists (select 1 from mining_sessions where user_id = p_user) then
     return jsonb_build_object('ok', false, 'code', 'chat_need_roll');
   end if;
   if length(coalesce(p_body, '')) not between 1 and 300 then return jsonb_build_object('ok', false, 'code', 'bad_request'); end if;
@@ -2469,6 +2666,8 @@ begin
   blk := user_block(u, p_ip_hash);
   if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
   if u.fp_address is null then return jsonb_build_object('ok', false, 'code', 'link_faucetpay'); end if;
+  blk := mining_ad_block(p_user);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
   st := watch_status(p_user);
   if (st->>'left')::int < 1 then return jsonb_build_object('ok', false, 'code', 'daily_limit'); end if;
   if (st->>'next_in')::int > 0 then return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after', (st->>'next_in')::int); end if;
@@ -2499,6 +2698,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'daily_limit');
   end if;
   update watch_views set completed_at = now() where token = p_token;
+  if s.mining_enabled then return mining_add(p_user, 'video', 'video:' || p_token, s.watch_revenue_eur); end if;
   return add_earning(p_user, 'video', p_token, 'Watch Ads',
     floor(s.watch_revenue_eur * s.tokens_per_eur * s.watch_share_percent / 100)::bigint, s.watch_revenue_eur);
 end $$;

@@ -254,7 +254,19 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
       return json(d, 200, { ok: true });
 
     case "me":
+      // Les sessions de minage terminees sont versees avant de lire le profil.
+      await d.rpc("mining_settle", { p_user: userId });
       return json(d, 200, { ok: true, ...(await d.rpc("user_profile", { p_user: userId })) });
+
+    case "mining_status":
+      await d.rpc("mining_settle", { p_user: userId });
+      return json(d, 200, { ok: true, ...(await d.rpc("mining_status", { p_user: userId })) });
+
+    case "mining_start": {
+      if (!(await captchaOk())) return refuse(d, 400, "captcha");
+      await d.rpc("mining_settle", { p_user: userId });
+      return result(d, await d.rpc("mining_start", { p_user: userId, p_ip_hash: ipHash }));
+    }
 
     case "set_password": {
       const password = String(b.password ?? "");
@@ -647,7 +659,8 @@ export async function handleCron(req: Request, d: Deps, budgetMs = 120_000): Pro
   const rates = await refreshRates(d).catch((err) => ({ updated: [], skipped: [], error: String(err) }));
   // Tournoi : les gagnants de la semaine passee sont payes une seule fois, au premier lot du lundi.
   const tournament = await d.rpc("close_tournament").catch((err: unknown) => ({ ok: false, error: String(err) }));
-  // Gains valides (lot horaire) puis soldes disponibles au-dessus du minimum (paiement automatique).
+  // Sessions de minage terminees versees, puis gains valides (lot horaire) et soldes au-dessus du minimum.
+  await d.rpc("mining_settle_all", { p_limit: 1000 });
   const users: string[] = await d.rpc("hourly_batch_users", { p_limit: 200 });
   const autos: string[] = await d.rpc("auto_batch_users", { p_limit: 200 });
   const queue: [string, "hourly" | "instant"][] = [...users.map((id): [string, "hourly"] => [id, "hourly"]), ...autos.map((id): [string, "instant"] => [id, "instant"])];

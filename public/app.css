@@ -956,3 +956,43 @@ textarea:focus { outline: none; border-color: var(--sky); }
 .autopay p { display: flex; align-items: flex-start; gap: 8px; font-weight: 700; color: var(--ink); font-size: 14px; }
 .autopay p svg { flex: none; width: 18px; height: 18px; color: var(--green); margin-top: 1px; }
 .autopay .progress { margin: 8px 0 4px; }
+
+/* Minage virtuel */
+.mine-hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  background: radial-gradient(120% 120% at 0% 0%, rgba(255, 204, 61, .18), transparent 55%), linear-gradient(180deg, rgba(40, 66, 150, .82), rgba(20, 36, 96, .86)); }
+.mine-rig { flex: none; width: 96px; height: 96px; border-radius: 28px; display: grid; place-items: center; color: #4a2b00;
+  background: linear-gradient(145deg, #ffe27a, #ff9f1c); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .45), 0 6px 0 rgba(120, 60, 0, .5), 0 0 30px rgba(255, 204, 61, .35); }
+.mine-rig svg { width: 60px; height: 60px; stroke-width: 1.8; }
+.mine-rig.on svg { animation: spin-fan 1.2s linear infinite; }
+@keyframes spin-fan { to { transform: rotate(360deg); } }
+.mine-main { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.mine-power { font: 700 34px/1.1 var(--display); color: var(--ink); margin-bottom: 8px; }
+.mine-counter { font: 700 28px/1.1 var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.mine-base { display: flex; flex-direction: column; gap: 8px; }
+.mine-base-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.mine-base-head b { color: var(--ink); font-family: var(--display); }
+.mine-base-head span { font-weight: 700; color: var(--sky); font-variant-numeric: tabular-nums; }
+.boost-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.boost-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; text-decoration: none; color: inherit; background: rgba(255, 255, 255, .05); border: 2px solid var(--line); }
+.boost-card:hover { border-color: var(--line-2); }
+.boost-card .game-ico { width: 46px; height: 46px; border-radius: 14px; }
+.boost-card .game-ico svg { width: 24px; height: 24px; }
+.boost-text { flex: 1; display: flex; flex-direction: column; }
+.boost-text b { font: 600 17px var(--display); color: var(--ink); }
+.boost-text span { font-weight: 800; color: var(--green); font-size: 14px; }
+.sess-list { display: grid; gap: 8px; }
+.sess { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, .04); border: 2px solid var(--line); }
+.sess .row-main .progress { margin: 6px 0 4px; }
+.sess-mined { flex: none; font: 700 16px var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.sess.k-video .row-ico { background: rgba(255, 140, 198, .18); color: #ff8cc6; }
+.sess.k-base .row-ico { background: rgba(255, 204, 61, .18); color: var(--gold); }
+.pchip-ico.power svg { fill: none; stroke: #ffd34d; filter: drop-shadow(0 0 8px rgba(255, 204, 61, .6)); }
+a.pchip { text-decoration: none; color: inherit; }
+.task-reward svg { width: 16px; height: 16px; }
+@media (max-width: 720px) {
+  .boost-list { grid-template-columns: minmax(0, 1fr); }
+  .mine-rig { width: 76px; height: 76px; }
+  .mine-rig svg { width: 46px; height: 46px; }
+  .mine-power { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .mine-rig.on svg { animation: none; } }

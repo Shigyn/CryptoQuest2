@@ -8,7 +8,7 @@
 
   // Textes : [francais, anglais]
   const W = {
-    gateSub: ["Tirages gratuits, tâches payées et retraits instantanés", "Free rolls, paid tasks and instant withdrawals"],
+    gateSub: ["Minage virtuel de sats, retraits sur FaucetPay", "Virtual sats mining, withdrawals to FaucetPay"],
     fpField: ["Ton e-mail, pseudo ou adresse FaucetPay", "Your FaucetPay email, username or address"],
     enter: ["Entrer et jouer", "Enter and play"],
     passwordShort: ["Mot de passe", "Password"],
@@ -60,6 +60,17 @@
     tourneyEmpty: ["Personne n’a encore marqué de points cette semaine. Fais un tirage pour prendre la tête !", "Nobody has scored yet this week. Make a roll to take the lead!"],
     tourneyText: ["Gratuit : chaque Coin gagné cette semaine compte (tirages, jeux, tâches, parrainage ; pas les quêtes). Les", "Free: every Coin earned this week counts (rolls, games, tasks, referrals; not quests). The top"],
     tourneyText2: ["premiers sont payés lundi matin.", "players are paid on Monday morning."],
+    // Minage virtuel
+    faucet: ["Minage", "Mining"], sessions: ["Sessions", "Sessions"], kindBase: ["Session de base", "Base session"],
+    miningStart: ["Lancer le minage", "Start mining"], miningStarted: ["Minage lancé :", "Mining started:"], miningPower: ["puissance", "power"],
+    miningNow: ["Miné en ce moment", "Mining right now"], miningBoost: ["Booste ta puissance", "Boost your power"], adsHourLeft: ["pubs dispo cette heure", "ads left this hour"],
+    miningBaseText: ["Lance ta session : elle mine pendant 8 h, puis tu la relances. Chaque pub regardée ouvre une session en plus.", "Start your session: it mines for 8 h, then you restart it. Every ad you watch opens an extra session."],
+    miningFair: ["Minage virtuel financé par la publicité : aucun matériel, rien à acheter. La puissance ne s'achète pas, elle se gagne.", "Virtual mining funded by ads: no hardware, nothing to buy. Power can't be bought, only earned."],
+    miningRunning: ["Session en cours", "Session running"], miningGo: ["Lance ta session de 8 h", "Start your 8 h session"],
+    sessionOpened: ["Nouvelle session :", "New session:"], sessionsActive: ["Sessions en cours", "Active sessions"], sessionsDone: ["Terminées (24 h)", "Finished (24 h)"],
+    noSessions: ["Aucune session en cours.", "No active session."], noSessionsDone: ["Rien de terminé ces dernières 24 h.", "Nothing finished in the last 24 h."],
+    sessionsNote: ["La session de base est versée dans ton solde ; celles des pubs passent par « À valider », puis partent seules.", "The base session goes to your balance; ad sessions go through “Under review”, then are paid automatically."],
+    simMining: ["Sessions de base par jour", "Base sessions per day"], simVideo: ["Vidéos par jour", "Videos per day"],
     // Tirage en 2 etapes, paiement automatique
     collectBtn: ["Récupérer mon gain", "Collect my prize"], revealIn: ["Ton gain dans", "Your prize in"], revealNow: ["Ton gain t'attend !", "Your prize is ready!"],
     autoPay: ["Paiement automatique : dès que ton solde atteint", "Automatic payout: as soon as your balance reaches"],
@@ -81,7 +92,7 @@
     watchHow: ["Laisse la vidéo jusqu'au bout, page visible : le compteur s'arrête si tu changes d'onglet. Les gains sont vérifiés puis payés avec les autres tâches.", "Let the video play to the end with the page visible: the timer stops if you switch tabs. Earnings are reviewed and paid with the other tasks."],
     watchStay: ["Reste sur la page", "Stay on the page"], watchValidate: ["Valider la vue", "Confirm view"],
     // Refonte
-    dashboard: ["Tableau de bord", "Dashboard"], faucet: ["Faucet", "Faucet"], menuEarn: ["Gagner", "Earn"], menuGames: ["Jeux", "Games"],
+    dashboard: ["Tableau de bord", "Dashboard"], menuEarn: ["Gagner", "Earn"], menuGames: ["Jeux", "Games"],
     menuRewards: ["Récompenses", "Rewards"], menuShop: ["Boutique et VIP", "Shop and VIP"], menuWallet: ["Argent", "Money"], menuAccount: ["Compte", "Account"],
     achievements: ["Succès", "Achievements"], promo: ["Codes promo", "Promo codes"], support: ["Support", "Support"], faq: ["FAQ", "FAQ"], proofs: ["Preuves de paiement", "Payment proofs"],
     close: ["Fermer", "Close"], liveFeed: ["En direct", "Live"], withdrawal1: ["Retrait", "Withdrawal"], noActivity: ["Les premiers gains arrivent bientôt.", "First earnings coming soon."],
@@ -119,20 +130,20 @@
     simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["PTC par jour", "PTC per day"],
     simLinks: ["Shortlinks par jour", "Shortlinks per day"], simSurveys: ["Sondages par jour", "Surveys per day"], simDay: ["Par jour", "Per day"], simMonth: ["Par mois", "Per month"],
     simNote: ["Estimation basée sur les récompenses actuelles du site. Les sondages varient selon le pays et la durée.", "Estimate based on the site's current rewards. Surveys vary by country and length."],
-    w_faucet: ["Des tirages gratuits toute la journée, jackpot de {jp}.", "Free rolls all day long, {jp} jackpot."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
+    w_faucet: ["Minage virtuel de sats : une session de 8 h, des boosts à chaque pub.", "Virtual sats mining: an 8 h session, boosts with every ad."], w_ptc: ["Regarde une pub quelques secondes.", "Watch an ad for a few seconds."],
     w_links: ["Passe des liens raccourcis payés.", "Go through paid short links."], w_surveys: ["Les mieux payés : donne ton avis.", "Best paid: share your opinion."],
     w_offers: ["Jeux, applis, inscriptions.", "Games, apps, sign-ups."], w_games: ["Roue, Mines et Dice, gratuits.", "Wheel, Mines and Dice, free."],
     w_quests: ["Quêtes du jour et de la semaine, succès.", "Daily and weekly quests, achievements."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
     heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
-    heroTitle: ["Gagne des cryptos gratuitement, en jouant.", "Earn free crypto, the fun way."],
-    heroLead: ["Tirages gratuits, sondages payés, PTC, shortlinks et quêtes. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Free rolls, paid surveys, PTC, shortlinks and quests. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
+    heroTitle: ["Mine des sats gratuitement, sans matériel.", "Mine sats for free, no hardware."],
+    heroLead: ["Minage virtuel financé par la pub : lance ta session, booste-la avec des vidéos et des PTC, retire dès 10 sats. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Virtual mining funded by ads: start your session, boost it with videos and PTC, withdraw from 10 sats. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
     members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
     waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
     step2: ["Joue et fais des tâches", "Play and do tasks"], step2t: ["Tirages, pubs, sondages, jeux, quêtes.", "Rolls, ads, surveys, games, quests."],
     step3: ["Retire en un clic", "Withdraw in one click"], step3t: ["Directement sur FaucetPay, dans la crypto de ton choix.", "Straight to FaucetPay, in the coin you like."],
     lvBonus: ["sur tes tirages : niveau", "on your rolls: level"],
-    rollsTo: ["tirages avant le niveau", "rolls to level"], rollTo: ["tirage avant le niveau", "roll to level"], maxLevel: ["Niveau maximum atteint !", "Max level reached!"],
+    rollsTo: ["XP avant le niveau", "XP to level"], rollTo: ["XP avant le niveau", "XP to level"], maxLevel: ["Niveau maximum atteint !", "Max level reached!"],
     onRolls: ["sur les tirages", "on rolls"], levelUp: ["Niveau", "Level"], myOffers: ["Mes dernières offres", "My latest offers"],
     es_pending: ["À valider", "Under review"], es_validated: ["Validée", "Approved"], es_paying: ["En paiement", "Paying"], es_paid: ["Payée", "Paid"],
     es_rejected: ["Refusée", "Refused"], es_reversed: ["Annulée", "Reversed"],
@@ -149,7 +160,7 @@
     credited: ["ajoutés, en attente de validation.", "added, under review."],
     wheel: ["Roue", "Wheel"], wheelText: ["Un tour gratuit toutes les quelques heures, après ton premier tirage du jour.", "A free spin every few hours, after your first roll of the day."],
     spin: ["Tourner la roue", "Spin the wheel"], spun: ["Reviens plus tard", "Come back later"], wheelWon: ["gagnés à la roue !", "won on the wheel!"],
-    bonus: ["Bonus quotidien", "Daily bonus"], bonusText: ["Fais un tirage, puis récupère ton bonus.", "Make a roll, then collect your bonus."],
+    bonus: ["Bonus quotidien", "Daily bonus"], bonusText: ["Reviens chaque jour : ton bonus monte avec ta série.", "Come back every day: your bonus grows with your streak."],
     collect: ["Récupérer", "Collect"], done: ["Récupéré", "Collected"],
     quests: ["Quêtes du jour", "Daily quests"], rolls: ["tirages", "rolls"],
     available: ["Disponible", "Available"], pending: ["À valider", "Under review"], validated: ["Validé", "Approved"],
@@ -239,6 +250,8 @@
     chat_blocked: ["Message bloqué par la modération.", "Message blocked by moderation."],
     chat_muted: ["Tu ne peux plus écrire pour le moment", "You can't write for now"],
     roll_pending: ["Récupère d'abord ton tirage en cours.", "Collect your current roll first."],
+    mining_active: ["Ta session de base tourne encore.", "Your base session is still running."],
+    mining_ad_limit: ["Tu as atteint le maximum de pubs pour cette heure. Reviens un peu plus tard.", "You've reached the ad limit for this hour. Come back a bit later."],
     not_enough: ["Pas assez de Coins pour cet achat.", "Not enough Coins for this."],
     not_found: ["Plus disponible.", "No longer available."],
     unauthorized: ["Ta session a expiré. Reconnecte-toi.", "Your session expired. Log in again."],
@@ -296,6 +309,7 @@
     chat: "M4 5h16v11H9l-5 4z",
     send: "M4 12l16-8-6 16-2-7z",
     play: "M7 4.5v15l12-7.5z",
+    fan: "M12 10.2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM12 10.2C11 6 12.5 3 15 3.5s2.5 3.5-1.3 5.2M13.8 12c4.2-1 7.2.5 6.7 3s-3.5 2.5-5.2-1.3M12 13.8c1 4.2-.5 7.2-3 6.7s-2.5-3.5 1.3-5.2M10.2 12C6 13 3 11.5 3.5 9s3.5-2.5 5.2 1.3",
     bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
     shop: "M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2",
     trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 21h6M10 17h4z",
@@ -327,7 +341,7 @@
   const UNITS = [["COINS"], ["EUR"], ["BTC", "bitcoin", "₿"], ["ETH", "ethereum", "Ξ"], ["LTC", "litecoin", "Ł"], ["DOGE", "dogecoin", "Ð"],
     ["BCH", "bitcoin-cash", "Ƀ"], ["DASH", "dash", "D"], ["DGB", "digibyte", "Ɗ"], ["TRX", "tron", "T"], ["USDT", "tether", "₮"],
     ["USDC", "usd-coin", "$"], ["BNB", "binancecoin", "B"], ["SOL", "solana", "◎"], ["ZEC", "zcash", "Z"]];
-  let unit = store.get("cc.unit") || "COINS";
+  let unit = store.get("cc.unit") || "BTC";
   let geckoRates = null;
   try { geckoRates = JSON.parse(store.get("cc.rates") || "null"); } catch { geckoRates = null; }
   // Taux d'affichage : ceux du site pour les cryptos de retrait, CoinGecko pour les autres (toutes les 10 min au plus).
@@ -739,6 +753,11 @@
     };
     tickTimer();
     every(tickTimer, 1000);
+    const powerChip = miningOn() ? (() => {
+      const b = h("b", {}, mining ? fmtGhs(mining.power) : "…");
+      if (!mining) loadMining().then(() => { b.textContent = fmtGhs(mining?.power || 0); });
+      return h("a", { class: "pchip energy", href: "#sessions" }, h("span", { class: "pchip-ico power" }, icon("fan")), b, h("span", {}, t("miningPower")));
+    })() : null;
     return h("section", { class: "panel player" },
       h("div", { class: "player-top" },
         h("div", { class: "lvl-badge", title: t("level") }, icon("star"), h("b", {}, String(lv.lvl))),
@@ -749,7 +768,7 @@
       h("div", { class: "player-chips" },
         h("div", { class: "pchip fire" }, h("span", { class: "pchip-ico" }, icon("fire")),
           h("b", {}, fmtInt(me.streak)), h("span", {}, t("streakLbl"))),
-        h("div", { class: "pchip energy", title: t("energyHelp") },
+        powerChip || h("div", { class: "pchip energy", title: t("energyHelp") },
           h("span", { class: "pips" }, [...Array(cnt).keys()].map((i) => h("i", { class: i < ready ? "on" : "" }))),
           h("b", {}, `${ready}/${cnt}`), h("span", {}, t("energyLbl")), timer),
         h("div", { class: "pchip money" }, coin(),
@@ -965,8 +984,8 @@
     const menu = () => {
       const linksLeft = earn.shortlinks.reduce((a, p) => a + p.remaining, 0);
       const cats = [
-        { key: "ptc", tone: "--c1:#4fd2ff;--c2:#2f6bff", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc) },
-        { key: "watch", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "play", name: t("watchAds"), text: t("watchShort"), n: adCodes("watch").length ? (status?.watch_daily_limit ?? 30) : 0, sum: null, unit: "videos" },
+        { key: "ptc", tone: "--c1:#4fd2ff;--c2:#2f6bff", ico: "eye", name: t("ptc"), text: t("ptcShort"), n: earn.ptc.length, sum: sumRewards(earn.ptc), unit: miningOn() ? "ghs" : undefined, ghs: status?.mining_ptc_ghs },
+        { key: "watch", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "play", name: t("watchAds"), text: t("watchShort"), n: adCodes("watch").length ? (status?.watch_daily_limit ?? 30) : 0, sum: null, unit: miningOn() ? "ghs" : "videos", ghs: status?.mining_video_ghs },
         { key: "links", tone: "--c1:#b48cff;--c2:#6b3dff", ico: "link", name: t("links"), text: t("linksShort"), n: linksLeft, sum: sumRewards(earn.shortlinks) },
         { key: "surveys", tone: "--c1:#45e3a6;--c2:#11a771", ico: "quests", name: t("surveys"), text: t("surveysShort"), n: walls("surveys").length, sum: null },
         { key: "offers", tone: "--c1:#ff8cc6;--c2:#e2367f", ico: "gift", name: t("offers"), text: t("offersShort"), n: walls("offers").length, sum: null },
@@ -980,7 +999,7 @@
             h("span", { class: "game-name" }, c.name),
             h("span", { class: "game-text" }, c.text),
             h("span", { class: `badge ${c.n > 0 ? "good" : ""}` },
-              c.n < 1 ? t("noneNow") : c.unit === "videos" ? `${c.n} ${t("perDay")} · ${num(status?.watch_reward ?? 0)} / ${t("perViewShort")}` : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
+              c.n < 1 ? t("noneNow") : c.unit === "ghs" ? `${c.n} ${t("availableN")} · +${fmtGhs(c.ghs)} · ${status?.mining_hours ?? 8} h` : c.unit === "videos" ? `${c.n} ${t("perDay")} · ${num(status?.watch_reward ?? 0)} / ${t("perViewShort")}` : c.sum === null ? `${c.n} ${t(c.n > 1 ? "walls" : "wall1")}` : `${c.n} ${t("availableN")} · ${tk(c.sum)}`),
             h("span", { class: "btn small", style: "margin-top:auto" }, t("open"))))),
         h("p", { class: "note", style: "text-align:center" }, t("pendingNote")),
         adSlot("in_content"));
@@ -1001,7 +1020,7 @@
           h("div", { class: "task-top" },
             h("div", { class: "row-ico" }, icon("eye")),
             h("div", { class: "row-main" }, h("h3", {}, c.title), h("div", { class: "row-sub" }, `${c.duration_seconds} s`)),
-            h("span", { class: "task-reward" }, coin(), num(c.reward_tokens))),
+            h("span", { class: "task-reward" }, ...(miningOn() ? [icon("fan"), `+${fmtGhs(status.mining_ptc_ghs)}`] : [coin(), num(c.reward_tokens)]))),
           foot);
         const start = h("button", {
           class: "btn small", type: "button",
@@ -1035,13 +1054,14 @@
                   if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
                   ok.disabled = true;
                   const done = await api("ptc_complete", { id: c.id, captcha: captchaToken(cap) || "dev" });
+                  if (done.mining) mining = null;
                   captchaReset(cap);
                   ok.disabled = false;
-                  if (done.ok) burst(ok, `+${tk(done.tokens)}`);
-                  toast(done.ok ? `${tk(done.tokens)} ${t("credited")}` : message(done), done.ok ? "good" : "bad");
+                  if (done.ok) burst(ok, done.mining ? `+${fmtGhs(done.ghs)}` : `+${tk(done.tokens)}`);
+                  toast(done.ok ? (done.mining ? `${t("sessionOpened")} ${fmtGhs(done.ghs)} · ${done.hours} h` : `${tk(done.tokens)} ${t("credited")}`) : message(done), done.ok ? "good" : "bad");
                   if (done.ok || done.code === "already_done") { busy = false; await loadEarn(); await refreshMe(); render(); }
                 },
-              }, `${t("confirm")} +${num(c.reward_tokens)}`);
+              }, miningOn() ? `${t("confirm")} +${fmtGhs(status.mining_ptc_ghs)}` : `${t("confirm")} +${num(c.reward_tokens)}`);
               foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
             }, 1000);
           },
@@ -1322,7 +1342,7 @@
     const streak = me.daily_streak || 0;
     const nextDaily = rewards[(me.daily_done ? Math.max(streak - 1, 0) : streak) % rewards.length];
     const btn = h("button", {
-      class: "btn gold", style: "width:100%", disabled: me.daily_done || me.claims_today < 1,
+      class: "btn gold", style: "width:100%", disabled: me.daily_done || (!miningOn() && me.claims_today < 1),
       onclick: async (e) => {
         const target = e.currentTarget;
         const r = await api("daily");
@@ -1799,7 +1819,7 @@
   // [route, cle de texte, icone] par groupe du menu
   const MENU = [
     [null, [["", "dashboard", "home"]]],
-    ["menuEarn", [["faucet", "faucet", "bolt"], ["ptc", "ptc", "eye"], ["watch", "watchAds", "play"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
+    ["menuEarn", [["faucet", "faucet", "bolt"], ["sessions", "sessions", "quests"], ["ptc", "ptc", "eye"], ["watch", "watchAds", "play"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
     ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"]]],
     ["menuCommunity", [["chat", "chat", "chat"]]],
     ["menuShop", [["shop", "shop", "shop"], ["vip", "vip", "crown"], ["referral", "referral", "profile"]]],
@@ -1815,7 +1835,7 @@
 
   // Pastilles : ce qui attend le membre
   function pending() {
-    const rollReady = !status?.paused && (me.retry_after || 0) - since() <= 0 && energyNow() >= 1;
+    const rollReady = miningOn() ? Boolean(mining && !mining.base) : !status?.paused && (me.retry_after || 0) - since() <= 0 && energyNow() >= 1;
     const questsReady = (me.challenges || []).filter((c) => !c.done && (Number(c.progress) || 0) >= c.target).length;
     const dailyReady = !me.daily_done && me.claims_today >= 1;
     const wheelReady = !me.wheel_done && me.claims_today >= (me.wheel_min_claims ?? 1);
@@ -1925,7 +1945,7 @@
     if (GAME_SUB.includes(route)) { gameSel = route; minesEnd = route === "mines" ? minesEnd : null; return gamesView(); }
     if (route === "games") { gameSel = null; return gamesView(); }
     const views = {
-      "": dashboardView, faucet: faucetView, rewards: rewardsView, quests: questsView, tournament: () => h("div", { class: "stack" }, tournamentCard()),
+      "": dashboardView, faucet: () => (miningOn() ? miningView() : faucetView()), sessions: sessionsView, rewards: rewardsView, quests: questsView, tournament: () => h("div", { class: "stack" }, tournamentCard()),
       achievements: achievementsView, chat: chatView, watch: watchView, promo: promoView, shop: shopView, vip: vipView, referral: referralView,
       wallet: walletView, advertise: advertiseView, profile: profileView, support: supportView, faq: faqView, proofs: proofsView,
       notifications: notificationsView,
@@ -1943,7 +1963,7 @@
     const actions = h("section", { class: "panel" },
       h("div", { class: "panel-title" }, t("nextActions")),
       h("div", { class: "next-list" },
-        act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? `${t("readyNow")} · ${me.energy ?? 0} ${t("energyLbl")}` : `${t("next")} ${clock(Math.max(0, (me.retry_after || 0) - since()))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
+        miningOn() ? act(p.rollReady, "bolt", t("faucet"), mining?.base ? t("miningRunning") : t("miningGo"), "#faucet", "--c1:#ffd34d;--c2:#ff8f1c") : act(p.rollReady, "bolt", t("rollBtn"), p.rollReady ? `${t("readyNow")} · ${me.energy ?? 0} ${t("energyLbl")}` : `${t("next")} ${clock(Math.max(0, (me.retry_after || 0) - since()))}`, "#faucet", "--c1:#4fd2ff;--c2:#2f6bff"),
         act(p.questsReady > 0 || p.dailyReady, "flag", t("questsTitle"),
           p.questsReady || p.dailyReady ? `${p.questsReady + (p.dailyReady ? 1 : 0)} ${t("toCollect")}` : `${(me.challenges || []).filter((c) => c.done).length}/${(me.challenges || []).length}`, "#quests", "--c1:#ffd34d;--c2:#ff8f1c"),
         act(true, "eye", t("earn"), t("pickTask"), "#earn", "--c1:#45e3a6;--c2:#11a771")));
@@ -2056,7 +2076,7 @@
         h("div", {}, h("h2", {}, t("watchAds")), h("p", { class: "row-sub" }, t("watchText"))),
         h("div", { class: "watch-stats" },
           h("div", {}, h("b", {}, `${st.left}/${st.limit}`), h("span", {}, t("watchLeft"))),
-          h("div", {}, h("b", {}, coin(), num(st.reward)), h("span", {}, t("perView")))));
+          h("div", {}, h("b", {}, ...(miningOn() ? [`+${fmtGhs(status.mining_video_ghs)}`] : [coin(), num(st.reward)])), h("span", {}, miningOn() ? `${status.mining_hours} h ${t("perView")}` : t("perView")))));
       if (!codes.length) { box.replaceChildren(head, h("div", { class: "empty" }, h("div", { class: "empty-ico" }, icon("play")), h("p", {}, t("watchNone")))); return; }
       const wait = h("span", { class: "row-sub" });
       const btn = h("button", { class: "btn big gold", type: "button", disabled: st.left < 1 }, st.left < 1 ? t("comeBack") : t("watchGo"));
@@ -2105,16 +2125,166 @@
             ok.disabled = true;
             const r = await api("watch_complete", { token, captcha: captchaToken(cap) || "dev" });
             captchaReset(cap);
-            if (r.ok) { burst(ok, `+${tk(r.tokens)}`); toast(`${tk(r.tokens)} ${t("credited")}`, "good"); layer.remove(); await refreshMe(); load(); return; }
+            if (r.ok) {
+              burst(ok, r.mining ? `+${fmtGhs(r.ghs)}` : `+${tk(r.tokens)}`);
+              toast(r.mining ? `${t("sessionOpened")} ${fmtGhs(r.ghs)} · ${r.hours} h` : `${tk(r.tokens)} ${t("credited")}`, "good");
+              layer.remove(); mining = null; await refreshMe(); load(); return;
+            }
             ok.disabled = false;
             toast(message(r), "bad");
           },
-        }, `${t("watchValidate")} +${num(reward)}`);
+        }, miningOn() ? `${t("watchValidate")} +${fmtGhs(status.mining_video_ghs)}` : `${t("watchValidate")} +${num(reward)}`);
         foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
       }, 1000);
     };
     load();
     return h("div", { class: "stack" }, box, adSlot("in_content"));
+  }
+
+  // Minage virtuel ---------------------------------------------------------------------
+  const miningOn = () => Boolean(status?.mining_enabled);
+  let mining = null;
+  let miningAt = 0;
+  async function loadMining() {
+    const r = await api("mining_status");
+    if (r.ok) { mining = r; miningAt = Date.now(); }
+    return mining;
+  }
+  // Heure du serveur, recalee sur l'horloge du navigateur.
+  const serverNow = () => (mining ? new Date(mining.now).getTime() + (Date.now() - miningAt) : Date.now());
+  const minedCoins = (sess) => {
+    const now = Math.min(serverNow(), new Date(sess.ends_at).getTime());
+    return Math.max(0, (Number(sess.coins_per_hour) * (now - new Date(sess.started_at).getTime())) / 3600000);
+  };
+  const toSats = (coins) => coins / (Number(mining?.coins_per_sat || status?.coins_per_sat) || 1);
+  const fmtSat = (sats, d = 4) => `${sats.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })} sat`;
+  const fmtGhs = (g) => (g >= 1000 ? `${(g / 1000).toLocaleString(locale, { maximumFractionDigits: 2 })} TH/s` : `${Number(g).toLocaleString(locale, { maximumFractionDigits: 2 })} GH/s`);
+  const hms = (ms) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const KIND = { base: ["bolt", "kindBase"], ptc: ["eye", "ptc"], video: ["play", "watchAds"] };
+
+  function miningView() {
+    const box = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
+    const draw = () => {
+      if (!mining || !box.isConnected) return;
+      const st = mining;
+      let reloading = false;
+      const counter = h("b", { class: "mine-counter" });
+      const rate = h("span", { class: "row-sub" });
+      const baseLine = h("div", { class: "mine-base" });
+      const cap = captchaBox();
+      const after = h("div", { class: "after-claim" });
+      const startBtn = h("button", {
+        class: "btn big gold", type: "button",
+        onclick: async () => {
+          if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+          startBtn.disabled = true;
+          const r = await api("mining_start", { captcha: captchaToken(cap) || "dev" });
+          captchaReset(cap);
+          if (!r.ok) { startBtn.disabled = false; toast(message(r), "bad"); return; }
+          burst(startBtn, `+${fmtGhs(r.ghs)}`);
+          toast(`${t("miningStarted")} ${fmtGhs(r.ghs)} · ${st.hours} h`, "good");
+          refreshAds();
+          await Promise.all([loadMining(), refreshMe()]);
+          draw();
+        },
+      }, `${t("miningStart")} · ${st.hours} h`);
+      const tick = () => {
+        const mined = st.active.reduce((sum, x) => sum + minedCoins(x), 0);
+        counter.textContent = fmtSat(toSats(mined));
+        const perHour = st.active.filter((x) => new Date(x.ends_at).getTime() > serverNow()).reduce((sum, x) => sum + Number(x.coins_per_hour), 0);
+        rate.textContent = `≈ ${fmtSat(toSats(perHour), 2)} / h`;
+        if (st.base) {
+          const end = new Date(st.base.ends_at).getTime();
+          const total = end - new Date(st.base.started_at).getTime();
+          baseLine.replaceChildren(
+            h("div", { class: "mine-base-head" }, h("b", {}, `${t("kindBase")} · ${fmtGhs(st.base.ghs)}`), h("span", {}, `${t("endsIn")} ${hms(end - serverNow())}`)),
+            h("div", { class: "progress" }, h("i", { style: `width:${Math.min(100, ((serverNow() - (end - total)) / total) * 100)}%` })));
+        }
+        // Une session vient de finir : le serveur la verse, on recharge une seule fois.
+        if (!reloading && st.active.some((x) => new Date(x.ends_at).getTime() <= serverNow())) {
+          reloading = true;
+          loadMining().then(() => { refreshMe(); draw(); });
+        }
+      };
+      every(tick, 500);
+      const boosts = [
+        ["video", "play", "--c1:#ff8cc6;--c2:#e2367f", st.video_ghs, "#watch"],
+        ["ptc", "eye", "--c1:#4fd2ff;--c2:#2f6bff", st.ptc_ghs, "#ptc"],
+      ].map(([k, ico, tone, ghs, href]) => h("a", { class: "boost-card", href },
+        h("span", { class: "game-ico", style: tone }, icon(ico)),
+        h("span", { class: "boost-text" }, h("b", {}, t(k === "video" ? "watchAds" : "ptc")), h("span", {}, `+${fmtGhs(ghs)} · ${st.hours} h`)),
+        h("span", { class: "chev" }, "›")));
+      box.replaceChildren(
+        h("section", { class: "panel mine-hero" },
+          h("div", { class: `mine-rig${st.power > 0 ? " on" : ""}` }, icon("fan")),
+          h("div", { class: "mine-main" },
+            h("span", { class: "row-sub" }, t("miningPower")),
+            h("b", { class: "mine-power" }, fmtGhs(st.power)),
+            h("span", { class: "row-sub" }, t("miningNow")), counter, rate)),
+        adSlot("roll_top"),
+        h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, t("kindBase"), h("span", { class: "badge" }, `${fmtGhs(st.base_ghs)} · ${st.hours} h`)),
+          st.base ? baseLine : h("div", {}, h("p", { class: "note" }, t("miningBaseText")), cap, startBtn),
+          after),
+        adSlot("roll_bottom"),
+        h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, t("miningBoost"), h("span", { class: "badge" }, `${st.ads_hour_left} ${t("adsHourLeft")}`)),
+          h("div", { class: "boost-list" }, boosts),
+          h("a", { class: "btn ghost small", href: "#sessions", style: "width:auto;margin-top:12px" }, `${t("sessions")} (${st.active.length})`)),
+        h("p", { class: "note", style: "text-align:center" }, t("miningFair")));
+      tick();
+    };
+    statsHost = h("div", {}, statsRow());
+    loadMining().then(draw);
+    return h("div", { class: "stack" }, statsHost, box);
+  }
+
+  function sessionsView() {
+    const box = h("div", { class: "stack" }, h("section", { class: "panel" }, h("p", { class: "empty" }, "…")));
+    const draw = () => {
+      if (!mining || !box.isConnected) return;
+      const st = mining;
+      const rows = st.active.map((x) => {
+        const [ico, key] = KIND[x.kind] || KIND.base;
+        const mined = h("b", { class: "sess-mined" });
+        const left = h("span", { class: "row-sub" });
+        const bar = h("i", {});
+        const upd = () => {
+          const end = new Date(x.ends_at).getTime();
+          const start = new Date(x.started_at).getTime();
+          mined.textContent = fmtSat(toSats(minedCoins(x)));
+          left.textContent = `${t("endsIn")} ${hms(end - serverNow())}`;
+          bar.style.width = `${Math.min(100, ((serverNow() - start) / (end - start)) * 100)}%`;
+        };
+        upd();
+        every(upd, 1000);
+        return h("div", { class: `sess k-${x.kind}` },
+          h("span", { class: "row-ico" }, icon(ico)),
+          h("div", { class: "row-main" }, h("h3", {}, `${t(key)} · ${fmtGhs(x.ghs)}`), h("div", { class: "progress" }, bar), left),
+          mined);
+      });
+      const done = st.done_today.map((x) => {
+        const [ico, key] = KIND[x.kind] || KIND.base;
+        return h("div", { class: "list-line" },
+          h("div", {}, h("div", { style: "color:var(--ink);font-weight:700" }, `${t(key)} · ${fmtGhs(x.ghs)}`), h("div", { class: "row-sub" }, when(x.ends_at))),
+          h("span", { class: "amount plus" }, `+${fmtSat(toSats(x.tokens || 0), 2)}`));
+      });
+      box.replaceChildren(
+        h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, t("sessionsActive"), h("span", { class: "badge good" }, `${fmtGhs(st.power)}`)),
+          rows.length ? h("div", { class: "sess-list" }, rows) : h("div", { class: "empty" }, h("p", {}, t("noSessions")), h("a", { class: "btn small", href: "#faucet", style: "width:auto;margin-top:8px" }, t("miningStart")))),
+        adSlot("in_content"),
+        h("section", { class: "panel" },
+          h("div", { class: "panel-title" }, t("sessionsDone"), h("span", { class: "badge" }, `+${fmtSat(toSats(st.done_today_tokens || 0), 2)}`)),
+          done.length ? done : h("p", { class: "empty" }, t("noSessionsDone")),
+          h("p", { class: "note", style: "margin:10px 0 0" }, t("sessionsNote"))));
+      every(() => { if (st.active.some((x) => new Date(x.ends_at).getTime() <= serverNow())) loadMining().then(draw); }, 5000);
+    };
+    loadMining().then(draw);
+    return box;
   }
 
   // Bandeau d'annonce : derniere annonce du site, fermable.
@@ -2321,8 +2491,11 @@
     const s = status || {};
     const tpe = s.tokens_per_eur || 10000;
     const lines = [
-      ["simFaucet", "bolt", 0, 72, 15, rollAverage()],
-      ["simPtc", "eye", 0, 50, 10, s.ptc_reward || 10],
+      ...(miningOn() ? (() => {
+        const satCoins = (ghs) => (ghs / 1000) * (s.mining_sat_per_ths_hour || 1) * (s.mining_hours || 8) * (s.coins_per_sat || 6.8);
+        return [["simMining", "bolt", 0, 3, 3, satCoins(s.mining_base_ghs || 30)], ["simVideo", "play", 0, 50, 10, satCoins(s.mining_video_ghs || 50)]];
+      })() : [["simFaucet", "bolt", 0, 72, 15, rollAverage()]]),
+      ["simPtc", "eye", 0, 50, 10, miningOn() ? ((s.mining_ptc_ghs || 20) / 1000) * (s.mining_sat_per_ths_hour || 1) * (s.mining_hours || 8) * (s.coins_per_sat || 6.8) : s.ptc_reward || 10],
       ["simLinks", "link", 0, 20, 5, s.link_reward || 15],
       ["simSurveys", "quests", 0, 10, 2, Math.round(0.5 * tpe * 0.5)],
     ];

@@ -1370,3 +1370,56 @@ test("paiement automatique : le solde disponible part au lot horaire des qu'il a
   assert.equal((await cron(h)).body.paid, 0);
   assert.equal((await api(h, "status", {})).body.auto_payout, false);
 });
+
+test("minage : session de base de 8 h, une a la fois, versee a la fin au cours du BTC", async () => {
+  const h = await createHarness();
+  // 1 BTC = 100 000 EUR : 1 sat = 0,001 EUR = 10 Coins.
+  await h.pg.query("update settings set mining_enabled = true, mining_sat_per_ths_hour = 1000");
+  await h.pg.query("update coins set per_eur = 0.00001 where code = 'BTC'");
+  const u = await newUser(h);
+  const start = (await api(h, "mining_start", { session: u.session }, u.ip)).body;
+  assert.equal(start.ok, true);
+  assert.equal(start.ghs, 30);
+  assert.equal((await api(h, "mining_start", { session: u.session }, u.ip)).body.code, "mining_active");
+  let st = (await api(h, "mining_status", { session: u.session }, u.ip)).body;
+  assert.deepEqual([st.power, st.active.length, st.coins_per_sat], [30, 1, 10]);
+  // 30 GH/s x 8 h x (1 000 sats par TH/s-h) = 240 sats = 2 400 Coins.
+  await h.pg.query("update mining_sessions set started_at = started_at - interval '8 hours', ends_at = ends_at - interval '8 hours'");
+  const m = await me(h, u);
+  assert.equal(m.available, 2400);
+  assert.equal(m.xp, 1);
+  st = (await api(h, "mining_status", { session: u.session }, u.ip)).body;
+  assert.deepEqual([st.power, st.done_today_tokens, st.base], [0, 2400, null]);
+  assert.equal((await api(h, "mining_start", { session: u.session }, u.ip)).body.ok, true, "relance possible");
+});
+
+test("minage : chaque PTC et chaque video ouvre sa propre session, versee a valider, plafond de pubs", async () => {
+  const h = await createHarness();
+  await h.pg.query("update settings set mining_enabled = true, mining_sat_per_ths_hour = 1000, mining_ads_per_hour = 2");
+  await h.pg.query("update coins set per_eur = 0.00001 where code = 'BTC'");
+  await admin(h, { action: "save_ptc", item: { title: "Pub", url: "https://x.com", reward_tokens: 10, duration_seconds: 5, max_views: 10, price_eur_per_view: 0.002 } });
+  await admin(h, { action: "save_ads", slots: { watch: ["<div>video</div>"] } });
+  const u = await newUser(h);
+  const ptc = (await api(h, "earn_list", { session: u.session }, u.ip)).body.ptc[0];
+  await api(h, "ptc_start", { session: u.session, id: ptc.id }, u.ip);
+  await h.pg.query("update ptc_views set started_at = started_at - interval '10 seconds'");
+  const done = (await api(h, "ptc_complete", { session: u.session, id: ptc.id }, u.ip)).body;
+  assert.deepEqual([done.mining, done.kind, done.ghs], [true, "ptc", 20]);
+  assert.equal((await me(h, u)).pending, 0, "rien tant que la session tourne");
+  const w = (await api(h, "watch_start", { session: u.session }, u.ip)).body;
+  await h.pg.query("update watch_views set started_at = started_at - interval '31 seconds'");
+  assert.equal((await api(h, "watch_complete", { session: u.session, token: w.token }, u.ip)).body.ghs, 50);
+  let st = (await api(h, "mining_status", { session: u.session }, u.ip)).body;
+  assert.deepEqual([st.power, st.active.length, st.ads_hour_left], [70, 2, 0]);
+  // Plafond de 2 pubs par heure atteint.
+  await h.pg.query("update watch_views set completed_at = completed_at - interval '2 minutes'");
+  assert.equal((await api(h, "watch_start", { session: u.session }, u.ip)).body.code, "mining_ad_limit");
+  // Fin des sessions : PTC 20 x 8 = 160 sats, video 50 x 8 = 400 sats, en Coins et « a valider ».
+  await h.pg.query("update mining_sessions set started_at = started_at - interval '8 hours', ends_at = ends_at - interval '8 hours'");
+  const m = await me(h, u);
+  assert.equal(m.pending, 1600 + 4000);
+  assert.equal(m.available, 0);
+  // Les quetes « pubs » comptent les sessions ouvertes.
+  const q = m.challenges.find((c) => c.goal === "ads" && c.period === "day");
+  assert.equal(q?.progress, 2);
+});
