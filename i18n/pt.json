@@ -228,7 +228,7 @@
 "w_ref":"Uma parte vitalícia dos seus indicados.",
 "heroEyebrow":"Saque instantâneo para a FaucetPay",
 "heroTitle":"Minere sats de graça, sem equipamento.",
-"heroLead":"Mineração virtual paga pela publicidade: comece sua sessão, aumente a potência com vídeos e PTC, saque a partir de 10 sats. Saque em BTC, LTC, DOGE, USDT… em um clique.",
+"heroLead":"Mineração virtual paga pela publicidade: comece sua sessão, aumente a potência com vídeos e PTC e saque a partir de 20 sats, direto para a FaucetPay em BTC.",
 "members":"membros",
 "paidOut":"pagos",
 "instant":"Instantâneos",
@@ -439,4 +439,10 @@
 "codeType":"Digite o código para validar sua visualização",
 "codeBad":"Código incorreto, tentativas restantes",
 "codeLost":"3 códigos errados: esta visualização foi perdida.",
-"e:bad_code":"Código incorreto."}
+"e:bad_code":"Código incorreto.",
+"chipMinWd":"Saque a partir de {n} sats",
+"sound":"Som",
+"frameHint":"Fique nesta página até o fim do contador",
+"q_sessions":["Comece {n} sessão de mineração",
+"Comece {n} sessões de mineração"],"q_ads":["Veja {n} anúncio",
+"Veja {n} anúncios"]}

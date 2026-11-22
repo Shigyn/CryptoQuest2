@@ -130,16 +130,16 @@
     noTickets: ["Aucune demande.", "No tickets."], newTicket: ["Nouvelle demande", "New ticket"], myTickets: ["Mes demandes", "My tickets"],
     ticketText: ["Une question, un problème de retrait ? On répond en général sous 24 h. Regarde d'abord la", "A question or a withdrawal issue? We usually answer within 24 h. Check the"],
     ticketSent: ["Demande envoyée.", "Ticket sent."],
-    faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet : tu gagnes des Coins gratuitement (tirages, PTC, shortlinks, sondages, offres) et tu les retires en crypto sur ton compte FaucetPay.", "A faucet: you earn Coins for free (rolls, PTC, shortlinks, surveys, offers) and withdraw them as crypto to your FaucetPay account."],
-    faq_pay_q: ["Comment je suis payé ?", "How do I get paid?"], faq_pay_a: ["Les Coins disponibles se retirent tout de suite vers FaucetPay. Les gains des tâches sont vérifiés puis partent seuls à chaque heure.", "Available Coins are withdrawn instantly to FaucetPay. Task earnings are reviewed and then sent automatically every hour."],
-    faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Non, sauf le minimum propre à certaines cryptos sur FaucetPay. L'USDT accepte les plus petits montants.", "No, except the minimum some coins have on FaucetPay. USDT accepts the smallest amounts."],
+    faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet de minage virtuel : tu gagnes des sats gratuitement (minage, vidéos, PTC, quêtes, parrainage) et tu les retires en BTC sur ton compte FaucetPay.", "A virtual mining faucet: you earn sats for free (mining, videos, PTC, quests, referrals) and withdraw them in BTC to your FaucetPay account."],
+    faq_pay_q: ["Comment je suis payé ?", "How do I get paid?"], faq_pay_a: ["Ton solde disponible se retire en BTC sur FaucetPay, en un clic, dès le minimum atteint. Les gains des pubs sont d'abord vérifiés, puis envoyés automatiquement.", "Your available balance is withdrawn in BTC to FaucetPay in one click once you reach the minimum. Ad earnings are checked first, then sent automatically."],
+    faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Oui : le minimum est affiché dans le portefeuille (20 sats actuellement).", "Yes: the minimum is shown in the wallet (20 sats at the moment)."],
     faq_pending_q: ["Pourquoi mes gains sont « à valider » ?", "Why are my earnings “under review”?"], faq_pending_a: ["Les pubs, liens, sondages et offres sont contrôlés contre la triche avant d'être payés. Ça prend en général quelques heures.", "Ads, links, surveys and offers are checked for cheating before payout. It usually takes a few hours."],
     faq_multi_q: ["Puis-je avoir plusieurs comptes ?", "Can I have several accounts?"], faq_multi_a: ["Non. Un compte par personne et par foyer. Les comptes en double sont bannis et perdent leur solde.", "No. One account per person and household. Duplicate accounts are banned and lose their balance."],
     faq_vpn_q: ["VPN, proxy, robots ?", "VPN, proxy, bots?"], faq_vpn_a: ["Interdits. Les tâches faites derrière un VPN ou par un script sont refusées.", "Not allowed. Tasks done behind a VPN or by a script are refused."],
     faq_ref_q: ["Comment marche le parrainage ?", "How do referrals work?"], faq_ref_a: ["Tu touches un pourcentage de tout ce que gagnent tes filleuls, à vie, sans que ça leur soit retiré.", "You earn a percentage of everything your referrals earn, for life, without taking anything from them."],
-    faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Zéro pub, un bonus fixe sur les tâches, une part de parrainage plus élevée et une réserve d'énergie de 5 au lieu de 3. Les chances de chaque tirage sont les mêmes pour tous.", "No ads, a fixed bonus on tasks, a higher referral share and an energy reserve of 5 instead of 3. The odds of each roll are the same for everyone."],
+    faq_vip_q: ["Que donne le VIP ?", "What does VIP give?"], faq_vip_a: ["Sans pub, un bonus fixe sur les tâches et une plus grosse part de parrainage.", "No ads, a fixed bonus on tasks and a bigger referral share."],
     faq_ads_q: ["Je peux faire de la pub ici ?", "Can I advertise here?"], faq_ads_a: ["Oui : crée une campagne depuis l'espace annonceur, en crypto ou avec tes Coins. Chaque vue est une vraie visite.", "Yes: create a campaign from the advertiser area, in crypto or with your Coins. Every view is a real visit."],
-    faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Le tirage est gratuit, sans mise : tu ne peux jamais perdre tes Coins.", "No. The roll is free, with no stake: you can never lose your Coins."],
+    faq_gamble_q: ["Y a-t-il des jeux d'argent ?", "Is there gambling?"], faq_gamble_a: ["Non. Tout est gratuit et sans mise : tu ne peux jamais perdre ton solde.", "No. Everything is free and without stakes: you can never lose your balance."],
     noProofs: ["Les premiers paiements apparaîtront ici.", "The first payouts will show here."],
     proofsText: ["Chaque retrait payé, en temps réel. Les adresses sont masquées.", "Every paid withdrawal, in real time. Addresses are masked."],
     simTitle: ["Combien je peux gagner ?", "How much can I earn?"], simFaucet: ["Tirages par jour", "Rolls per day"], simPtc: ["PTC par jour", "PTC per day"],
@@ -151,7 +151,7 @@
     w_quests: ["Quêtes du jour et de la semaine, succès.", "Daily and weekly quests, achievements."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
     heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
     heroTitle: ["Mine des sats gratuitement, sans matériel.", "Mine sats for free, no hardware."],
-    heroLead: ["Minage virtuel financé par la pub : lance ta session, booste-la avec des vidéos et des PTC, retire dès 10 sats. Retire en BTC, LTC, DOGE, USDT… en un clic.", "Virtual mining funded by ads: start your session, boost it with videos and PTC, withdraw from 10 sats. Withdraw in BTC, LTC, DOGE, USDT… in one click."],
+    heroLead: ["Minage virtuel financé par la pub : lance ta session, booste-la avec des vidéos et des PTC, et retire dès 20 sats, directement en BTC sur FaucetPay.", "Virtual mining funded by ads: start your session, boost it with videos and PTC, and withdraw from 20 sats, straight to FaucetPay in BTC."],
     members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
     waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
@@ -231,6 +231,9 @@
     ptcClosed: ["Pub fermée trop tôt : rouvre-la pour continuer.", "Ad closed too early: reopen it to continue."], reopen: ["Rouvrir la pub", "Reopen the ad"],
     codeType: ["Recopie le code pour valider ta vue", "Type the code to confirm your view"],
     codeBad: ["Code incorrect, essais restants", "Wrong code, tries left"], codeLost: ["3 codes faux : cette vue est perdue.", "3 wrong codes: this view is lost."],
+    chipMinWd: ["Retrait dès {n} sats", "Withdraw from {n} sats"], sound: ["Son", "Sound"],
+    q_sessions: [["Lance {n} session de minage", "Lance {n} sessions de minage"], ["Start {n} mining session", "Start {n} mining sessions"]],
+    q_ads: [["Regarde {n} pub", "Regarde {n} pubs"], ["Watch {n} ad", "Watch {n} ads"]],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -694,7 +697,7 @@
     if (!list.length) return null;
     const items = list.map((r) => h("span", { class: "ticker-item" }, r.who, h("b", {}, payText(r))));
     // Contenu double pour un defilement sans coupure.
-    return h("div", { class: "ticker", "aria-label": FR ? "Derniers paiements" : "Latest payouts" },
+    return h("div", { class: "ticker", "aria-label": t("lastWins") },
       h("span", { class: "ticker-live" }, icon("star"), t("lastWins")),
       h("div", { class: "ticker-track" }, items, items.map((n) => n.cloneNode(true))));
   }
@@ -741,7 +744,8 @@
           h("div", { class: "chips" },
             h("span", { class: "chip" }, icon("bolt"), t("chipInstant")),
             h("span", { class: "chip" }, icon("gift"), t("chipFree")),
-            h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)));
+            miningOn() ? h("span", { class: "chip" }, icon("star"), t("chipMinWd").replace("{n}", status?.min_withdraw_sats ?? 20))
+              : h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)));
     if (embedded) return card;
     return h("div", {}, ticker(), h("main", { class: "gate" }, card));
   }
@@ -1449,6 +1453,8 @@
     links: { ico: "link", go: () => { location.hash = "links"; } },
     surveys: { ico: "quests", go: () => { location.hash = "surveys"; } },
     offers: { ico: "gift", go: () => { location.hash = "offers"; } },
+    sessions: { ico: "bolt", go: () => { location.hash = ""; } },
+    ads: { ico: "play", go: () => { location.hash = ""; } },
   };
   const questName = (c) => {
     const key = W[`q_${c.goal}`] ? `q_${c.goal}` : "q_claims";
@@ -2195,7 +2201,7 @@
     const video = h("video", { class: "vast-video", playsInline: true, preload: "auto" });
     video.setAttribute("playsinline", "");
     const note = h("div", { class: "vast-note" });
-    const mute = h("button", { type: "button", class: "vast-mute", "aria-label": "Son", onclick: () => { video.muted = !video.muted; mute.textContent = video.muted ? "🔇" : "🔊"; } }, "🔊");
+    const mute = h("button", { type: "button", class: "vast-mute", "aria-label": t("sound"), onclick: () => { video.muted = !video.muted; mute.textContent = video.muted ? "🔇" : "🔊"; } }, "🔊");
     const el = h("div", { class: "vast-wrap" }, video, mute, note);
     const ping = (list) => (list || []).forEach((u) => { if (u) { const i = new Image(); i.src = u; } });
     let ad = null;
@@ -2721,8 +2727,8 @@
         return [["simMining", "bolt", 0, 3, 3, satCoins(s.mining_base_ghs || 30)], ["simVideo", "play", 0, 50, 10, satCoins(s.mining_video_ghs || 50)]];
       })() : [["simFaucet", "bolt", 0, 72, 15, rollAverage()]]),
       ["simPtc", "eye", 0, 50, 10, miningOn() ? ((s.mining_ptc_ghs || 20) / 1000) * (s.mining_sat_per_ths_hour || 1) * (s.mining_hours || 8) * (s.coins_per_sat || 6.8) : s.ptc_reward || 10],
-      ["simLinks", "link", 0, 20, 5, s.link_reward || 15],
-      ["simSurveys", "quests", 0, 10, 2, Math.round(0.5 * tpe * 0.5)],
+      // Seulement ce qui existe vraiment sur le site : pas de chiffre invente.
+      ...(s.link_reward ? [["simLinks", "link", 0, 20, 5, s.link_reward]] : []),
     ];
     const vals = lines.map((l) => l[4]);
     const out = h("div", { class: "sim-total" });

@@ -228,7 +228,7 @@
 "w_ref":"Bagian seumur hidup dari referralmu.",
 "heroEyebrow":"Penarikan instan ke FaucetPay",
 "heroTitle":"Tambang sats gratis, tanpa perangkat.",
-"heroLead":"Penambangan virtual dibiayai iklan: mulai sesimu, tingkatkan dengan video dan PTC, tarik mulai 10 sats. Tarik dalam BTC, LTC, DOGE, USDT… dengan satu klik.",
+"heroLead":"Penambangan virtual dibiayai iklan: mulai sesimu, tingkatkan dengan video dan PTC, lalu tarik mulai 20 sats, langsung ke FaucetPay dalam BTC.",
 "members":"anggota",
 "paidOut":"dibayarkan",
 "instant":"Instan",
@@ -439,4 +439,10 @@
 "codeType":"Ketik kode untuk mengonfirmasi tontonanmu",
 "codeBad":"Kode salah, sisa percobaan",
 "codeLost":"3 kode salah: tontonan ini hangus.",
-"e:bad_code":"Kode salah."}
+"e:bad_code":"Kode salah.",
+"chipMinWd":"Tarik mulai {n} sats",
+"sound":"Suara",
+"frameHint":"Tetap di halaman ini sampai penghitung selesai",
+"q_sessions":["Mulai {n} sesi menambang",
+"Mulai {n} sesi menambang"],"q_ads":["Tonton {n} iklan",
+"Tonton {n} iklan"]}

@@ -228,7 +228,7 @@
 "w_ref":"Referanslarından ömür boyu pay.",
 "heroEyebrow":"FaucetPay'e anında çekim",
 "heroTitle":"Donanım olmadan ücretsiz sats kaz.",
-"heroLead":"Reklamla finanse edilen sanal madencilik: oturumunu başlat, videolar ve PTC ile hızlandır, 10 sats'tan itibaren çek. BTC, LTC, DOGE, USDT… tek tıkla çek.",
+"heroLead":"Reklamla finanse edilen sanal madencilik: oturumunu başlat, videolar ve PTC ile hızlandır, 20 sats'tan itibaren doğrudan FaucetPay'e BTC olarak çek.",
 "members":"üye",
 "paidOut":"ödendi",
 "instant":"Anında",
@@ -439,4 +439,10 @@
 "codeType":"İzlemeyi onaylamak için kodu yaz",
 "codeBad":"Yanlış kod, kalan deneme",
 "codeLost":"3 yanlış kod: bu izleme geçersiz.",
-"e:bad_code":"Yanlış kod."}
+"e:bad_code":"Yanlış kod.",
+"chipMinWd":"{n} sats'tan itibaren çekim",
+"sound":"Ses",
+"frameHint":"Sayaç bitene kadar bu sayfada kal",
+"q_sessions":["{n} madencilik oturumu başlat",
+"{n} madencilik oturumu başlat"],"q_ads":["{n} reklam izle",
+"{n} reklam izle"]}

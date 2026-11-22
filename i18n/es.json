@@ -228,7 +228,7 @@
 "w_ref":"Una parte de por vida de tus referidos.",
 "heroEyebrow":"Retiro instantáneo a FaucetPay",
 "heroTitle":"Mina sats gratis, sin hardware.",
-"heroLead":"Minería virtual financiada por anuncios: inicia tu sesión, aumenta la potencia con videos y PTC, retira desde 10 sats. Retira en BTC, LTC, DOGE, USDT… en un clic.",
+"heroLead":"Minería virtual financiada por anuncios: inicia tu sesión, aumenta la potencia con videos y PTC, y retira desde 20 sats, directo a FaucetPay en BTC.",
 "members":"miembros",
 "paidOut":"pagados",
 "instant":"Instantáneos",
@@ -439,4 +439,10 @@
 "codeType":"Escribe el código para validar tu vista",
 "codeBad":"Código incorrecto, intentos restantes",
 "codeLost":"3 códigos incorrectos: esta vista se pierde.",
-"e:bad_code":"Código incorrecto."}
+"e:bad_code":"Código incorrecto.",
+"chipMinWd":"Retiro desde {n} sats",
+"sound":"Sonido",
+"frameHint":"Quédate en esta página hasta el final del contador",
+"q_sessions":["Inicia {n} sesión de minería",
+"Inicia {n} sesiones de minería"],"q_ads":["Mira {n} anuncio",
+"Mira {n} anuncios"]}
