@@ -452,9 +452,12 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "watch_start":
       return result(d, await d.rpc("watch_start", { p_user: userId, p_token: crypto.randomUUID().replaceAll("-", ""), p_ip_hash: ipHash }));
 
+    case "watch_code":
+      return result(d, await d.rpc("watch_code", { p_user: userId, p_token: String(b.token ?? "") }));
+
+    // Fin de video : le code a recopier remplace le captcha.
     case "watch_complete":
-      if (!(await captchaOk())) return refuse(d, 400, "captcha");
-      return result(d, await d.rpc("watch_complete", { p_user: userId, p_token: String(b.token ?? ""), p_ip_hash: ipHash }));
+      return result(d, await d.rpc("watch_complete", { p_user: userId, p_token: String(b.token ?? ""), p_ip_hash: ipHash, p_code: String(b.code ?? "") }));
 
     case "board":
       return json(d, 200, { ok: true, ...(await d.rpc("tournament_board", { p_user: userId })) });

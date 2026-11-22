@@ -435,4 +435,8 @@
 "feeShort":"ücret",
 "ptcBack":"Duraklatıldı: devam etmek için reklam sekmesine dön.",
 "ptcClosed":"Reklam çok erken kapandı: devam etmek için yeniden aç.",
-"reopen":"Reklamı yeniden aç"}
+"reopen":"Reklamı yeniden aç",
+"codeType":"İzlemeyi onaylamak için kodu yaz",
+"codeBad":"Yanlış kod, kalan deneme",
+"codeLost":"3 yanlış kod: bu izleme geçersiz.",
+"e:bad_code":"Yanlış kod."}

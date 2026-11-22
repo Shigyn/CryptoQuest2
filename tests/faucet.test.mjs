@@ -1309,9 +1309,13 @@ test("Watch Ads : 30 s de video, captcha, 1 minute entre deux, 30 par jour, reco
   assert.equal(start.body.ok, true);
   const token = start.body.token;
   assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.code, "too_soon");
+  assert.equal((await api(h, "watch_code", { session: u.session, token }, u.ip)).body.code, "too_soon", "pas de code avant la fin de la video");
   await h.pg.query("update watch_views set started_at = started_at - interval '31 seconds'");
-  assert.equal((await api(h, "watch_complete", { session: u.session, token, captcha: "mauvais" }, u.ip)).body.code, "captcha");
-  assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.tokens, 10);
+  const code = (await api(h, "watch_code", { session: u.session, token }, u.ip)).body.digits;
+  assert.match(code, /^[1-9][0-9]{2,4}$/, "3 a 5 chiffres");
+  const bad = (await api(h, "watch_complete", { session: u.session, token, code: "0" }, u.ip)).body;
+  assert.deepEqual([bad.code, bad.left], ["bad_code", 2]);
+  assert.equal((await api(h, "watch_complete", { session: u.session, token, code }, u.ip)).body.tokens, 10);
   assert.equal((await me(h, u)).pending, 10, "gain a valider, comme les PTC");
   assert.equal((await api(h, "watch_complete", { session: u.session, token }, u.ip)).body.code, "already_done");
   const again = (await api(h, "watch_start", { session: u.session }, u.ip)).body;
@@ -1439,7 +1443,8 @@ test("minage : chaque PTC et chaque video ouvre sa propre session, versee a vali
   assert.equal((await me(h, u)).pending, 0, "rien tant que la session tourne");
   const w = (await api(h, "watch_start", { session: u.session }, u.ip)).body;
   await h.pg.query("update watch_views set started_at = started_at - interval '31 seconds'");
-  assert.equal((await api(h, "watch_complete", { session: u.session, token: w.token }, u.ip)).body.ghs, 50);
+  const wc = (await api(h, "watch_code", { session: u.session, token: w.token }, u.ip)).body.digits;
+  assert.equal((await api(h, "watch_complete", { session: u.session, token: w.token, code: wc }, u.ip)).body.ghs, 50);
   let st = (await api(h, "mining_status", { session: u.session }, u.ip)).body;
   assert.deepEqual([st.power, st.active.length, st.ads_hour_left], [70, 2, 0]);
   // Plafond de 2 pubs par heure atteint.

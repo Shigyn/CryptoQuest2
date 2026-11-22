@@ -435,4 +435,8 @@
 "feeShort":"biaya",
 "ptcBack":"Dijeda: kembali ke tab iklan untuk melanjutkan.",
 "ptcClosed":"Iklan ditutup terlalu cepat: buka lagi untuk melanjutkan.",
-"reopen":"Buka lagi iklan"}
+"reopen":"Buka lagi iklan",
+"codeType":"Ketik kode untuk mengonfirmasi tontonanmu",
+"codeBad":"Kode salah, sisa percobaan",
+"codeLost":"3 kode salah: tontonan ini hangus.",
+"e:bad_code":"Kode salah."}

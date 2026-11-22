@@ -435,4 +435,8 @@
 "feeShort":"taxa",
 "ptcBack":"Pausado: volte para a aba do anúncio para continuar.",
 "ptcClosed":"Anúncio fechado cedo demais: abra de novo para continuar.",
-"reopen":"Reabrir o anúncio"}
+"reopen":"Reabrir o anúncio",
+"codeType":"Digite o código para validar sua visualização",
+"codeBad":"Código incorreto, tentativas restantes",
+"codeLost":"3 códigos errados: esta visualização foi perdida.",
+"e:bad_code":"Código incorreto."}

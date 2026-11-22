@@ -544,7 +544,10 @@ create table watch_views (
   user_id uuid not null references users (id),
   day date not null default (now() at time zone 'utc')::date,
   started_at timestamptz not null default now(),
-  completed_at timestamptz
+  completed_at timestamptz,
+  -- Code de 3 a 5 chiffres a recopier en fin de video (montre seulement apres le minuteur), et essais rates.
+  code text,
+  tries int not null default 0
 );
 create index watch_views_user_idx on watch_views (user_id, started_at desc);
 
@@ -2702,6 +2705,12 @@ returns jsonb language sql stable set search_path = public as $$
   from settings s where s.id = 1;
 $$;
 
+-- 3, 4 ou 5 chiffres, sans zero en tete.
+create function random_code()
+returns text language sql volatile set search_path = public as $$
+  select (floor(power(10, n - 1) + random() * 9 * power(10, n - 1)))::bigint::text from (select 3 + floor(random() * 3)::int as n) x;
+$$;
+
 create function watch_start(p_user uuid, p_token text, p_ip_hash text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
@@ -2718,11 +2727,27 @@ begin
   st := watch_status(p_user);
   if (st->>'left')::int < 1 then return jsonb_build_object('ok', false, 'code', 'daily_limit'); end if;
   if (st->>'next_in')::int > 0 then return jsonb_build_object('ok', false, 'code', 'cooldown', 'retry_after', (st->>'next_in')::int); end if;
-  insert into watch_views (token, user_id) values (p_token, p_user);
+  insert into watch_views (token, user_id, code) values (p_token, p_user, random_code());
   return jsonb_build_object('ok', true, 'token', p_token, 'seconds', (st->>'seconds')::int);
 end $$;
 
-create function watch_complete(p_user uuid, p_token text, p_ip_hash text)
+-- Code de fin de video : donne seulement une fois le minuteur du serveur ecoule.
+create function watch_code(p_user uuid, p_token text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  v watch_views;
+  left_s numeric;
+begin
+  select * into s from settings where id = 1;
+  select * into v from watch_views where token = p_token and user_id = p_user;
+  if not found or v.completed_at is not null then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  left_s := extract(epoch from v.started_at + make_interval(secs => s.watch_seconds) - now());
+  if left_s > 0 then return jsonb_build_object('ok', false, 'code', 'too_soon', 'retry_after', ceil(left_s)::int); end if;
+  return jsonb_build_object('ok', true, 'digits', v.code);
+end $$;
+
+create function watch_complete(p_user uuid, p_token text, p_ip_hash text, p_code text)
 returns jsonb language plpgsql set search_path = public as $$
 declare
   s settings;
@@ -2741,6 +2766,12 @@ begin
   -- Le minuteur est celui du serveur, jamais celui du navigateur.
   left_s := extract(epoch from v.started_at + make_interval(secs => s.watch_seconds) - now());
   if left_s > 0 then return jsonb_build_object('ok', false, 'code', 'too_soon', 'retry_after', ceil(left_s)::int); end if;
+  -- Code de fin de video : 3 essais, puis la vue est perdue.
+  if v.tries >= 3 then return jsonb_build_object('ok', false, 'code', 'bad_code', 'left', 0); end if;
+  if v.code is not null and trim(coalesce(p_code, '')) <> v.code then
+    update watch_views set tries = tries + 1 where token = p_token;
+    return jsonb_build_object('ok', false, 'code', 'bad_code', 'left', 2 - v.tries);
+  end if;
   if (select count(*) from watch_views where user_id = p_user and day = v.day and completed_at is not null) >= s.watch_daily_limit then
     return jsonb_build_object('ok', false, 'code', 'daily_limit');
   end if;

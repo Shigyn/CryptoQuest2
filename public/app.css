@@ -1089,3 +1089,10 @@ button.boost-card:disabled { opacity: .6; cursor: wait; }
 .vast-mute { position: absolute; right: 10px; bottom: 10px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .55); color: #fff; font-size: 18px; cursor: pointer; }
 .vast-note { position: absolute; inset: auto 0 50% 0; text-align: center; color: #fff; font-weight: 700; padding: 0 16px; }
 .vast-note:empty { display: none; }
+
+/* Code de fin de video */
+.watch-code-box { width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.watch-code-box .row-sub { width: 100%; text-align: center; }
+.watch-code { width: 220px; height: 64px; border-radius: 12px; border: 2px solid var(--line-2); }
+.watch-code-input { width: 120px; text-align: center; font: 700 24px var(--display); letter-spacing: .15em; }
+.watch-code-box .btn { width: auto; }

@@ -229,6 +229,8 @@
     feeShort: ["frais", "fee"],
     ptcBack: ["En pause : retourne sur l'onglet de la pub pour continuer.", "Paused: go back to the ad tab to continue."],
     ptcClosed: ["Pub fermée trop tôt : rouvre-la pour continuer.", "Ad closed too early: reopen it to continue."], reopen: ["Rouvrir la pub", "Reopen the ad"],
+    codeType: ["Recopie le code pour valider ta vue", "Type the code to confirm your view"],
+    codeBad: ["Code incorrect, essais restants", "Wrong code, tries left"], codeLost: ["3 codes faux : cette vue est perdue.", "3 wrong codes: this view is lost."],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -254,6 +256,7 @@
     need_pseudo: ["Choisis d'abord un pseudo pour écrire dans le chat.", "Pick a username first to write in the chat."],
     bad_pseudo: ["Pseudo invalide : 3 à 16 caractères, lettres, chiffres, point, tiret ou souligné.", "Invalid username: 3 to 16 characters, letters, digits, dot, dash or underscore."],
     pseudo_taken: ["Ce pseudo est déjà pris.", "This username is taken."],
+    bad_code: ["Code incorrect.", "Wrong code."],
     pseudo_refused: ["Ce pseudo n'est pas accepté.", "This username isn't allowed."],
     banned: ["Ce compte ne peut plus jouer ici.", "This account can no longer play here."],
     paused: W.paused,
@@ -2196,6 +2199,7 @@
     const el = h("div", { class: "vast-wrap" }, video, mute, note);
     const ping = (list) => (list || []).forEach((u) => { if (u) { const i = new Image(); i.src = u; } });
     let ad = null;
+    let stopped = false;
     const fetchAd = async (tag, depth = 0) => {
       const xml = new DOMParser().parseFromString(await (await fetch(tag, { credentials: "omit" })).text(), "text/xml");
       const ads = [...xml.querySelectorAll("Ad")];
@@ -2218,6 +2222,7 @@
       return { src: file.src, imp: text(inline, "Impression"), track, click: text(inline, "ClickThrough")[0], clickTrack: text(inline, "ClickTracking"), fired: {} };
     };
     const next = async (tries = 0) => {
+      if (stopped) return;
       note.textContent = "";
       try {
         ad = await fetchAd(url);
@@ -2237,11 +2242,11 @@
       if (r >= 0.5) fire("midpoint");
       if (r >= 0.75) fire("thirdQuartile");
     });
-    video.addEventListener("ended", () => { fire("complete"); if (el.isConnected) next(); });
-    video.addEventListener("error", () => { if (el.isConnected) setTimeout(() => next(1), 800); });
+    video.addEventListener("ended", () => { fire("complete"); if (el.isConnected && !stopped) next(); });
+    video.addEventListener("error", () => { if (el.isConnected && !stopped) setTimeout(() => next(1), 800); });
     video.addEventListener("click", () => { if (ad?.click) { ping(ad.clickTrack); window.open(ad.click, "_blank", "noopener"); } });
     next();
-    return { el, counting: () => !video.paused && !video.ended && video.readyState > 2, stop: () => { video.pause(); video.removeAttribute("src"); } };
+    return { el, counting: () => !video.paused && !video.ended && video.readyState > 2, stop: () => { stopped = true; video.pause(); video.removeAttribute("src"); video.load(); } };
   }
 
   function playWatchVideo(token, secs, html, reward, onDone) {
@@ -2266,24 +2271,51 @@
       counter.textContent = String(Math.max(left, 0));
       if (left > 0) return;
       clearInterval(id);
-      const cap = captchaBox();
+      vast?.stop();
+      // Code a recopier, dessine (pas de texte a copier-coller), donne par le serveur seulement maintenant.
+      const canvas = h("canvas", { class: "watch-code", width: 220, height: 64, "aria-hidden": "true" });
+      const input = h("input", { inputMode: "numeric", autocomplete: "off", maxLength: 5, placeholder: "•••", ariaLabel: t("codeType"), class: "watch-code-input" });
+      const drawCode = (digits) => {
+        const g = canvas.getContext("2d");
+        g.clearRect(0, 0, 220, 64);
+        g.fillStyle = "#fff4ea"; g.fillRect(0, 0, 220, 64);
+        for (let i = 0; i < 6; i++) { g.strokeStyle = `rgba(255,122,0,${0.15 + Math.random() * 0.25})`; g.beginPath(); g.moveTo(Math.random() * 220, Math.random() * 64); g.lineTo(Math.random() * 220, Math.random() * 64); g.stroke(); }
+        const step = 200 / digits.length;
+        [...digits].forEach((d, i) => {
+          g.save();
+          g.translate(14 + step * i + step / 2 - 10, 44 + (Math.random() * 8 - 4));
+          g.rotate((Math.random() - 0.5) * 0.5);
+          g.font = "700 34px Fredoka, Nunito, sans-serif"; g.fillStyle = "#2b1606"; g.fillText(d, 0, 0);
+          g.restore();
+        });
+      };
+      const getCode = async () => {
+        const c = await api("watch_code", { token });
+        if (c.ok) { drawCode(c.digits); input.focus(); return; }
+        if (c.code === "too_soon") { setTimeout(getCode, (c.retry_after || 1) * 1000); return; }
+        toast(message(c), "bad");
+      };
+      getCode();
       const ok = h("button", {
         class: "btn gold", type: "button",
         onclick: async () => {
-          if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+          if (!/^[0-9]{3,5}$/.test(input.value.trim())) { toast(t("codeType"), "bad"); input.focus(); return; }
           ok.disabled = true;
-          const r = await api("watch_complete", { token, captcha: captchaToken(cap) || "dev" });
-          captchaReset(cap);
+          const r = await api("watch_complete", { token, code: input.value.trim() });
           if (r.ok) {
             burst(ok, r.mining ? `+${fmtGhs(r.ghs)}` : `+${tk(r.tokens)}`);
             toast(r.mining ? `${t("sessionOpened")} ${fmtGhs(r.ghs)} · ${r.hours} h` : `${tk(r.tokens)} ${t("credited")}`, "good");
             vast?.stop(); layer.remove(); mining = null; await refreshMe(); onDone(); return;
           }
           ok.disabled = false;
-          toast(message(r), "bad");
+          input.value = "";
+          if (r.code === "bad_code" && r.left > 0) { toast(`${t("codeBad")} (${r.left})`, "bad"); input.focus(); return; }
+          toast(r.code === "bad_code" ? t("codeLost") : message(r), "bad");
+          if (r.code === "bad_code") { layer.remove(); onDone(); }
         },
       }, miningOn() ? `${t("watchValidate")} +${fmtGhs(status.mining_video_ghs)}` : `${t("watchValidate")} +${num(reward)}`);
-      foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") ok.click(); });
+      foot.replaceChildren(h("div", { class: "watch-code-box" }, h("span", { class: "row-sub" }, t("codeType")), canvas, input, ok));
     }, 1000);
   }
 

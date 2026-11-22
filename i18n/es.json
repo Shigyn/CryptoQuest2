@@ -435,4 +435,8 @@
 "feeShort":"comisión",
 "ptcBack":"En pausa: vuelve a la pestaña del anuncio para continuar.",
 "ptcClosed":"Anuncio cerrado demasiado pronto: vuelve a abrirlo para continuar.",
-"reopen":"Reabrir el anuncio"}
+"reopen":"Reabrir el anuncio",
+"codeType":"Escribe el código para validar tu vista",
+"codeBad":"Código incorrecto, intentos restantes",
+"codeLost":"3 códigos incorrectos: esta vista se pierde.",
+"e:bad_code":"Código incorrecto."}
