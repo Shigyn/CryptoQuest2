@@ -28,6 +28,8 @@
       side_right: [AADS_BOX],
       footer: [AADS],
       list: [AADS],
+      // Watch Ads : video HilltopAds (zone VAST), lue par le lecteur du site.
+      watch: ["vast:https://sadpicture.com/d.mjFizNdLGLNHv/ZBGuUj/WeFmz9AugZDUflGk/PqTTcA2WN/TyAQ3-NZj/E/t/N/z-YK1/MmDUcR2VNVQW"],
     },
   };
 })();

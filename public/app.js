@@ -2186,20 +2186,82 @@
   }
 
   // Lecteur : compteur en pause si l'onglet est cache, puis captcha et validation.
+  // Lecteur VAST (HilltopAds...) : lit la video du reseau, envoie ses mesures (affichage, quartiles, fin, clic).
+  // Le compteur Watch Ads n'avance que pendant la lecture ; a la fin d'une pub, la suivante est chargee.
+  function vastPlayer(url) {
+    const video = h("video", { class: "vast-video", playsInline: true, preload: "auto" });
+    video.setAttribute("playsinline", "");
+    const note = h("div", { class: "vast-note" });
+    const mute = h("button", { type: "button", class: "vast-mute", "aria-label": "Son", onclick: () => { video.muted = !video.muted; mute.textContent = video.muted ? "🔇" : "🔊"; } }, "🔊");
+    const el = h("div", { class: "vast-wrap" }, video, mute, note);
+    const ping = (list) => (list || []).forEach((u) => { if (u) { const i = new Image(); i.src = u; } });
+    let ad = null;
+    const fetchAd = async (tag, depth = 0) => {
+      const xml = new DOMParser().parseFromString(await (await fetch(tag, { credentials: "omit" })).text(), "text/xml");
+      const ads = [...xml.querySelectorAll("Ad")];
+      const inline = ads.find((a) => a.querySelector("InLine MediaFile"));
+      const text = (node, sel) => [...node.querySelectorAll(sel)].map((x) => x.textContent.trim()).filter(Boolean);
+      if (!inline) {
+        const wrap = ads.find((a) => a.querySelector("Wrapper VASTAdTagURI"));
+        if (wrap && depth < 3) {
+          const inner = await fetchAd(wrap.querySelector("VASTAdTagURI").textContent.trim(), depth + 1);
+          if (inner) { inner.imp.push(...text(wrap, "Impression")); }
+          return inner;
+        }
+        return null;
+      }
+      const files = [...inline.querySelectorAll("MediaFile")].map((m) => ({ type: m.getAttribute("type"), w: Number(m.getAttribute("width")) || 0, src: m.textContent.trim() }));
+      const file = files.filter((f) => f.type === "video/mp4").sort((a, b) => Math.abs(a.w - 480) - Math.abs(b.w - 480))[0] || files[0];
+      if (!file?.src) return null;
+      const track = {};
+      inline.querySelectorAll("Tracking").forEach((x) => { (track[x.getAttribute("event")] ||= []).push(x.textContent.trim()); });
+      return { src: file.src, imp: text(inline, "Impression"), track, click: text(inline, "ClickThrough")[0], clickTrack: text(inline, "ClickTracking"), fired: {} };
+    };
+    const next = async (tries = 0) => {
+      note.textContent = "";
+      try {
+        ad = await fetchAd(url);
+        if (!ad) throw new Error("vide");
+        video.src = ad.src;
+        try { await video.play(); } catch { video.muted = true; mute.textContent = "🔇"; await video.play().catch(() => {}); }
+      } catch {
+        if (tries < 2 && el.isConnected) setTimeout(() => next(tries + 1), 1500);
+        else note.textContent = t("watchNone");
+      }
+    };
+    const fire = (ev) => { if (ad && !ad.fired[ev]) { ad.fired[ev] = true; ping(ad.track[ev]); } };
+    video.addEventListener("playing", () => { if (ad && !ad.fired.imp) { ad.fired.imp = true; ping(ad.imp); } fire("start"); });
+    video.addEventListener("timeupdate", () => {
+      const r = video.duration ? video.currentTime / video.duration : 0;
+      if (r >= 0.25) fire("firstQuartile");
+      if (r >= 0.5) fire("midpoint");
+      if (r >= 0.75) fire("thirdQuartile");
+    });
+    video.addEventListener("ended", () => { fire("complete"); if (el.isConnected) next(); });
+    video.addEventListener("error", () => { if (el.isConnected) setTimeout(() => next(1), 800); });
+    video.addEventListener("click", () => { if (ad?.click) { ping(ad.clickTrack); window.open(ad.click, "_blank", "noopener"); } });
+    next();
+    return { el, counting: () => !video.paused && !video.ended && video.readyState > 2, stop: () => { video.pause(); video.removeAttribute("src"); } };
+  }
+
   function playWatchVideo(token, secs, html, reward, onDone) {
     let left = secs;
     const counter = h("b", { class: "watch-counter" }, String(left));
     const frame = h("div", { class: "watch-frame" });
-    frame.append(document.createRange().createContextualFragment(html));
+    // Code « vast:URL » : notre lecteur VAST ; sinon le code HTML du reseau tel quel.
+    const vast = html.trim().startsWith("vast:") ? vastPlayer(html.trim().slice(5)) : null;
+    if (vast) frame.append(vast.el);
+    else frame.append(document.createRange().createContextualFragment(html));
     const foot = h("div", { class: "watch-foot" }, h("span", {}, t("watchStay")), counter);
     const layer = h("div", { class: "frame-layer" },
       h("div", { class: "frame-box watch-box" },
-        h("div", { class: "frame-head" }, h("b", {}, t("watchAds")), h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => { layer.remove(); onDone(); } }, "✕")),
+        h("div", { class: "frame-head" }, h("b", {}, t("watchAds")), h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => { vast?.stop(); layer.remove(); onDone(); } }, "✕")),
         frame, foot));
     document.body.append(layer);
     const id = setInterval(() => {
-      if (!layer.isConnected) { clearInterval(id); return; }
+      if (!layer.isConnected) { clearInterval(id); vast?.stop(); return; }
       if (document.hidden) return;
+      if (vast && !vast.counting()) return;
       left -= 1;
       counter.textContent = String(Math.max(left, 0));
       if (left > 0) return;
@@ -2215,7 +2277,7 @@
           if (r.ok) {
             burst(ok, r.mining ? `+${fmtGhs(r.ghs)}` : `+${tk(r.tokens)}`);
             toast(r.mining ? `${t("sessionOpened")} ${fmtGhs(r.ghs)} · ${r.hours} h` : `${tk(r.tokens)} ${t("credited")}`, "good");
-            layer.remove(); mining = null; await refreshMe(); onDone(); return;
+            vast?.stop(); layer.remove(); mining = null; await refreshMe(); onDone(); return;
           }
           ok.disabled = false;
           toast(message(r), "bad");
