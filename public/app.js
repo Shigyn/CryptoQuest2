@@ -1927,7 +1927,7 @@
   // [route, cle de texte, icone] par groupe du menu
   const MENU = [
     [null, [["", "dashboard", "home"]]],
-    ["menuEarn", [["faucet", "faucet", "bolt"], ["sessions", "sessions", "quests"], ["ptc", "ptc", "eye"], ["watch", "watchAds", "play"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
+    ["menuEarn", [["faucet", "faucet", "bolt"], ["sessions", "sessions", "quests"], ["ptc", "ptc", "eye"], ["links", "links", "link"], ["surveys", "surveys", "quests"], ["offers", "offers", "gift"]]],
     ["menuRewards", [["quests", "quests", "flag"], ["achievements", "achievements", "trophy"]]],
     ["menuCommunity", [["chat", "chat", "chat"], ["referral", "referral", "profile"]]],
     ["menuWallet", [["wallet", "wallet", "wallet"], ["advertise", "advertise", "megaphone"]]],
@@ -2177,6 +2177,55 @@
         h("p", { class: "note", style: "margin:10px 0 0" }, t("chatRules"))));
   }
 
+  // Lecteur : compteur en pause si l'onglet est cache, puis captcha et validation.
+  function playWatchVideo(token, secs, html, reward, onDone) {
+    let left = secs;
+    const counter = h("b", { class: "watch-counter" }, String(left));
+    const frame = h("div", { class: "watch-frame" });
+    frame.append(document.createRange().createContextualFragment(html));
+    const foot = h("div", { class: "watch-foot" }, h("span", {}, t("watchStay")), counter);
+    const layer = h("div", { class: "frame-layer" },
+      h("div", { class: "frame-box watch-box" },
+        h("div", { class: "frame-head" }, h("b", {}, t("watchAds")), h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => { layer.remove(); onDone(); } }, "✕")),
+        frame, foot));
+    document.body.append(layer);
+    const id = setInterval(() => {
+      if (!layer.isConnected) { clearInterval(id); return; }
+      if (document.hidden) return;
+      left -= 1;
+      counter.textContent = String(Math.max(left, 0));
+      if (left > 0) return;
+      clearInterval(id);
+      const cap = captchaBox();
+      const ok = h("button", {
+        class: "btn gold", type: "button",
+        onclick: async () => {
+          if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
+          ok.disabled = true;
+          const r = await api("watch_complete", { token, captcha: captchaToken(cap) || "dev" });
+          captchaReset(cap);
+          if (r.ok) {
+            burst(ok, r.mining ? `+${fmtGhs(r.ghs)}` : `+${tk(r.tokens)}`);
+            toast(r.mining ? `${t("sessionOpened")} ${fmtGhs(r.ghs)} · ${r.hours} h` : `${tk(r.tokens)} ${t("credited")}`, "good");
+            layer.remove(); mining = null; await refreshMe(); onDone(); return;
+          }
+          ok.disabled = false;
+          toast(message(r), "bad");
+        },
+      }, miningOn() ? `${t("watchValidate")} +${fmtGhs(status.mining_video_ghs)}` : `${t("watchValidate")} +${num(reward)}`);
+      foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
+    }, 1000);
+  }
+
+  // Lance directement une video (bouton de la page Minage) : sans passer par la page Watch Ads.
+  async function startWatch(onDone) {
+    const codes = adCodes("watch");
+    if (!codes.length) { toast(t("watchNone"), "info"); return; }
+    const r = await api("watch_start");
+    if (!r.ok) { toast(message(r), "bad"); return; }
+    playWatchVideo(r.token, r.seconds, codes[Math.floor(Math.random() * codes.length)], status?.watch_reward ?? 0, onDone);
+  }
+
   // Watch Ads : video recompensee, captcha a la fin, bouton « Valider la vue ».
   function watchView() {
     const box = h("section", { class: "panel watch" }, h("p", { class: "empty" }, "…"));
@@ -2207,48 +2256,9 @@
         btn.disabled = true;
         const r = await api("watch_start");
         if (!r.ok) { toast(message(r), "bad"); load(); return; }
-        playVideo(r.token, r.seconds, codes[Math.floor(Math.random() * codes.length)], st.reward);
+        playWatchVideo(r.token, r.seconds, codes[Math.floor(Math.random() * codes.length)], st.reward, load);
       };
       box.replaceChildren(head, h("div", { class: "watch-go" }, btn, wait), h("p", { class: "note", style: "margin:12px 0 0" }, t("watchHow")));
-    };
-    // Lecteur : compteur en pause si l'onglet est cache, puis captcha et validation.
-    const playVideo = (token, secs, html, reward) => {
-      let left = secs;
-      const counter = h("b", { class: "watch-counter" }, String(left));
-      const frame = h("div", { class: "watch-frame" });
-      frame.append(document.createRange().createContextualFragment(html));
-      const foot = h("div", { class: "watch-foot" }, h("span", {}, t("watchStay")), counter);
-      const layer = h("div", { class: "frame-layer" },
-        h("div", { class: "frame-box watch-box" },
-          h("div", { class: "frame-head" }, h("b", {}, t("watchAds")), h("button", { type: "button", class: "icon-btn", "aria-label": t("close"), onclick: () => { layer.remove(); load(); } }, "✕")),
-          frame, foot));
-      document.body.append(layer);
-      const id = setInterval(() => {
-        if (!layer.isConnected) { clearInterval(id); return; }
-        if (document.hidden) return;
-        left -= 1;
-        counter.textContent = String(Math.max(left, 0));
-        if (left > 0) return;
-        clearInterval(id);
-        const cap = captchaBox();
-        const ok = h("button", {
-          class: "btn gold", type: "button",
-          onclick: async () => {
-            if (captchaMissing(cap)) { toast(t("needCaptcha"), "bad"); return; }
-            ok.disabled = true;
-            const r = await api("watch_complete", { token, captcha: captchaToken(cap) || "dev" });
-            captchaReset(cap);
-            if (r.ok) {
-              burst(ok, r.mining ? `+${fmtGhs(r.ghs)}` : `+${tk(r.tokens)}`);
-              toast(r.mining ? `${t("sessionOpened")} ${fmtGhs(r.ghs)} · ${r.hours} h` : `${tk(r.tokens)} ${t("credited")}`, "good");
-              layer.remove(); mining = null; await refreshMe(); load(); return;
-            }
-            ok.disabled = false;
-            toast(message(r), "bad");
-          },
-        }, miningOn() ? `${t("watchValidate")} +${fmtGhs(status.mining_video_ghs)}` : `${t("watchValidate")} +${num(reward)}`);
-        foot.replaceChildren(h("div", { class: "task-confirm" }, cap, ok));
-      }, 1000);
     };
     load();
     return h("div", { class: "stack" }, box, adSlot("in_content"));
@@ -2326,7 +2336,10 @@
       every(tick, 500);
       const boosts = [
         ["video", "play", "--c1:#ff8cc6;--c2:#e2367f", st.video_ghs, "#watch"],
-      ].map(([k, ico, tone, ghs, href]) => h("a", { class: "boost-card", href },
+      ].map(([k, ico, tone, ghs]) => h("button", {
+        class: "boost-card", type: "button",
+        onclick: (e) => { const b = e.currentTarget; b.disabled = true; startWatch(() => loadMining().then(() => { refreshMe(); draw(); })).finally(() => { b.disabled = false; }); },
+      },
         h("span", { class: "game-ico", style: tone }, icon(ico)),
         h("span", { class: "boost-text" }, h("b", {}, t(k === "video" ? "watchAds" : "ptc")), h("span", {}, `+${fmtGhs(ghs)} · ${st.hours} h`)),
         h("span", { class: "chev" }, "›")));
