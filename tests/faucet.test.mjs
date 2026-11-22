@@ -1312,7 +1312,7 @@ test("Watch Ads : 30 s de video, captcha, 1 minute entre deux, 30 par jour, reco
   assert.equal((await api(h, "watch_code", { session: u.session, token }, u.ip)).body.code, "too_soon", "pas de code avant la fin de la video");
   await h.pg.query("update watch_views set started_at = started_at - interval '31 seconds'");
   const code = (await api(h, "watch_code", { session: u.session, token }, u.ip)).body.digits;
-  assert.match(code, /^[1-9][0-9]{2,4}$/, "3 a 5 chiffres");
+  assert.match(code, /^[1-9][0-9]{3}$/, "4 chiffres");
   const bad = (await api(h, "watch_complete", { session: u.session, token, code: "0" }, u.ip)).body;
   assert.deepEqual([bad.code, bad.left], ["bad_code", 2]);
   assert.equal((await api(h, "watch_complete", { session: u.session, token, code }, u.ip)).body.tokens, 10);

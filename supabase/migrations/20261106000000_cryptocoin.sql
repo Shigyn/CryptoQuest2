@@ -2705,10 +2705,10 @@ returns jsonb language sql stable set search_path = public as $$
   from settings s where s.id = 1;
 $$;
 
--- 3, 4 ou 5 chiffres, sans zero en tete.
+-- 4 chiffres, sans zero en tete.
 create function random_code()
 returns text language sql volatile set search_path = public as $$
-  select (floor(power(10, n - 1) + random() * 9 * power(10, n - 1)))::bigint::text from (select 3 + floor(random() * 3)::int as n) x;
+  select (1000 + floor(random() * 9000))::int::text;
 $$;
 
 create function watch_start(p_user uuid, p_token text, p_ip_hash text)

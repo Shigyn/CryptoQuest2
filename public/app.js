@@ -2274,7 +2274,7 @@
       vast?.stop();
       // Code a recopier, dessine (pas de texte a copier-coller), donne par le serveur seulement maintenant.
       const canvas = h("canvas", { class: "watch-code", width: 220, height: 64, "aria-hidden": "true" });
-      const input = h("input", { inputMode: "numeric", autocomplete: "off", maxLength: 5, placeholder: "•••", ariaLabel: t("codeType"), class: "watch-code-input" });
+      const input = h("input", { inputMode: "numeric", autocomplete: "off", maxLength: 4, placeholder: "••••", ariaLabel: t("codeType"), class: "watch-code-input" });
       const drawCode = (digits) => {
         const g = canvas.getContext("2d");
         g.clearRect(0, 0, 220, 64);
@@ -2299,7 +2299,7 @@
       const ok = h("button", {
         class: "btn gold", type: "button",
         onclick: async () => {
-          if (!/^[0-9]{3,5}$/.test(input.value.trim())) { toast(t("codeType"), "bad"); input.focus(); return; }
+          if (!/^[0-9]{4}$/.test(input.value.trim())) { toast(t("codeType"), "bad"); input.focus(); return; }
           ok.disabled = true;
           const r = await api("watch_complete", { token, code: input.value.trim() });
           if (r.ok) {
