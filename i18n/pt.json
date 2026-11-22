@@ -432,4 +432,7 @@
 "wdFeeFree":"0 sat: um envio entre contas FaucetPay é grátis.",
 "wdGet":"Você vai receber",
 "wdFeeOut":"Para tirar seus BTC da FaucetPay para uma carteira externa, a FaucetPay cobra cerca de 1 000 sats de taxa de rede (mínimo 120 000 sats).",
-"feeShort":"taxa"}
+"feeShort":"taxa",
+"ptcBack":"Pausado: volte para a aba do anúncio para continuar.",
+"ptcClosed":"Anúncio fechado cedo demais: abra de novo para continuar.",
+"reopen":"Reabrir o anúncio"}

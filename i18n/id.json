@@ -432,4 +432,7 @@
 "wdFeeFree":"0 sat: pengiriman antar akun FaucetPay gratis.",
 "wdGet":"Kamu akan menerima",
 "wdFeeOut":"Untuk memindahkan BTC dari FaucetPay ke dompet luar, FaucetPay mengambil sekitar 1.000 sats biaya jaringan (minimum 120.000 sats).",
-"feeShort":"biaya"}
+"feeShort":"biaya",
+"ptcBack":"Dijeda: kembali ke tab iklan untuk melanjutkan.",
+"ptcClosed":"Iklan ditutup terlalu cepat: buka lagi untuk melanjutkan.",
+"reopen":"Buka lagi iklan"}

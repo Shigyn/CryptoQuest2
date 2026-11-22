@@ -432,4 +432,7 @@
 "wdFeeFree":"0 sat: FaucetPay hesapları arasında gönderim ücretsizdir.",
 "wdGet":"Alacağın tutar",
 "wdFeeOut":"BTC'ni FaucetPay'den harici bir cüzdana çekmek için FaucetPay yaklaşık 1.000 sats ağ ücreti alır (minimum 120.000 sats).",
-"feeShort":"ücret"}
+"feeShort":"ücret",
+"ptcBack":"Duraklatıldı: devam etmek için reklam sekmesine dön.",
+"ptcClosed":"Reklam çok erken kapandı: devam etmek için yeniden aç.",
+"reopen":"Reklamı yeniden aç"}

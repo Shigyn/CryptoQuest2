@@ -227,6 +227,8 @@
     wdGet: ["Tu recevras", "You will receive"],
     wdFeeOut: ["Pour sortir tes BTC de FaucetPay vers un portefeuille externe, FaucetPay prend environ 1 000 sats de frais réseau (minimum 120 000 sats).", "To move your BTC from FaucetPay to an external wallet, FaucetPay charges about 1,000 sats network fee (minimum 120,000 sats)."],
     feeShort: ["frais", "fee"],
+    ptcBack: ["En pause : retourne sur l'onglet de la pub pour continuer.", "Paused: go back to the ad tab to continue."],
+    ptcClosed: ["Pub fermée trop tôt : rouvre-la pour continuer.", "Ad closed too early: reopen it to continue."], reopen: ["Rouvrir la pub", "Reopen the ad"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -1097,7 +1099,7 @@
             busy = true;
             // Fenetre : nouvel onglet. Iframe et video : dans la page, compteur en pause si l'onglet est cache.
             const inPage = c.kind === "iframe" || c.kind === "video";
-            const win = inPage ? null : window.open("about:blank", "_blank");
+            let win = inPage ? null : window.open("about:blank", "_blank");
             const r = await api("ptc_start", { id: c.id });
             if (!r.ok) { busy = false; win?.close(); toast(message(r), "bad"); return; }
             if (win) { win.opener = null; win.location = r.url; }
@@ -1108,8 +1110,14 @@
             const fill = h("i", {});
             const label = h("span", { class: "row-sub" }, `${t("watch")} ${left} s`);
             foot.replaceChildren(h("div", { class: "task-bar" }, fill), label);
+            const reopen = h("button", { class: "btn small ghost", type: "button", style: "width:auto", onclick: () => { win = window.open(r.url, "_blank"); } }, t("reopen"));
             const id = every(() => {
               if (frame && (document.hidden || !frame.isConnected)) return;
+              // Nouvel onglet : le compteur ne tourne que si la pub est ouverte et que le membre est dessus (pas sur ce site).
+              if (win) {
+                if (win.closed) { label.replaceChildren(t("ptcClosed"), " ", reopen); return; }
+                if (!document.hidden && document.hasFocus()) { label.textContent = t("ptcBack"); return; }
+              }
               left -= 1;
               fill.style.width = `${Math.min(100, ((total - left) / total) * 100)}%`;
               if (left > 0) { label.textContent = `${t("watch")} ${left} s`; return; }
