@@ -445,4 +445,17 @@
 "frameHint":"Sayaç bitene kadar bu sayfada kal",
 "q_sessions":["{n} madencilik oturumu başlat",
 "{n} madencilik oturumu başlat"],"q_ads":["{n} reklam izle",
-"{n} reklam izle"]}
+"{n} reklam izle"],"walletCtaSub":"Ücretsiz FaucetPay cüzdanını aç",
+"tutTitle":"Başlangıç rehberi",
+"tutGift":"{n} sats hediye",
+"tutLead":"Bu 3 adımı tamamla: FaucetPay'e hemen çekilebilen {n} sats kazan.",
+"tutStep1":"FaucetPay Bitcoin cüzdanın bağlı: sats'ların oraya gelir.",
+"tutStep2":"8 saatlik madencilik oturumunu başlat (aşağıdaki düğme).",
+"tutStep3":"Gücünü artırmak için 1 reklam izle: video veya PTC.",
+"tutVideo":"Video",
+"tutClaim":"{n} sats'ımı al",
+"tutReady":"Tebrikler! {n} sats bakiyende.",
+"tutWithdraw":"Şimdi FaucetPay'e çek",
+"tutAfter":"Bu ilk çekimde minimum yok. Sonrasında {m} sats'tan itibaren çekim.",
+"tutDone":"Çekim gönderildi: FaucetPay hesabına bak!",
+"s:tutorial":"Rehber"}

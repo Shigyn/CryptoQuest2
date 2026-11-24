@@ -9,6 +9,8 @@
 
   window.FAUCET_CONFIG = {
     SITE_NAME: "BitPool",
+    // Lien d'inscription FaucetPay avec ton code de parrainage (bouton BITCOIN WALLET, tutoriel, ecran d'entree).
+    FAUCETPAY_REF: "https://faucetpay.io/r/5408126",
     TOKEN: "Coins",
     // https://VOTRE-PROJET.supabase.co/functions/v1
     API_BASE: "https://snvfovahyugxpqtthfoo.supabase.co/functions/v1",

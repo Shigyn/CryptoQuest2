@@ -234,6 +234,17 @@
     chipMinWd: ["Retrait dès {n} sats", "Withdraw from {n} sats"], sound: ["Son", "Sound"],
     q_sessions: [["Lance {n} session de minage", "Lance {n} sessions de minage"], ["Start {n} mining session", "Start {n} mining sessions"]],
     q_ads: [["Regarde {n} pub", "Regarde {n} pubs"], ["Watch {n} ad", "Watch {n} ads"]],
+    walletCtaSub: ["Ouvre ton portefeuille gratuit FaucetPay", "Open your free FaucetPay wallet"],
+    tutTitle: ["Tutoriel de départ", "Getting started"], tutGift: ["{n} sats offerts", "{n} free sats"],
+    tutLead: ["Fais ces 3 étapes : tu reçois {n} sats, retirables tout de suite sur FaucetPay.", "Do these 3 steps: you get {n} sats, withdrawable right away to FaucetPay."],
+    tutStep1: ["Ton portefeuille Bitcoin FaucetPay est relié : tes sats y arrivent.", "Your FaucetPay Bitcoin wallet is linked: your sats land there."],
+    tutStep2: ["Lance ta session de minage de 8 h (bouton plus bas).", "Start your 8 h mining session (button below)."],
+    tutStep3: ["Regarde 1 pub pour booster ta puissance : une vidéo ou un PTC.", "Watch 1 ad to boost your power: a video or a PTC."],
+    tutVideo: ["Vidéo", "Video"], tutClaim: ["Récupérer mes {n} sats", "Collect my {n} sats"],
+    tutReady: ["Bravo ! Tes {n} sats sont dans ton solde.", "Well done! Your {n} sats are in your balance."],
+    tutWithdraw: ["Retirer maintenant sur FaucetPay", "Withdraw now to FaucetPay"],
+    tutAfter: ["Ce premier retrait n'a pas de minimum. Ensuite, retrait dès {m} sats.", "This first withdrawal has no minimum. After that, withdraw from {m} sats."],
+    tutDone: ["Retrait envoyé : regarde ton compte FaucetPay !", "Withdrawal sent: check your FaucetPay account!"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -692,6 +703,51 @@
 
   // Paiement affiche en sats en mode minage (montant en Coins converti au cours du jour), sinon dans sa crypto.
   const payText = (r) => (unitInfo().kind === "sat" && r.tokens != null ? `+${num(r.tokens)} sat` : `+${units(r.amount_units, r.decimals)} ${r.coin}`);
+  // Lien FaucetPay avec le code de parrainage du proprietaire.
+  const FP_REF = cfg.FAUCETPAY_REF || "https://faucetpay.io";
+  const walletCta = (small = false) => h("a", { class: `btc-wallet${small ? " small" : ""}`, href: FP_REF, target: "_blank", rel: "noopener" },
+    h("span", { class: "btc-wallet-ico", "aria-hidden": "true" }, "₿"),
+    h("span", { class: "btc-wallet-main" }, h("b", { class: "btc-wallet-text" }, "BITCOIN WALLET"), h("small", {}, t("walletCtaSub"))));
+
+  // Tutoriel de depart (page Minage) : session, pub, sats offerts, premier retrait sans minimum.
+  function tutorialCard(redraw) {
+    const tu = me?.tutorial;
+    if (!tu || (tu.done && tu.withdrawn)) return null;
+    const n = String(tu.sats ?? 2);
+    const step = (ok, text, extra) => h("div", { class: `tut-step${ok ? " ok" : ""}` }, h("span", { class: "tut-check" }, ok ? "✓" : ""), h("div", { class: "tut-text" }, h("span", {}, text), extra || null));
+    let action;
+    if (!tu.done && tu.base && tu.ad) {
+      const b = h("button", { class: "btn gold", type: "button", onclick: async () => {
+        b.disabled = true;
+        const r = await api("tutorial_claim");
+        if (!r.ok) { b.disabled = false; toast(message(r), "bad"); return; }
+        burst(b, `+${n} sat`);
+        await refreshMe(); redraw();
+      } }, t("tutClaim").replace("{n}", n));
+      action = b;
+    } else if (tu.done) {
+      const b = h("button", { class: "btn gold", type: "button", onclick: async () => {
+        b.disabled = true;
+        const r = await api("withdraw");
+        if (r.ok) { burst(b, `${r.amount_units} sat`); toast(t("tutDone"), "good"); }
+        else { b.disabled = false; toast(message(r), r.code === "pending" ? "info" : "bad"); }
+        await refreshMe(); redraw();
+      } }, t("tutWithdraw"));
+      action = h("div", { class: "tut-ready" }, h("p", {}, t("tutReady").replace("{n}", n)), b,
+        h("p", { class: "row-sub" }, t("tutAfter").replace("{m}", String(status?.min_withdraw_sats ?? 20))));
+    }
+    return h("section", { class: "panel tut" },
+      h("div", { class: "panel-title" }, t("tutTitle"), h("span", { class: "badge good" }, t("tutGift").replace("{n}", n))),
+      tu.done ? null : h("p", { class: "note" }, t("tutLead").replace("{n}", n)),
+      tu.done ? null : h("div", { class: "tut-steps" },
+        step(true, t("tutStep1"), walletCta(true)),
+        step(tu.base, t("tutStep2")),
+        step(tu.ad, t("tutStep3"), tu.ad ? null : h("div", { class: "tut-btns" },
+          h("button", { class: "btn small", type: "button", style: "width:auto", onclick: () => startWatch(() => { loadMining().then(() => refreshMe()).then(redraw); }) }, icon("play"), t("tutVideo")),
+          h("a", { class: "btn small ghost", href: "#ptc", style: "width:auto" }, icon("eye"), "PTC")))),
+      action || null);
+  }
+
   function ticker() {
     const list = status?.recent || [];
     if (!list.length) return null;
@@ -740,7 +796,7 @@
           !status ? h("div", { class: "notice bad", style: "margin-bottom:14px" }, t("offline")) : null,
           status?.paused ? h("div", { class: "notice warn", style: "margin-bottom:14px" }, t("paused")) : null,
           form,
-          h("p", { class: "gate-foot" }, `${t("noFp")} `, h("a", { href: "https://faucetpay.io", rel: "noopener", target: "_blank" }, t("createFp"))),
+          h("p", { class: "gate-foot" }, `${t("noFp")} `, h("a", { href: FP_REF, rel: "noopener", target: "_blank" }, t("createFp"))),
           h("div", { class: "chips" },
             h("span", { class: "chip" }, icon("bolt"), t("chipInstant")),
             h("span", { class: "chip" }, icon("gift"), t("chipFree")),
@@ -1767,7 +1823,7 @@
     ptc: ["Pub", "Ad"], shortlink: ["Lien", "Link"], offer: ["Offre", "Offer"], offer_reversed: ["Offre annulée", "Offer reversed"],
     mines: ["Mines", "Mines"], dice: ["Dice", "Dice"], validation: ["Validation", "Approval"], rejected: ["Gain refusé", "Refused"], withdrawal: ["Retrait", "Withdrawal"], withdrawal_refund: ["Retrait rendu", "Refund"],
     shop: ["Boutique", "Shop"], tournament: ["Tournoi", "Tournament"], achievement: ["Succès", "Achievement"], promo: ["Code promo", "Promo code"],
-    mining: ["Minage", "Mining"], seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
+    mining: ["Minage", "Mining"], tutorial: ["Tutoriel", "Tutorial"], seized: ["Solde saisi", "Balance seized"], ad_refund: ["Pub refusée, Coins rendus", "Ad refused, Coins back"],
   };
   // « Des que ton solde atteint X, il part tout seul » + barre de progression.
   function autoPayBox() {
@@ -1785,7 +1841,7 @@
     const c = me.coins.find((x) => x.code === me.payout_coin) || me.coins[0];
     const est = c && me.available > 0 ? (me.available / (status?.tokens_per_eur || 10000)) * c.per_eur : 0;
     const btn = h("button", {
-      class: "btn big", disabled: me.available <= 0 || me.available < (status?.min_withdraw_tokens || 1) || !c || status?.paused,
+      class: "btn big", disabled: me.available <= 0 || me.available < (me.tutorial?.done && !me.tutorial?.withdrawn ? 1 : (status?.min_withdraw_tokens || 1)) || !c || status?.paused,
       onclick: async () => {
         btn.disabled = true;
         const r = await api("withdraw");
@@ -1935,7 +1991,7 @@
           render();
         },
       }, t("logout")),
-      h("div", { class: "foot-links" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: "https://faucetpay.io", rel: "noopener", target: "_blank" }, "FaucetPay")));
+      h("div", { class: "foot-links" }, h("a", { href: "legal.html" }, t("legal")), h("a", { href: FP_REF, rel: "noopener", target: "_blank" }, "FaucetPay")));
   }
 
   // Coquille facon VieFaucet : barre du haut, menu lateral (tiroir sur mobile), 5 onglets en bas ------
@@ -2452,6 +2508,7 @@
         h("span", { class: "boost-text" }, h("b", {}, t(k === "video" ? "watchAds" : "ptc")), h("span", {}, `+${fmtGhs(ghs)} · ${st.hours} h`)),
         h("span", { class: "chev" }, "›")));
       box.replaceChildren(
+        tutorialCard(() => { draw(); }),
         h("section", { class: "panel mine-hero" },
           h("div", { class: `mine-rig${st.power > 0 ? " on" : ""}` }, icon("fan")),
           h("div", { class: "mine-main" },
@@ -2761,6 +2818,7 @@
               h("span", { class: "eyebrow2" }, t("heroEyebrow")),
               h("h1", {}, t("heroTitle")),
               h("p", { class: "lead2" }, t("heroLead")),
+              walletCta(),
               h("div", { class: "hero2-stats" },
                 h("div", {}, h("b", {}, fmtInt(s.users || 0)), h("span", {}, t("members"))),
                 h("div", {}, h("b", {}, eur(s.paid_tokens || 0)), h("span", {}, t("paidOut"))),

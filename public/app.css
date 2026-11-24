@@ -1096,3 +1096,49 @@ button.boost-card:disabled { opacity: .6; cursor: wait; }
 .watch-code { width: 220px; height: 64px; border-radius: 12px; border: 2px solid var(--line-2); }
 .watch-code-input { width: 120px; text-align: center; font: 700 24px var(--display); letter-spacing: .15em; }
 .watch-code-box .btn { width: auto; }
+
+/* Bouton BITCOIN WALLET (parrainage FaucetPay) : multicolore et brillant */
+.btc-wallet { position: relative; display: inline-flex; align-items: center; gap: 14px; margin: 18px 0 6px; padding: 14px 22px 14px 16px; border-radius: 20px;
+  text-decoration: none; background: #fff; border: 3px solid transparent; overflow: hidden; isolation: isolate;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(90deg, #ff3d6e, #ff9a3d, #ffd23d, #3ddc84, #3dc3ff, #8a5cff, #ff3d6e);
+  background-origin: border-box; background-clip: padding-box, border-box; background-size: 100% 100%, 300% 100%;
+  animation: btc-border 4s linear infinite, btc-glow 2.4s ease-in-out infinite; }
+.btc-wallet::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .9) 50%, transparent 70%);
+  transform: translateX(-120%); animation: btc-shine 3s ease-in-out infinite; pointer-events: none; }
+.btc-wallet-ico { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font: 800 28px var(--display); color: #fff;
+  background: linear-gradient(145deg, #ffb347, #f7931a); box-shadow: 0 4px 0 #b86b00, 0 0 18px rgba(247, 147, 26, .6); }
+.btc-wallet-main { display: flex; flex-direction: column; line-height: 1.1; }
+.btc-wallet-text { font: 800 26px var(--display); letter-spacing: .04em; background: linear-gradient(90deg, #ff3d6e, #ff9a3d, #ffd23d, #3ddc84, #3dc3ff, #8a5cff, #ff3d6e);
+  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: btc-border 4s linear infinite; }
+.btc-wallet-main small { font-weight: 700; color: var(--text); font-size: 13px; margin-top: 3px; }
+.btc-wallet:hover { transform: translateY(-2px); }
+.btc-wallet.small { margin: 8px 0 0; padding: 8px 14px 8px 10px; gap: 10px; border-radius: 16px; }
+.btc-wallet.small .btc-wallet-ico { width: 34px; height: 34px; font-size: 19px; }
+.btc-wallet.small .btc-wallet-text { font-size: 17px; }
+@keyframes btc-border { to { background-position: 0 0, 300% 0; } }
+@keyframes btc-glow { 0%, 100% { box-shadow: 0 6px 20px rgba(255, 122, 0, .25), 0 0 0 rgba(138, 92, 255, 0); } 50% { box-shadow: 0 8px 28px rgba(255, 122, 0, .35), 0 0 26px rgba(138, 92, 255, .45); } }
+@keyframes btc-shine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+.btc-wallet-text { animation-name: btc-text; }
+@keyframes btc-text { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .btc-wallet, .btc-wallet::after, .btc-wallet-text { animation: none; } }
+@media (max-width: 720px) { .btc-wallet-text { font-size: 21px; } .btc-wallet { padding: 12px 16px 12px 12px; } }
+
+/* Tutoriel de depart */
+.tut { border-color: var(--line-2); background: linear-gradient(180deg, #fff, #fff7ee); }
+.tut-steps { display: grid; gap: 8px; margin-top: 10px; }
+.tut-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: rgba(255, 122, 0, .05); border: 1px solid var(--line); }
+.tut-step.ok { background: rgba(18, 164, 95, .07); border-color: rgba(18, 164, 95, .3); }
+.tut-check { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--line-2); color: #fff; font-weight: 800; }
+.tut-step.ok .tut-check { background: var(--green); border-color: var(--green); }
+.tut-text { display: flex; flex-direction: column; gap: 4px; color: var(--ink); font-weight: 600; }
+.tut-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.tut-btns .btn svg { width: 16px; height: 16px; }
+.tut > .btn { margin-top: 12px; }
+.tut-ready { display: grid; gap: 8px; text-align: center; margin-top: 6px; }
+.tut-ready p { margin: 0; }
+.tut-ready > p:first-child { font: 700 18px var(--display); color: var(--ink); }
+.hero2-text .btc-wallet { padding: 18px 28px 18px 18px; gap: 16px; }
+.hero2-text .btc-wallet-ico { width: 58px; height: 58px; font-size: 34px; }
+.hero2-text .btc-wallet-text { font-size: 34px; }
+.hero2-text .btc-wallet-main small { font-size: 14px; }
+@media (max-width: 720px) { .hero2-text .btc-wallet-text { font-size: 25px; } .hero2-text .btc-wallet-ico { width: 46px; height: 46px; font-size: 26px; } }

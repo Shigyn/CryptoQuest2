@@ -445,4 +445,17 @@
 "frameHint":"Tetap di halaman ini sampai penghitung selesai",
 "q_sessions":["Mulai {n} sesi menambang",
 "Mulai {n} sesi menambang"],"q_ads":["Tonton {n} iklan",
-"Tonton {n} iklan"]}
+"Tonton {n} iklan"],"walletCtaSub":"Buka dompet gratis FaucetPay kamu",
+"tutTitle":"Tutorial awal",
+"tutGift":"{n} sats gratis",
+"tutLead":"Lakukan 3 langkah ini: kamu dapat {n} sats, bisa langsung ditarik ke FaucetPay.",
+"tutStep1":"Dompet Bitcoin FaucetPay kamu sudah terhubung: sats-mu masuk ke sana.",
+"tutStep2":"Mulai sesi menambang 8 jam (tombol di bawah).",
+"tutStep3":"Tonton 1 iklan untuk menambah daya: video atau PTC.",
+"tutVideo":"Video",
+"tutClaim":"Ambil {n} sats-ku",
+"tutReady":"Mantap! {n} sats-mu sudah di saldo.",
+"tutWithdraw":"Tarik sekarang ke FaucetPay",
+"tutAfter":"Penarikan pertama ini tanpa minimum. Setelah itu, tarik mulai {m} sats.",
+"tutDone":"Penarikan terkirim: cek akun FaucetPay kamu!",
+"s:tutorial":"Tutorial"}

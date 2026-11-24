@@ -28,6 +28,8 @@ create table settings (
   -- Minimum de retrait en sats (converti en Coins au cours du BTC) et frais de transfert en sats, payes par le membre.
   min_withdraw_sats numeric not null default 20 check (min_withdraw_sats >= 0),
   withdraw_fee_sats numeric not null default 0 check (withdraw_fee_sats >= 0),
+  -- Tutoriel de depart : sats offerts a la fin, retirables tout de suite (premier retrait sans minimum).
+  tutorial_sats numeric not null default 2 check (tutorial_sats >= 0),
   -- Tirage en 2 etapes : secondes entre « Lancer » et « Recuperer ». Paiement auto du solde disponible au lot horaire.
   roll_reveal_seconds int not null default 8 check (roll_reveal_seconds between 0 and 60),
   -- Minage virtuel (finance par la pub) : session de base a relancer, chaque PTC / video ouvre sa propre session.
@@ -138,6 +140,8 @@ create table users (
   chat_muted_until timestamptz,
   -- Pseudo public (chat, gains en direct) : l'adresse FaucetPay n'est jamais montree.
   pseudo text,
+  -- Tutoriel de depart termine (bonus verse).
+  tutorial_at timestamptz,
   -- Tirage fait mais pas encore recupere : {roll, tokens, at, level, level_up}.
   pending_roll jsonb,
   -- Fractions de Coins en attente entre deux sessions de minage versees.
@@ -1634,6 +1638,10 @@ declare
   new_id uuid;
 begin
   select * into u from users where id = p_user for update;
+  -- Apres le tutoriel, le tout premier retrait n'a pas de minimum (les sats offerts partent tout de suite).
+  if u.tutorial_at is not null and not exists (select 1 from withdrawals where user_id = p_user and status in ('reserved', 'paid', 'unknown')) then
+    min_tokens := 1;
+  end if;
   select * into s from settings where id = 1;
   blk := user_block(u, p_ip_hash);
   if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
@@ -2034,6 +2042,10 @@ create function user_profile(p_user uuid)
 returns jsonb language sql stable set search_path = public as $$
   select jsonb_build_object(
     'ref_code', u.ref_code, 'secured', u.password_hash is not null, 'pseudo', u.pseudo,
+    'tutorial', jsonb_build_object('done', u.tutorial_at is not null, 'sats', s.tutorial_sats,
+      'base', exists (select 1 from mining_sessions m where m.user_id = u.id and m.kind = 'base'),
+      'ad', exists (select 1 from mining_sessions m where m.user_id = u.id and m.kind in ('ptc', 'video')),
+      'withdrawn', exists (select 1 from withdrawals w where w.user_id = u.id and w.status in ('reserved', 'paid', 'unknown'))),
     'vip', coalesce(u.vip_until > now(), false), 'vip_until', u.vip_until, 'fp_address', u.fp_address, 'payout_coin', u.payout_coin,
     'available', u.available, 'pending', u.pending, 'validated', u.validated,
     'daily_done', u.last_daily_day = (now() at time zone 'utc')::date,
@@ -2255,6 +2267,7 @@ begin
     min_withdraw_tokens = coalesce((p->>'min_withdraw_tokens')::int, min_withdraw_tokens),
     min_withdraw_sats = coalesce((p->>'min_withdraw_sats')::numeric, min_withdraw_sats),
     withdraw_fee_sats = coalesce((p->>'withdraw_fee_sats')::numeric, withdraw_fee_sats),
+    tutorial_sats = coalesce((p->>'tutorial_sats')::numeric, tutorial_sats),
     roll_reveal_seconds = coalesce((p->>'roll_reveal_seconds')::int, roll_reveal_seconds),
     mining_enabled = coalesce((p->>'mining_enabled')::boolean, mining_enabled),
     mining_session_hours = coalesce((p->>'mining_session_hours')::numeric, mining_session_hours),
@@ -2603,6 +2616,30 @@ begin
   end if;
   update ptc_campaigns set enabled = false, needs_review = false where advertiser_id = p_user;
   return jsonb_build_object('ok', true, 'seized', seized);
+end $$;
+
+-- Tutoriel de depart : une seule fois par compte, apres une session de base et une pub.
+create function tutorial_claim(p_user uuid, p_ip_hash text)
+returns jsonb language plpgsql set search_path = public as $$
+declare
+  s settings;
+  u users;
+  blk text;
+  tokens bigint;
+begin
+  select * into s from settings where id = 1;
+  select * into u from users where id = p_user for update;
+  blk := user_block(u, p_ip_hash);
+  if blk is not null then return jsonb_build_object('ok', false, 'code', blk); end if;
+  if u.tutorial_at is not null then return jsonb_build_object('ok', false, 'code', 'already_done'); end if;
+  if not exists (select 1 from mining_sessions where user_id = p_user and kind = 'base')
+     or not exists (select 1 from mining_sessions where user_id = p_user and kind in ('ptc', 'video')) then
+    return jsonb_build_object('ok', false, 'code', 'not_reached');
+  end if;
+  tokens := ceil(s.tutorial_sats * coins_per_sat())::bigint;
+  update users set tutorial_at = now() where id = p_user;
+  perform move_tokens(p_user, 'available', tokens, 'tutorial', 'tutorial');
+  return jsonb_build_object('ok', true, 'tokens', tokens, 'sats', s.tutorial_sats);
 end $$;
 
 -- Chat global ------------------------------------------------------------------

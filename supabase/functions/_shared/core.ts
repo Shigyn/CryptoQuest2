@@ -452,6 +452,9 @@ export async function handleApi(req: Request, d: Deps): Promise<Response> {
     case "watch_start":
       return result(d, await d.rpc("watch_start", { p_user: userId, p_token: crypto.randomUUID().replaceAll("-", ""), p_ip_hash: ipHash }));
 
+    case "tutorial_claim":
+      return result(d, await d.rpc("tutorial_claim", { p_user: userId, p_ip_hash: ipHash }));
+
     case "watch_code":
       return result(d, await d.rpc("watch_code", { p_user: userId, p_token: String(b.token ?? "") }));
 

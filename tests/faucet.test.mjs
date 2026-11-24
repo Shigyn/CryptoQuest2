@@ -1361,6 +1361,30 @@ test("retrait BTC : minimum en sats au cours du BTC, frais de transfert retenus 
   assert.equal((await me(h, u)).withdrawals[0].fee_units, 2);
 });
 
+test("tutoriel : 2 sats apres une session et une pub, une seule fois, premier retrait sans minimum", async () => {
+  const h = await createHarness({ minSats: true });
+  await h.pg.query("update settings set mining_enabled = true");
+  await h.pg.query("update coins set per_eur = 1 / 0.00068 / 100000000, enabled = (code = \'BTC\') where code in (\'BTC\', \'USDT\', \'LTC\')");
+  const u = await newUser(h);
+  await h.pg.query("update users set payout_coin = \'BTC\' where fp_address = $1", [u.fp]);
+  let tu = (await me(h, u)).tutorial;
+  assert.deepEqual([tu.done, tu.base, tu.ad, tu.sats], [false, false, false, 2]);
+  assert.equal((await api(h, "tutorial_claim", { session: u.session }, u.ip)).body.code, "not_reached");
+  await api(h, "mining_start", { session: u.session }, u.ip);
+  assert.equal((await api(h, "tutorial_claim", { session: u.session }, u.ip)).body.code, "not_reached", "il faut aussi une pub");
+  await h.pg.query("insert into mining_sessions (user_id, kind, ghs, ends_at, coins_per_hour, revenue_eur, ref) select id, \'video\', 50, now() + interval \'8 hours\', 1, 0, \'t1\' from users where fp_address = $1", [u.fp]);
+  const r = (await api(h, "tutorial_claim", { session: u.session }, u.ip)).body;
+  assert.deepEqual([r.ok, r.tokens], [true, 14], "2 sats x 6,8 Coins, arrondi au-dessus");
+  assert.equal((await api(h, "tutorial_claim", { session: u.session }, u.ip)).body.code, "already_done");
+  const w = (await api(h, "withdraw", { session: u.session }, u.ip)).body;
+  assert.equal(w.ok, true, "premier retrait sans le minimum de 20 sats");
+  assert.equal(w.amount_units, 2);
+  await give(h, u, 50);
+  assert.equal((await api(h, "withdraw", { session: u.session }, u.ip)).body.code, "below_minimum", "ensuite, minimum de 20 sats");
+  tu = (await me(h, u)).tutorial;
+  assert.deepEqual([tu.done, tu.withdrawn], [true, true]);
+});
+
 test("tirage en 2 etapes : gain cache, credite seulement apres le compte a rebours, jamais deux tirages en attente", async () => {
   const h = await createHarness();
   const u = await newUser(h);

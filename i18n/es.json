@@ -445,4 +445,17 @@
 "frameHint":"Quédate en esta página hasta el final del contador",
 "q_sessions":["Inicia {n} sesión de minería",
 "Inicia {n} sesiones de minería"],"q_ads":["Mira {n} anuncio",
-"Mira {n} anuncios"]}
+"Mira {n} anuncios"],"walletCtaSub":"Abre tu cartera gratis FaucetPay",
+"tutTitle":"Tutorial de inicio",
+"tutGift":"{n} sats de regalo",
+"tutLead":"Haz estos 3 pasos: recibes {n} sats, retirables al instante en FaucetPay.",
+"tutStep1":"Tu cartera Bitcoin FaucetPay está conectada: tus sats llegan ahí.",
+"tutStep2":"Inicia tu sesión de minería de 8 h (botón más abajo).",
+"tutStep3":"Mira 1 anuncio para aumentar tu potencia: un video o un PTC.",
+"tutVideo":"Video",
+"tutClaim":"Cobrar mis {n} sats",
+"tutReady":"¡Bravo! Tus {n} sats están en tu saldo.",
+"tutWithdraw":"Retirar ahora a FaucetPay",
+"tutAfter":"Este primer retiro no tiene mínimo. Después, retiro desde {m} sats.",
+"tutDone":"Retiro enviado: ¡mira tu cuenta FaucetPay!",
+"s:tutorial":"Tutorial"}
