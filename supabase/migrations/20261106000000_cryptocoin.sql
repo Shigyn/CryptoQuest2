@@ -26,7 +26,7 @@ create table settings (
   -- Montant minimum d'un retrait (instantane ou lot horaire), en Coins.
   min_withdraw_tokens int not null default 1 check (min_withdraw_tokens >= 1),
   -- Minimum de retrait en sats (converti en Coins au cours du BTC) et frais de transfert en sats, payes par le membre.
-  min_withdraw_sats numeric not null default 20 check (min_withdraw_sats >= 0),
+  min_withdraw_sats numeric not null default 5 check (min_withdraw_sats >= 0),
   withdraw_fee_sats numeric not null default 0 check (withdraw_fee_sats >= 0),
   -- Tutoriel de depart : sats offerts a la fin, retirables tout de suite (premier retrait sans minimum).
   tutorial_sats numeric not null default 2 check (tutorial_sats >= 0),

@@ -132,7 +132,7 @@
     ticketSent: ["Demande envoyée.", "Ticket sent."],
     faq_what_q: ["C'est quoi, ce site ?", "What is this site?"], faq_what_a: ["Un faucet de minage virtuel : tu gagnes des sats gratuitement (minage, vidéos, PTC, quêtes, parrainage) et tu les retires en BTC sur ton compte FaucetPay.", "A virtual mining faucet: you earn sats for free (mining, videos, PTC, quests, referrals) and withdraw them in BTC to your FaucetPay account."],
     faq_pay_q: ["Comment je suis payé ?", "How do I get paid?"], faq_pay_a: ["Ton solde disponible se retire en BTC sur FaucetPay, en un clic, dès le minimum atteint. Les gains des pubs sont d'abord vérifiés, puis envoyés automatiquement.", "Your available balance is withdrawn in BTC to FaucetPay in one click once you reach the minimum. Ad earnings are checked first, then sent automatically."],
-    faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Oui : le minimum est affiché dans le portefeuille (20 sats actuellement).", "Yes: the minimum is shown in the wallet (20 sats at the moment)."],
+    faq_min_q: ["Y a-t-il un minimum de retrait ?", "Is there a minimum withdrawal?"], faq_min_a: ["Oui : le minimum est affiché dans le portefeuille (5 sats actuellement).", "Yes: the minimum is shown in the wallet (5 sats at the moment)."],
     faq_pending_q: ["Pourquoi mes gains sont « à valider » ?", "Why are my earnings “under review”?"], faq_pending_a: ["Les pubs, liens, sondages et offres sont contrôlés contre la triche avant d'être payés. Ça prend en général quelques heures.", "Ads, links, surveys and offers are checked for cheating before payout. It usually takes a few hours."],
     faq_multi_q: ["Puis-je avoir plusieurs comptes ?", "Can I have several accounts?"], faq_multi_a: ["Non. Un compte par personne et par foyer. Les comptes en double sont bannis et perdent leur solde.", "No. One account per person and household. Duplicate accounts are banned and lose their balance."],
     faq_vpn_q: ["VPN, proxy, robots ?", "VPN, proxy, bots?"], faq_vpn_a: ["Interdits. Les tâches faites derrière un VPN ou par un script sont refusées.", "Not allowed. Tasks done behind a VPN or by a script are refused."],
@@ -151,7 +151,7 @@
     w_quests: ["Quêtes du jour et de la semaine, succès.", "Daily and weekly quests, achievements."], w_ref: ["Un pourcentage à vie sur tes filleuls.", "A lifetime share of your referrals."],
     heroEyebrow: ["Retrait instantané sur FaucetPay", "Instant withdrawal to FaucetPay"],
     heroTitle: ["Mine des sats gratuitement, sans matériel.", "Mine sats for free, no hardware."],
-    heroLead: ["Minage virtuel financé par la pub : lance ta session, booste-la avec des vidéos et des PTC, et retire dès 20 sats, directement en BTC sur FaucetPay.", "Virtual mining funded by ads: start your session, boost it with videos and PTC, and withdraw from 20 sats, straight to FaucetPay in BTC."],
+    heroLead: ["Minage virtuel financé par la pub : lance ta session, booste-la avec des vidéos et des PTC, et retire dès 5 sats, directement en BTC sur FaucetPay.", "Virtual mining funded by ads: start your session, boost it with videos and PTC, and withdraw from 5 sats, straight to FaucetPay in BTC."],
     members: ["membres", "members"], paidOut: ["versés", "paid out"], instant: ["Instantanés", "Instant"],
     waysTitle: ["Toutes les façons de gagner", "Every way to earn"], stepsTitle: ["Commence en 3 étapes", "Start in 3 steps"],
     step1: ["Entre ton adresse FaucetPay", "Enter your FaucetPay address"], step1t: ["Pas d'inscription longue, pas de dépôt.", "No long sign-up, no deposit."],
@@ -734,7 +734,7 @@
         await refreshMe(); redraw();
       } }, t("tutWithdraw"));
       action = h("div", { class: "tut-ready" }, h("p", {}, t("tutReady").replace("{n}", n)), b,
-        h("p", { class: "row-sub" }, t("tutAfter").replace("{m}", String(status?.min_withdraw_sats ?? 20))));
+        h("p", { class: "row-sub" }, t("tutAfter").replace("{m}", String(status?.min_withdraw_sats ?? 5))));
     }
     return h("section", { class: "panel tut" },
       h("div", { class: "panel-title" }, t("tutTitle"), h("span", { class: "badge good" }, t("tutGift").replace("{n}", n))),
@@ -800,7 +800,7 @@
           h("div", { class: "chips" },
             h("span", { class: "chip" }, icon("bolt"), t("chipInstant")),
             h("span", { class: "chip" }, icon("gift"), t("chipFree")),
-            miningOn() ? h("span", { class: "chip" }, icon("star"), t("chipMinWd").replace("{n}", status?.min_withdraw_sats ?? 20))
+            miningOn() ? h("span", { class: "chip" }, icon("star"), t("chipMinWd").replace("{n}", status?.min_withdraw_sats ?? 5))
               : h("span", { class: "chip" }, icon("star"), `${t("chipJackpot")} ${eur(Math.max(0, ...(status?.roll_tiers || []).map((x) => x.tokens)))}`)));
     if (embedded) return card;
     return h("div", {}, ticker(), h("main", { class: "gate" }, card));

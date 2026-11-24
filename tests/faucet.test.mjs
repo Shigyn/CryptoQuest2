@@ -1345,7 +1345,7 @@ test("retrait BTC : minimum en sats au cours du BTC, frais de transfert retenus 
   const h = await createHarness({ minSats: true });
   // 1 sat = 0,00068 EUR, soit 6,8 Coins : 20 sats = 136 Coins.
   await h.pg.query("update coins set per_eur = 1 / 0.00068 / 100000000, enabled = (code = 'BTC') where code in ('BTC', 'USDT', 'LTC')");
-  await h.pg.query("update settings set withdraw_fee_sats = 2");
+  await h.pg.query("update settings set withdraw_fee_sats = 2, min_withdraw_sats = 20");
   const u = await newUser(h);
   await h.pg.query("update users set payout_coin = 'BTC' where fp_address = $1", [u.fp]);
   assert.equal((await api(h, "status", {})).body.min_withdraw_tokens, 136);
@@ -1377,10 +1377,10 @@ test("tutoriel : 2 sats apres une session et une pub, une seule fois, premier re
   assert.deepEqual([r.ok, r.tokens], [true, 14], "2 sats x 6,8 Coins, arrondi au-dessus");
   assert.equal((await api(h, "tutorial_claim", { session: u.session }, u.ip)).body.code, "already_done");
   const w = (await api(h, "withdraw", { session: u.session }, u.ip)).body;
-  assert.equal(w.ok, true, "premier retrait sans le minimum de 20 sats");
+  assert.equal(w.ok, true, "premier retrait sans le minimum de 5 sats");
   assert.equal(w.amount_units, 2);
-  await give(h, u, 50);
-  assert.equal((await api(h, "withdraw", { session: u.session }, u.ip)).body.code, "below_minimum", "ensuite, minimum de 20 sats");
+  await give(h, u, 20);
+  assert.equal((await api(h, "withdraw", { session: u.session }, u.ip)).body.code, "below_minimum", "ensuite, minimum de 5 sats (20 Coins = 2,9 sats)");
   tu = (await me(h, u)).tutorial;
   assert.deepEqual([tu.done, tu.withdrawn], [true, true]);
 });
