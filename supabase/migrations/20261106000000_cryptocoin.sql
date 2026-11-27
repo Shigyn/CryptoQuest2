@@ -2028,6 +2028,20 @@ returns jsonb language sql stable set search_path = public as $$
     'link_reward', (select max(reward_tokens) from shortlink_providers where enabled),
     'users', (select count(*) from users),
     'paid_tokens', (select coalesce(sum(tokens), 0) from withdrawals where status = 'paid'),
+    -- Fil d'activite reelle (jamais d'evenement invente) : sessions, retraits, quetes, nouveaux membres.
+    'activity', coalesce((select jsonb_agg(a) from (select a from (
+        (select jsonb_build_object('t', m.kind, 'at', m.started_at, 'ghs', m.ghs, 'who', public_who(u.pseudo, u.fp_address)) as a
+           from mining_sessions m join users u on u.id = m.user_id where not u.banned order by m.started_at desc limit 12)
+        union all
+        (select jsonb_build_object('t', 'wd', 'at', w.finished_at, 'tokens', w.tokens, 'who', public_who(u.pseudo, w.to_address))
+           from withdrawals w join users u on u.id = w.user_id where w.status = 'paid' order by w.finished_at desc limit 8)
+        union all
+        (select jsonb_build_object('t', 'quest', 'at', l.at, 'who', public_who(u.pseudo, u.fp_address))
+           from ledger l join users u on u.id = l.user_id where l.source = 'challenge' and l.delta > 0 and not u.banned order by l.at desc limit 6)
+        union all
+        (select jsonb_build_object('t', 'join', 'at', u.created_at, 'who', public_who(u.pseudo, u.fp_address))
+           from users u where not u.banned order by u.created_at desc limit 6)
+      ) y order by (a->>'at') desc limit 20) z), '[]'::jsonb),
     'recent', coalesce((
       select jsonb_agg(r) from (
         select jsonb_build_object('at', w.finished_at, 'coin', w.coin, 'amount_units', w.amount_units,

@@ -1385,6 +1385,20 @@ test("tutoriel : 2 sats apres une session et une pub, une seule fois, premier re
   assert.deepEqual([tu.done, tu.withdrawn], [true, true]);
 });
 
+test("fil d'activite : vrais evenements seulement (inscription, session, retrait), pseudo ou adresse masquee, jamais d'e-mail", async () => {
+  const h = await createHarness();
+  await h.pg.query("update settings set mining_enabled = true");
+  const u = await newUser(h);
+  await api(h, "set_pseudo", { session: u.session, pseudo: "Mineur_1" }, u.ip);
+  await api(h, "mining_start", { session: u.session }, u.ip);
+  await give(h, u, 50);
+  await api(h, "withdraw", { session: u.session }, u.ip);
+  const act = (await api(h, "status", {})).body.activity;
+  assert.deepEqual(act.map((e) => e.t).sort(), ["base", "join", "wd"]);
+  assert.ok(act.every((e) => e.who === "Mineur_1"));
+  assert.ok(!JSON.stringify(act).includes("@"));
+});
+
 test("tirage en 2 etapes : gain cache, credite seulement apres le compte a rebours, jamais deux tirages en attente", async () => {
   const h = await createHarness();
   const u = await newUser(h);

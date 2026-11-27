@@ -1142,3 +1142,13 @@ button.boost-card:disabled { opacity: .6; cursor: wait; }
 .hero2-text .btc-wallet-text { font-size: 34px; }
 .hero2-text .btc-wallet-main small { font-size: 14px; }
 @media (max-width: 720px) { .hero2-text .btc-wallet-text { font-size: 25px; } .hero2-text .btc-wallet-ico { width: 46px; height: 46px; font-size: 26px; } }
+
+/* Fil d'activite (bandeau et bloc En direct) */
+.ticker-item .act-ico, .live-row .act-ico { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--sky); background: rgba(255, 122, 0, .1); flex: none; }
+.ticker-item .act-ico svg, .live-row .act-ico svg { width: 13px; height: 13px; }
+.act-who { color: var(--ink); }
+.act-ago { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.act-wd .act-ico { color: var(--green); background: rgba(18, 164, 95, .1); }
+.act-video .act-ico { color: #e2367f; background: rgba(226, 54, 127, .1); }
+.live-row { display: flex; align-items: center; gap: 8px; }
+.live-row .live-what { flex: 1; min-width: 0; font-size: 13px; color: var(--text); }

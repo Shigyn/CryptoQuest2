@@ -458,4 +458,10 @@
 "tutWithdraw":"Tarik sekarang ke FaucetPay",
 "tutAfter":"Penarikan pertama ini tanpa minimum. Setelah itu, tarik mulai {m} sats.",
 "tutDone":"Penarikan terkirim: cek akun FaucetPay kamu!",
-"s:tutorial":"Tutorial"}
+"s:tutorial":"Tutorial",
+"act_base":"memulai {g}",
+"act_video":"menonton video · +{g}",
+"act_ptc":"melihat PTC · +{g}",
+"act_wd":"menarik {n}",
+"act_quest":"menyelesaikan misi",
+"act_join":"bergabung dengan BitPool"}

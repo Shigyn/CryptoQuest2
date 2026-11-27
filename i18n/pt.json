@@ -458,4 +458,10 @@
 "tutWithdraw":"Sacar agora para a FaucetPay",
 "tutAfter":"Este primeiro saque não tem mínimo. Depois, saque a partir de {m} sats.",
 "tutDone":"Saque enviado: veja sua conta FaucetPay!",
-"s:tutorial":"Tutorial"}
+"s:tutorial":"Tutorial",
+"act_base":"iniciou {g}",
+"act_video":"assistiu a um vídeo · +{g}",
+"act_ptc":"viu um PTC · +{g}",
+"act_wd":"sacou {n}",
+"act_quest":"concluiu uma missão",
+"act_join":"entrou no BitPool"}

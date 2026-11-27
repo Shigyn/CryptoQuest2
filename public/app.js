@@ -245,6 +245,9 @@
     tutWithdraw: ["Retirer maintenant sur FaucetPay", "Withdraw now to FaucetPay"],
     tutAfter: ["Ce premier retrait n'a pas de minimum. Ensuite, retrait dès {m} sats.", "This first withdrawal has no minimum. After that, withdraw from {m} sats."],
     tutDone: ["Retrait envoyé : regarde ton compte FaucetPay !", "Withdrawal sent: check your FaucetPay account!"],
+    act_base: ["a lancé {g}", "started {g}"], act_video: ["a regardé une vidéo · +{g}", "watched a video · +{g}"],
+    act_ptc: ["a vu un PTC · +{g}", "viewed a PTC · +{g}"], act_wd: ["a retiré {n}", "withdrew {n}"],
+    act_quest: ["a terminé une quête", "completed a quest"], act_join: ["a rejoint BitPool", "joined BitPool"],
     security: ["Sécurité", "Security"], secOn: ["Ton compte est protégé par un mot de passe.", "Your account is protected by a password."],
     secOff: ["Sans mot de passe, ton adresse FaucetPay suffit pour entrer. Ajoute-en un pour protéger ton compte.", "Without a password, your FaucetPay address is enough to enter. Add one to protect your account."],
     secNew: ["Nouveau mot de passe (8 caractères minimum)", "New password (8 characters minimum)"], secSave: ["Protéger mon compte", "Protect my account"], secChange: ["Changer le mot de passe", "Change password"], secDone: ["Mot de passe enregistré.", "Password saved."],
@@ -748,10 +751,22 @@
       action || null);
   }
 
+  // Activite reelle : texte traduit et « il y a 2 min » dans la langue du membre.
+  const ago = (at) => {
+    const sec = Math.round((new Date(at).getTime() - Date.now()) / 1000);
+    const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto", style: "short" });
+    if (sec > -60) return rtf.format(Math.min(0, sec), "second");
+    if (sec > -3600) return rtf.format(Math.round(sec / 60), "minute");
+    if (sec > -86400) return rtf.format(Math.round(sec / 3600), "hour");
+    return rtf.format(Math.round(sec / 86400), "day");
+  };
+  const ACT_ICO = { base: "bolt", video: "play", ptc: "eye", wd: "wallet", quest: "flag", join: "profile" };
+  const actText = (e) => t(`act_${e.t}`).replace("{g}", fmtGhs(Number(e.ghs) || 0)).replace("{n}", e.tokens != null ? `${num(e.tokens)} ${unitLabel()}` : "");
+  const activity = () => (status?.activity?.length ? status.activity : (status?.recent || []).map((r) => ({ ...r, t: "wd" })));
   function ticker() {
-    const list = status?.recent || [];
+    const list = activity();
     if (!list.length) return null;
-    const items = list.map((r) => h("span", { class: "ticker-item" }, r.who, h("b", {}, payText(r))));
+    const items = list.map((e) => h("span", { class: `ticker-item act-${e.t}` }, h("span", { class: "act-ico" }, icon(ACT_ICO[e.t] || "bolt")), h("b", { class: "act-who" }, e.who), h("span", {}, actText(e)), h("span", { class: "act-ago" }, ago(e.at))));
     // Contenu double pour un defilement sans coupure.
     return h("div", { class: "ticker", "aria-label": t("lastWins") },
       h("span", { class: "ticker-live" }, icon("star"), t("lastWins")),
@@ -2069,13 +2084,13 @@
 
   // Fil d'activite : retraits recents (et gains valides quand le serveur les envoie).
   function liveFeed(limit = 8) {
-    const list = (status?.recent || []).slice(0, limit);
+    const list = activity().slice(0, limit);
     return h("section", { class: "panel live" },
       h("div", { class: "panel-title" }, h("span", { class: "live-dot" }, t("liveFeed"))),
-      list.length ? list.map((r) => h("div", { class: "live-row" },
-        h("span", { class: "live-who" }, r.who),
-        h("span", { class: "live-what" }, r.kind ? r.kind : t("withdrawal1")),
-        h("b", {}, payText(r)))) : h("p", { class: "empty" }, t("noActivity")));
+      list.length ? list.map((e) => h("div", { class: `live-row act-${e.t}` },
+        h("span", { class: "act-ico" }, icon(ACT_ICO[e.t] || "bolt")),
+        h("span", { class: "live-what" }, h("b", { class: "live-who" }, e.who), " ", actText(e)),
+        h("span", { class: "act-ago" }, ago(e.at)))) : h("p", { class: "empty" }, t("noActivity")));
   }
 
   function shell() {

@@ -458,4 +458,10 @@
 "tutWithdraw":"Şimdi FaucetPay'e çek",
 "tutAfter":"Bu ilk çekimde minimum yok. Sonrasında {m} sats'tan itibaren çekim.",
 "tutDone":"Çekim gönderildi: FaucetPay hesabına bak!",
-"s:tutorial":"Rehber"}
+"s:tutorial":"Rehber",
+"act_base":"{g} başlattı",
+"act_video":"video izledi · +{g}",
+"act_ptc":"PTC izledi · +{g}",
+"act_wd":"{n} çekti",
+"act_quest":"bir görev tamamladı",
+"act_join":"BitPool'a katıldı"}
