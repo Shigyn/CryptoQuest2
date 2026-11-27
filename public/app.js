@@ -1192,14 +1192,16 @@
             const id = every(() => {
               if (frame && (document.hidden || !frame.isConnected)) return;
               // Nouvel onglet : le compteur ne tourne que si la pub est ouverte et que le membre est dessus (pas sur ce site).
+              // Le compte a rebours s'affiche aussi dans le titre de l'onglet BitPool, visible depuis l'onglet de la pub.
               if (win) {
-                if (win.closed) { label.replaceChildren(t("ptcClosed"), " ", reopen); return; }
-                if (!document.hidden && document.hasFocus()) { label.textContent = t("ptcBack"); return; }
+                if (win.closed) { label.replaceChildren(t("ptcClosed"), " ", reopen); document.title = `⏸ ${cfg.SITE_NAME}`; return; }
+                if (!document.hidden && document.hasFocus()) { label.textContent = t("ptcBack"); document.title = `⏸ ${left} s · ${cfg.SITE_NAME}`; return; }
               }
               left -= 1;
               fill.style.width = `${Math.min(100, ((total - left) / total) * 100)}%`;
-              if (left > 0) { label.textContent = `${t("watch")} ${left} s`; return; }
+              if (left > 0) { label.textContent = `${t("watch")} ${left} s`; if (win) document.title = `⏳ ${left} s · ${cfg.SITE_NAME}`; return; }
               clearInterval(id);
+              if (win) document.title = `✅ ${t("confirm")} · ${cfg.SITE_NAME}`;
               frame?.remove();
               const cap = captchaBox();
               const ok = h("button", {
@@ -2887,6 +2889,7 @@
 
   function render() {
     clearTimers();
+    document.title = cfg.SITE_NAME;
     const root = document.getElementById("root");
     root.replaceChildren(session && me ? shell() : landing(location.hash.replace("#", "")));
     window.scrollTo(0, 0);
